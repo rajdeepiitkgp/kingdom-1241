@@ -186,9 +186,14 @@ export function mapSettings(rows: Row[], defaults: SiteSettings): SiteSettings {
   };
 }
 
-/** Application settings → `site_settings` rows (used by the seed script). */
+/**
+ * Application settings → `site_settings` rows (used by the seed script).
+ * `value` is `jsonb not null`, so settings that are null (e.g. no Discord
+ * invite yet) are left out; `mapSettings` falls back to the defaults for
+ * missing keys.
+ */
 export function settingsToRows(settings: SiteSettings): Array<{ key: string; value: unknown }> {
-  return [
+  const rows: Array<{ key: string; value: unknown }> = [
     { key: "kingdom_number", value: settings.kingdomNumber },
     { key: "kingdom_name", value: settings.kingdomName },
     { key: "tagline", value: settings.tagline },
@@ -196,6 +201,7 @@ export function settingsToRows(settings: SiteSettings): Array<{ key: string; val
     { key: "discord_invite_url", value: settings.discordInviteUrl },
     { key: "transfer_contact", value: settings.transferContact },
   ];
+  return rows.filter((row) => row.value !== null && row.value !== undefined);
 }
 
 // ---------------------------------------------------------------------------

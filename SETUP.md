@@ -38,7 +38,7 @@ Supabase content (announcements, rules, the KvK plan…) is edited in the Supaba
 
 1. <https://aistudio.google.com/apikey> → **Create API key** → `GEMINI_API_KEY`.
 2. The free tier is enough: the pipeline only runs when content is added or edited and batches small texts together. If a rate limit is hit the scripts wait and retry.
-3. Optional: `GEMINI_MODEL` overrides the model (default `gemini-2.5-flash`).
+3. Optional: `GEMINI_MODEL` overrides the model (default `gemini-3.8-flash`).
 
 ## 3. Secrets you generate yourself
 
@@ -64,7 +64,7 @@ Without any env vars the site still runs with the bundled English seed content (
 
 | Command | What it does |
 | --- | --- |
-| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --overwrite` replaces seed rows, dropping their translations. |
+| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change). `-- --overwrite` replaces every seed row, dropping translations. |
 | `npm run translate` | Translates everything missing or outdated. `-- --table guides`, `-- --locale de`, `-- --force`, `-- --dry-run`. |
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |
@@ -148,7 +148,7 @@ Kingdom 1241 alternates two events every two weeks — the **internal castle bat
 
 **Change the password:** Table Editor → `kvk_plans` → edit `password`. Everyone is logged out immediately (the cookie is derived from the password) — share the new one on Discord.
 
-**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down), `min_hero_stars` (default 4), `min_skill_level` (the level of the hero's top-right skill, default 5).
+**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
 
 **Instructions** (`kvk_rules`): one row per bullet; `kind` is `do`, `dont` or `info`; `sort_order` orders them.
 

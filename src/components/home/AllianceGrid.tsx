@@ -10,7 +10,7 @@ function formatPower(power: number, locale: string): string {
 
 /** Gold / silver / bronze for the top three, like the in-game ranking. */
 const RANK_STYLES = [
-  "bg-gold text-gold-ink shadow-[0_2px_0_0_var(--gold-strong)]",
+  "bg-gold text-on-gold shadow-[0_2px_0_0_var(--gold-strong)]",
   "bg-slate-300 text-slate-800 shadow-[0_2px_0_0_#94a3b8] dark:bg-slate-400 dark:text-slate-900",
   "bg-amber-600 text-white shadow-[0_2px_0_0_#92400e]",
 ];

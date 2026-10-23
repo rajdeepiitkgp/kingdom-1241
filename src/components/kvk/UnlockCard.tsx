@@ -15,7 +15,7 @@ export function UnlockCard({ dict }: { dict: Dictionary }) {
 
   return (
     <form action={formAction} className="card mx-auto max-w-md p-6 text-center md:p-8">
-      <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gold text-gold-ink shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
+      <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
         <LockKeyhole className="size-8" />
       </span>
       <h2 className="mt-4 text-xl font-black text-ink">{dict["kvk.locked.title"]}</h2>

@@ -47,33 +47,31 @@ export const SEED_KVK_PLAN: SeedKvkPlan = {
   id: PLAN_ID,
   slug: "castle-battle-placeholder",
   eventType: "castle_battle",
-  title: "Internal castle battle — placeholder plan",
+  title: "Castle Battle — placeholder plan",
   opponent: null,
   battleAt: null,
-  introMarkdown: `Hello everyone! 👋
+  introMarkdown: `Hi all! 👋 **Castle Battle tomorrow** — see below for the rules.
 
-The **internal castle battle** is tomorrow — please read the instructions below.
+We will be trying different strategies and different heroes to prepare for the real KvK battle. Because of this, the formations will change. Please listen to the coordinators to know which formation to use.
 
-We use the internal battle to try different strategies and different heroes ahead of the real KvK in two weeks, so the troop formations will change. Always follow the coordinators' instructions to know which formation to use.
+Make the formations below, but only with heroes whose Top Expedition Skill (the top-right skill with the flag icon) is at level 5. If you don't have the hero at 4 stars, don't make that formation. Save each formation as a Troop Ratio.
 
-Set up your rallies today, and if you need help, we are all here. 💪
-
-> Kingdom council: this is placeholder text. Edit the plan in the \`kvk_plans\` table (title, date, this introduction) and the formations in \`kvk_formations\`.`,
+> Kingdom council: this is placeholder text. Edit the plan in the \`kvk_plans\` table (title, date, this introduction), the names in \`kvk_coordinators\` and the formations in \`kvk_formations\`.`,
   minHeroStars: 4,
   minSkillLevel: 5,
   rules: [
     {
       kind: "dont",
-      text: "No buffs except pet buffs and the Deployment Capacity buff — this saves gems for the whole kingdom.",
+      text: "No buffs other than pets and the Deployment Capacity buff. This saves gems for the whole kingdom.",
     },
-    { kind: "do", text: "Everyone starts in the [KvK] alliance. The coordinators move players to [TMP] as needed." },
+    { kind: "do", text: "Everyone starts at [KvK]; the coordinators will send people to [TMP] as required." },
     {
       kind: "do",
-      text: "Follow the coordinators' instructions — it is what keeps the battle organised and running smoothly.",
+      text: "Please listen to the instructions of the coordinators — this is very important for things to go smoothly.",
     },
     {
       kind: "info",
-      text: "Prepare the formations below, but only with heroes whose top-right skill is at level 5. Save each one in the game's Troop Ratio presets.",
+      text: "The formations will change while we test strategies; the coordinators tell you which one to use each time.",
     },
   ],
   coordinators: [
@@ -82,15 +80,17 @@ Set up your rallies today, and if you need help, we are all here. 💪
     { team: "tmp", name: "Coordinator name (placeholder)", allianceTag: "EOL", note: "" },
   ],
   formations: [
-    { label: "A", side: "any", role: "any", heroes: ["amane", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
-    { label: "B", side: "any", role: "any", heroes: ["chenko", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
-    { label: "C", side: "any", role: "any", heroes: ["amane", null, null], infantry: 50, cavalry: 0, archers: 50, note: "" },
-    { label: "D", side: "any", role: "any", heroes: ["chenko", null, null], infantry: 50, cavalry: 0, archers: 50, note: "" },
-    { label: "E", side: "any", role: "any", heroes: ["hilde", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
-    { label: "F", side: "any", role: "any", heroes: ["hilde", null, null], infantry: 60, cavalry: 0, archers: 40, note: "" },
-    { label: "G", side: "any", role: "any", heroes: ["eric", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
-    { label: "H", side: "any", role: "any", heroes: ["eric", null, null], infantry: 60, cavalry: 0, archers: 40, note: "" },
-    { label: "I", side: "any", role: "any", heroes: ["saul", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
+    // Attack
+    { label: "A", side: "attack", role: "any", heroes: ["amane", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
+    { label: "B", side: "attack", role: "any", heroes: ["chenko", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
+    { label: "C", side: "attack", role: "any", heroes: ["amane", null, null], infantry: 50, cavalry: 0, archers: 50, note: "" },
+    { label: "D", side: "attack", role: "any", heroes: ["chenko", null, null], infantry: 50, cavalry: 0, archers: 50, note: "" },
+    // Defence
+    { label: "E", side: "defense", role: "any", heroes: ["hilde", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
+    { label: "F", side: "defense", role: "any", heroes: ["hilde", null, null], infantry: 60, cavalry: 0, archers: 40, note: "" },
+    { label: "G", side: "defense", role: "any", heroes: ["eric", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
+    { label: "H", side: "defense", role: "any", heroes: ["eric", null, null], infantry: 60, cavalry: 0, archers: 40, note: "" },
+    { label: "I", side: "defense", role: "any", heroes: ["saul", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
   ],
 };
 

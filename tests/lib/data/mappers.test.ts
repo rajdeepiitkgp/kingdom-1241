@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { mapHero, mapKvkFormation, mapKvkPlan } from "@/lib/data/mappers";
+import { mapHero, mapKvkFormation, mapKvkPlan, mapSettings, settingsToRows } from "@/lib/data/mappers";
+import { SEED_SETTINGS } from "@/content/seed/settings";
+
+describe("settingsToRows", () => {
+  it("never produces a null value (the column is jsonb not null) and round-trips through mapSettings", () => {
+    const rows = settingsToRows({ ...SEED_SETTINGS, discordInviteUrl: null });
+    expect(rows.every((r) => r.value !== null && r.value !== undefined)).toBe(true);
+    expect(rows.find((r) => r.key === "discord_invite_url")).toBeUndefined();
+    const back = mapSettings(rows, SEED_SETTINGS);
+    expect(back).toEqual({ ...SEED_SETTINGS, discordInviteUrl: null });
+    expect(settingsToRows({ ...SEED_SETTINGS, discordInviteUrl: "https://discord.gg/x" }).find((r) => r.key === "discord_invite_url")?.value).toBe("https://discord.gg/x");
+  });
+});
 
 describe("mapHero", () => {
   it("maps a row and falls back on bad enum values", () => {
