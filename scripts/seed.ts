@@ -21,44 +21,70 @@ const overwrite = args.overwrite === true;
 const syncUi = overwrite || args["sync-ui"] === true;
 
 async function main() {
-  const [{ buildSeedContent, SEED_LANGUAGES }, { settingsToRows }, { createAdminClient }, { sourceHash }] =
-    await Promise.all([
-      import("@/content/seed"),
-      import("@/lib/data/mappers"),
-      import("@/lib/supabase/admin"),
-      import("@/lib/translate/hash"),
-    ]);
+  const [
+    { buildSeedContent, SEED_LANGUAGES },
+    { settingsToRows },
+    { createAdminClient },
+    { sourceHash },
+  ] = await Promise.all([
+    import("@/content/seed"),
+    import("@/lib/data/mappers"),
+    import("@/lib/supabase/admin"),
+    import("@/lib/translate/hash"),
+  ]);
 
   const supabase = createAdminClient();
   const seed = buildSeedContent();
   const summary: string[] = [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function upsertMissing(table: string, key: string, rows: Array<Record<string, any>>, replace = overwrite) {
+  async function upsertMissing(
+    table: string,
+    key: string,
+    rows: Array<Record<string, any>>,
+    replace = overwrite,
+  ) {
     if (rows.length === 0) return;
     const { data: existing, error } = await supabase.from(table).select(key);
     if (error) throw new Error(`${table}: ${error.message}`);
-    const present = new Set(((existing ?? []) as unknown as Array<Record<string, unknown>>).map((r) => String(r[key])));
-    const toWrite = replace ? rows : rows.filter((r) => !present.has(String(r[key])));
+    const present = new Set(
+      ((existing ?? []) as unknown as Array<Record<string, unknown>>).map((r) =>
+        String(r[key]),
+      ),
+    );
+    const toWrite = replace
+      ? rows
+      : rows.filter((r) => !present.has(String(r[key])));
     if (toWrite.length === 0) {
       summary.push(`${table}: nothing to do (${present.size} rows present)`);
       return;
     }
-    const { error: upsertError } = await supabase.from(table).upsert(toWrite, { onConflict: key });
+    const { error: upsertError } = await supabase
+      .from(table)
+      .upsert(toWrite, { onConflict: key });
     if (upsertError) throw new Error(`${table}: ${upsertError.message}`);
-    summary.push(`${table}: ${replace ? "wrote" : "inserted"} ${toWrite.length} row(s)`);
+    summary.push(
+      `${table}: ${replace ? "wrote" : "inserted"} ${toWrite.length} row(s)`,
+    );
   }
 
   await upsertMissing(
     "languages",
     "code",
-    SEED_LANGUAGES.map((l) => ({ code: l.code, enabled: l.enabled, sort_order: l.sortOrder })),
+    SEED_LANGUAGES.map((l) => ({
+      code: l.code,
+      enabled: l.enabled,
+      sort_order: l.sortOrder,
+    })),
   );
 
   await upsertMissing(
     "site_settings",
     "key",
-    settingsToRows(seed.settings).map((row) => ({ key: row.key, value: row.value })),
+    settingsToRows(seed.settings).map((row) => ({
+      key: row.key,
+      value: row.value,
+    })),
   );
 
   // UI strings ship with hand-made translations: mark them up to date so the
@@ -66,7 +92,11 @@ async function main() {
   await upsertMissing(
     "ui_strings",
     "key",
-    seed.uiStrings.map((s) => ({ key: s.key, text: s.text, source_hash: sourceHash({ text: s.text.en ?? "" }) })),
+    seed.uiStrings.map((s) => ({
+      key: s.key,
+      text: s.text,
+      source_hash: sourceHash({ text: s.text.en ?? "" }),
+    })),
     syncUi,
   );
 
@@ -199,76 +229,104 @@ async function main() {
 
   // KvK battle plan. Only one plan may be active; if the council already has
   // one, the placeholder goes in as inactive so it never replaces the real plan.
+  // The plan and its rules/coordinators/formations are seeded as ONE unit: once
+  // the plan row exists, its child rows are never re-added (the council deletes
+  // and replaces them freely).
   const plan = seed.kvkPlan;
-  const { data: activePlans, error: activeError } = await supabase.from("kvk_plans").select("id").eq("active", true);
-  if (activeError) throw new Error(`kvk_plans: ${activeError.message}`);
-  const otherActive = (activePlans ?? []).some((row) => row.id !== plan.id);
-
-  await upsertMissing("kvk_plans", "id", [
-    {
-      id: plan.id,
-      slug: plan.slug,
-      event_type: plan.eventType,
-      title: plan.title,
-      opponent: plan.opponent,
-      battle_at: plan.battleAt,
-      intro: plan.intro,
-      min_hero_stars: plan.minHeroStars,
-      min_skill_level: plan.minSkillLevel,
-      password: plan.password,
-      active: otherActive ? false : plan.active,
-      published: plan.published,
-    },
-  ]);
-
-  await upsertMissing(
-    "kvk_rules",
-    "id",
-    plan.rules.map((r) => ({ id: r.id, plan_id: r.planId, kind: r.kind, text: r.text, sort_order: r.sortOrder, published: r.published })),
+  const { data: planRows, error: planError } = await supabase
+    .from("kvk_plans")
+    .select("id, active");
+  if (planError) throw new Error(`kvk_plans: ${planError.message}`);
+  const planExists = (planRows ?? []).some((row) => row.id === plan.id);
+  const otherActive = (planRows ?? []).some(
+    (row) => row.id !== plan.id && row.active,
   );
 
-  await upsertMissing(
-    "kvk_coordinators",
-    "id",
-    plan.coordinators.map((c) => ({
-      id: c.id,
-      plan_id: c.planId,
-      team: c.team,
-      name: c.name,
-      alliance_tag: c.allianceTag,
-      note: c.note,
-      sort_order: c.sortOrder,
-      published: c.published,
-    })),
-  );
+  if (planExists && !overwrite) {
+    summary.push(
+      "kvk_plans: placeholder plan already present — leaving the plan and its rows alone",
+    );
+  } else {
+    await upsertMissing("kvk_plans", "id", [
+      {
+        id: plan.id,
+        slug: plan.slug,
+        event_type: plan.eventType,
+        title: plan.title,
+        opponent: plan.opponent,
+        battle_at: plan.battleAt,
+        intro: plan.intro,
+        min_hero_stars: plan.minHeroStars,
+        min_skill_level: plan.minSkillLevel,
+        password: plan.password,
+        active: otherActive ? false : plan.active,
+        published: plan.published,
+      },
+    ]);
 
-  await upsertMissing(
-    "kvk_formations",
-    "id",
-    plan.formations.map((f) => ({
-      id: f.id,
-      plan_id: f.planId,
-      label: f.label,
-      side: f.side,
-      role: f.role,
-      hero_1: f.heroSlugs[0],
-      hero_2: f.heroSlugs[1],
-      hero_3: f.heroSlugs[2],
-      infantry_pct: f.infantry,
-      cavalry_pct: f.cavalry,
-      archers_pct: f.archers,
-      note: f.note,
-      sort_order: f.sortOrder,
-      published: f.published,
-    })),
-  );
+    await upsertMissing(
+      "kvk_rules",
+      "id",
+      plan.rules.map((r) => ({
+        id: r.id,
+        plan_id: r.planId,
+        kind: r.kind,
+        text: r.text,
+        sort_order: r.sortOrder,
+        published: r.published,
+      })),
+    );
+
+    await upsertMissing(
+      "kvk_coordinators",
+      "id",
+      plan.coordinators.map((c) => ({
+        id: c.id,
+        plan_id: c.planId,
+        team: c.team,
+        name: c.name,
+        alliance_tag: c.allianceTag,
+        note: c.note,
+        sort_order: c.sortOrder,
+        published: c.published,
+      })),
+    );
+
+    await upsertMissing(
+      "kvk_formations",
+      "id",
+      plan.formations.map((f) => ({
+        id: f.id,
+        plan_id: f.planId,
+        label: f.label,
+        side: f.side,
+        role: f.role,
+        hero_1: f.heroSlugs[0],
+        hero_2: f.heroSlugs[1],
+        hero_3: f.heroSlugs[2],
+        infantry_pct: f.infantry,
+        cavalry_pct: f.cavalry,
+        archers_pct: f.archers,
+        note: f.note,
+        sort_order: f.sortOrder,
+        published: f.published,
+      })),
+    );
+  }
 
   console.log(summary.join("\n"));
-  console.log("\nDone. Next: `npm run translate` to fill in the other languages, then refresh the site cache (see SETUP.md).");
-  console.log("KvK: the placeholder battle plan uses the password from KVK_SEED_PASSWORD (default \"1241\") — change it in the kvk_plans table.");
+  console.log(
+    "\nDone. Next: `npm run translate` to fill in the other languages, then refresh the site cache (see SETUP.md).",
+  );
+  console.log(
+    'KvK: the placeholder battle plan uses the password from KVK_SEED_PASSWORD (default "1241") — change it in the kvk_plans table.',
+  );
 }
 
 main().catch((error) => {
-  console.error("Seeding failed:", error instanceof Error ? error.message : error);
+  console.error(
+    "Seeding failed:",
+    error instanceof Error ? error.message : error,
+  );
   process.exit(1);
 });
