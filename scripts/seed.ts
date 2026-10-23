@@ -88,16 +88,24 @@ async function main() {
 
   // UI strings ship with hand-made translations: mark them up to date so the
   // translator doesn't redo them (use `npm run translate -- --table ui_strings --force` to regenerate).
-  await upsertMissing(
-    "ui_strings",
-    "key",
-    seed.uiStrings.map((s) => ({
-      key: s.key,
-      text: s.text,
-      source_hash: sourceHash({ text: s.text.en ?? "" }),
-    })),
-    syncUi,
-  );
+  // With --sync-ui, languages the pipeline added (not in the code) are kept as
+  // long as the English text is unchanged; a changed English text replaces the
+  // row, and the pipeline then re-translates every language.
+  let uiRows = seed.uiStrings.map((s) => ({
+    key: s.key,
+    text: s.text as Record<string, string>,
+    source_hash: sourceHash({ text: s.text.en ?? "" }),
+  }));
+  if (syncUi) {
+    const { data: existingUi, error: uiError } = await supabase.from("ui_strings").select("key, text");
+    if (uiError) throw new Error(`ui_strings: ${uiError.message}`);
+    const byKey = new Map((existingUi ?? []).map((r) => [String(r.key), (r.text ?? {}) as Record<string, string>]));
+    uiRows = uiRows.map((row) => {
+      const existing = byKey.get(row.key);
+      return existing && existing.en === row.text.en ? { ...row, text: { ...existing, ...row.text } } : row;
+    });
+  }
+  await upsertMissing("ui_strings", "key", uiRows, syncUi);
 
   await upsertMissing(
     "announcements",

@@ -16,6 +16,11 @@ const TEXT: Record<string, { title: string; body: string; retry: string; ref: st
   ko: { title: "문제가 발생했습니다", body: "다시 시도해 주세요. 계속되면 디스코드에서 관리자에게 참조 코드와 함께 알려주세요.", retry: "다시 시도", ref: "참조 코드" },
   pl: { title: "Coś poszło nie tak", body: "Spróbuj ponownie. Jeśli problem się powtarza, napisz do admina na Discordzie i podaj kod referencyjny.", retry: "Spróbuj ponownie", ref: "Kod" },
   ar: { title: "حدث خطأ ما", body: "يرجى المحاولة مرة أخرى. إذا استمرت المشكلة، أخبر أحد المشرفين على ديسكورد مع ذكر رمز المرجع.", retry: "حاول مرة أخرى", ref: "المرجع" },
+  tr: { title: "Bir şeyler ters gitti", body: "Lütfen tekrar deneyin. Sorun devam ederse Discord'da bir yöneticiye referans kodunu da ekleyerek bildirin.", retry: "Tekrar dene", ref: "Referans" },
+  it: { title: "Qualcosa è andato storto", body: "Riprova. Se il problema persiste, avvisa un admin su Discord indicando il codice di riferimento.", retry: "Riprova", ref: "Riferimento" },
+  ja: { title: "問題が発生しました", body: "もう一度お試しください。繰り返し発生する場合は、参照コードを添えて Discord で管理者にお知らせください。", retry: "再試行", ref: "参照コード" },
+  "zh-TW": { title: "發生錯誤", body: "請再試一次。若問題持續，請在 Discord 上告知管理員並附上參考代碼。", retry: "再試一次", ref: "參考代碼" },
+  fr: { title: "Une erreur est survenue", body: "Réessayez. Si le problème persiste, prévenez un admin sur Discord en indiquant le code de référence.", retry: "Réessayer", ref: "Référence" },
 };
 
 export default function LocaleError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {

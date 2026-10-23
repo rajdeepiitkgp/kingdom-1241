@@ -1,6 +1,6 @@
 # Kingdom 1241
 
-Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in five languages (and counting). Modelled on 1424.win, hosted for free.
+Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in ten languages (English, German, Korean, Polish, Arabic, Turkish, Italian, Japanese, Traditional Chinese, French — more are a table row away). Modelled on 1424.win, hosted for free.
 
 **Live today:** site layout, languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, and the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks).
 Later phases add the admin panel with Discord login, KvK sign-ups and history, alliance pages from MightPulse, transfers and minister bookings.

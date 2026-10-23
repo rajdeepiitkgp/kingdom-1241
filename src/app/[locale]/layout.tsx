@@ -46,6 +46,8 @@ const FONT_CLASS: Record<string, string> = {
   latin: "",
   korean: "font-korean",
   arabic: "font-arabic",
+  japanese: "font-japanese",
+  chinese: "font-chinese",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/[locale]">) {
