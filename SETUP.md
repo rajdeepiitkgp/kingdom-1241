@@ -1,6 +1,6 @@
 # Setup guide — Kingdom 1241 website
 
-Everything runs on free tiers: **GitHub** (code + CI), **Vercel** (hosting), **Supabase** (database + image storage) and **Gemini** (translations). Discord login is a phase-2 feature; its keys are described at the end so the Supabase side is ready.
+Everything runs on free tiers — **GitHub** (code + CI), **Vercel** (hosting), **Supabase** (database + image storage) — plus an AI translation provider: **Anthropic** (Claude, recommended; about a dollar a month for this site) or **Google Gemini** (free tier). Discord login is a phase-2 feature; its keys are described at the end so the Supabase side is ready.
 
 Nothing secret is ever committed. Keys live in `.env.local` on your machine, in the Vercel project settings and in the GitHub repository secrets.
 
@@ -34,11 +34,15 @@ Supabase content (announcements, rules, the KvK plan…) is edited in the Supaba
    - **Automatic (recommended):** finish step 6 and run the **Deploy database** workflow once. It applies every file in `supabase/migrations/` in order and remembers which ones ran.
    - **Manual:** **SQL Editor → New query**, paste [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), **Run**; then the same with [`0002_kvk.sql`](supabase/migrations/0002_kvk.sql). (The files are idempotent, so running them again later via CI is harmless.)
 
-## 2. Gemini — translations
+## 2. Translation provider — Anthropic (recommended) or Gemini
 
-1. <https://aistudio.google.com/apikey> → **Create API key** → `GEMINI_API_KEY`.
-2. The free tier is enough: the pipeline only runs when content is added or edited and batches small texts together. If a rate limit is hit the scripts wait and retry.
-3. Optional: `GEMINI_MODEL` overrides the model (default `gemini-3.8-flash`).
+The pipeline only runs when content is added or edited, batches small texts together, and skips anything already translated, so the volume is tiny: translating the whole site into four languages costs about $1 on Claude Opus 5.5 (cents on Haiku), and a new announcement a few cents.
+
+**Option A — Anthropic (Claude).** <https://platform.claude.com> → API keys → create one → `ANTHROPIC_API_KEY`. Load a small prepaid credit. Optional: `ANTHROPIC_MODEL` (default `claude-opus-5-5`; `claude-sonnet-5-5` is about half the price, `claude-haiku-5-5` a fortieth).
+
+**Option B — Google Gemini (free tier).** <https://aistudio.google.com/apikey> → **Create API key** → `GEMINI_API_KEY`. Optional: `GEMINI_MODEL` (default `gemini-3.5-flash`; on 24 Oct 2026 `gemini-3.8-flash` took about 130 s per request for a fresh key versus 5 s, so check latency with one call before changing it). Google retires models for new keys from time to time; a 404 naming another model means updating this variable.
+
+**Choosing / switching / turning it off.** The provider is picked automatically: Anthropic if `ANTHROPIC_API_KEY` is set, otherwise Gemini if `GEMINI_API_KEY` is set, otherwise off. Force it with `TRANSLATION_PROVIDER=anthropic | gemini | off` (in Vercel for the webhook, in GitHub *variables* for the Maintenance workflow, in `.env.local` locally). With translation off the site keeps working — players see English for anything not translated — and edits still refresh the cache.
 
 ## 3. Secrets you generate yourself
 
@@ -79,7 +83,9 @@ Without any env vars the site still runs with the bundled English seed content (
    | `NEXT_PUBLIC_SUPABASE_URL` | step 1 |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | step 1 |
    | `SUPABASE_SECRET_KEY` | step 1 (mark as *Sensitive*) — also needed by the KvK page |
-   | `GEMINI_API_KEY` | step 2 (*Sensitive*) |
+   | `ANTHROPIC_API_KEY` | step 2, option A (*Sensitive*) |
+   | `GEMINI_API_KEY` | step 2, option B (*Sensitive*, optional) |
+   | `TRANSLATION_PROVIDER` | optional: `anthropic`, `gemini` or `off` |
    | `TRANSLATE_WEBHOOK_SECRET` | step 3 (*Sensitive*) |
    | `KVK_SESSION_SECRET` | step 3 (*Sensitive*, optional) |
    | `SITE_URL` | your site URL, e.g. `https://kingdom-1241.vercel.app` (fill in after the first deploy) |
@@ -110,7 +116,8 @@ Three workflows live in `.github/workflows/`:
 | `SUPABASE_DB_PASSWORD` | Deploy database | database password (step 1) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Maintenance | step 1 |
 | `SUPABASE_SECRET_KEY` | Maintenance | step 1 |
-| `GEMINI_API_KEY` | Maintenance | step 2 |
+| `ANTHROPIC_API_KEY` | Maintenance | step 2, option A |
+| `GEMINI_API_KEY` | Maintenance | step 2, option B (optional) |
 | `SITE_URL` | Maintenance | step 5 |
 | `TRANSLATE_WEBHOOK_SECRET` | Maintenance | step 3 |
 | `KVK_SEED_PASSWORD` | Maintenance (optional) | step 3 |
@@ -199,7 +206,7 @@ Vercel → your project → **Logs**. In production every server log line is JSO
 
 - **Pages show the seed content, not my edits.** Check the Vercel env vars (`NEXT_PUBLIC_SUPABASE_URL` / `…PUBLISHABLE_KEY`) and redeploy; the data layer falls back to the bundled seed when Supabase is unreachable (look for `"Failed to load from Supabase"` in the logs).
 - **The KvK page says "No battle plan has been published yet".** Either no row in `kvk_plans` has `active = true` and `published = true`, or `SUPABASE_SECRET_KEY` is missing in Vercel (the logs say which).
-- **Translations don't appear.** Logs: scope `translate`. Common causes: webhook SQL still has placeholders, secret mismatch (401), `GEMINI_API_KEY` missing, Gemini quota exceeded (the row keeps its old `source_hash`, so the next `npm run translate` finishes it).
+- **Translations don't appear.** Logs: scope `translate`. Common causes: webhook SQL still has placeholders, secret mismatch (401), no provider key (`ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) or `TRANSLATION_PROVIDER=off`, provider quota or a retired model (the row keeps its old `source_hash`, so the next `npm run translate` finishes it).
 - **A language shows English text.** The row has no translation for it yet (fallback is intentional). Run `npm run translate`.
 - **`npm run db:seed` fails with "Supabase admin client needs…".** `.env.local` is missing `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SECRET_KEY`.
 - **Deploy database fails at `supabase link`.** Check `SUPABASE_ACCESS_TOKEN` (not expired), `SUPABASE_PROJECT_ID` (the ref, not the URL) and `SUPABASE_DB_PASSWORD`. Fails at `db push` with "already exists"? The migration was applied by hand before; the files are idempotent, so re-run — if it still fails, run `supabase migration repair --status applied <version>` locally once (see the Supabase CLI docs).

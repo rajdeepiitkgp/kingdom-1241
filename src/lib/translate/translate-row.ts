@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeRichText } from "@/lib/html";
 import { DEFAULT_LOCALE } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
-import { translateFields, withRetry } from "./gemini";
+import { translateFields, withRetry } from "./provider";
 import { sourceHash } from "./hash";
 import { getTranslatableTable, isTranslatableRow, type TranslatableTable } from "./tables";
 

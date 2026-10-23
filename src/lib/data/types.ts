@@ -112,6 +112,8 @@ export interface SiteSettings {
   discordInviteUrl: string | null;
   /** Who to contact about transfers, shown while the transfer section is off. */
   transferContact: Localized;
+  /** In-game name of the site's creator, shown in the footer ("Created by …"). */
+  createdBy: string | null;
 }
 
 export interface UiString {

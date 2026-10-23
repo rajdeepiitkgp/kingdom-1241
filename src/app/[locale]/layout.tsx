@@ -76,7 +76,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
             kingdomNumber={settings.kingdomNumber}
           />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">{children}</main>
-          <Footer dict={dict} discordUrl={settings.discordInviteUrl} joinLabel={dict["home.joinDiscord"]} />
+          <Footer dict={dict} discordUrl={settings.discordInviteUrl} joinLabel={dict["home.joinDiscord"]} createdBy={settings.createdBy} />
           <BottomNav locale={currentLocale} dict={dict} />
         </ThemeProvider>
       </body>

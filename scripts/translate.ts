@@ -7,7 +7,8 @@
  *   npm run translate -- --force              # re-translate even if up to date
  *   npm run translate -- --dry-run            # show what would be translated
  *
- * Needs NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY and GEMINI_API_KEY.
+ * Needs NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY and a provider key
+ * (ANTHROPIC_API_KEY, or GEMINI_API_KEY; TRANSLATION_PROVIDER picks between them).
  * Optional: SITE_URL + TRANSLATE_WEBHOOK_SECRET to refresh the site cache afterwards.
  */
 import { loadEnv, parseArgs } from "./env";
@@ -17,18 +18,21 @@ loadEnv();
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, { isGeminiConfigured }] =
+  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, provider] =
     await Promise.all([
       import("@/lib/supabase/admin"),
       import("@/lib/translate/tables"),
       import("@/lib/translate/translate-row"),
-      import("@/lib/translate/gemini"),
+      import("@/lib/translate/provider"),
     ]);
 
   const dryRun = args["dry-run"] === true;
-  if (!dryRun && !isGeminiConfigured()) {
-    throw new Error("GEMINI_API_KEY is not set (see SETUP.md).");
+  if (!dryRun && !provider.isTranslationConfigured()) {
+    throw new Error(
+      "Translation is off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY), or TRANSLATION_PROVIDER=anthropic|gemini (see SETUP.md).",
+    );
   }
+  console.log(`Provider: ${await provider.translationProviderLabel()}`);
 
   const supabase = createAdminClient();
   const enabled = await getEnabledLocalesForTranslation(supabase);
@@ -59,6 +63,11 @@ async function main() {
   }
 
   console.log(`\n${dryRun ? "Dry run — " : ""}${translatedRows} row(s) translated, ${skipped} skipped, ${failed} failed.`);
+  if (!dryRun && provider.translationProvider() === "anthropic") {
+    const { getAnthropicUsage } = await import("@/lib/translate/anthropic");
+    const u = getAnthropicUsage();
+    console.log(`Anthropic usage: ${u.requests} request(s), ${u.inputTokens.toLocaleString()} input + ${u.outputTokens.toLocaleString()} output tokens.`);
+  }
 
   if (!dryRun && translatedRows > 0) await refreshSiteCache();
   if (failed > 0) process.exitCode = 1;

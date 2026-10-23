@@ -375,6 +375,7 @@ export const UI_STRINGS = {
     pl: "Tłumaczenia są generowane automatycznie i sprawdzane przez graczy. Widzisz błąd? Napisz do admina na Discordzie.",
     ar: "تُولَّد الترجمات تلقائيًا ويراجعها اللاعبون. وجدت خطأ؟ أخبر أحد المشرفين على ديسكورد.",
   },
+  "footer.createdBy": { en: "Created by {name}", de: "Erstellt von {name}", ko: "{name} 제작", pl: "Stworzone przez {name}", ar: "من إنشاء {name}" },
   "notFound.title": { en: "Page not found", de: "Seite nicht gefunden", ko: "페이지를 찾을 수 없습니다", pl: "Nie znaleziono strony", ar: "الصفحة غير موجودة" },
   "notFound.body": { en: "This page doesn't exist or has moved.", de: "Diese Seite existiert nicht oder wurde verschoben.", ko: "이 페이지는 존재하지 않거나 이동되었습니다.", pl: "Ta strona nie istnieje lub została przeniesiona.", ar: "هذه الصفحة غير موجودة أو تم نقلها." },
   "notFound.home": { en: "Back to home", de: "Zur Startseite", ko: "홈으로", pl: "Wróć na stronę główną", ar: "العودة إلى الرئيسية" },
