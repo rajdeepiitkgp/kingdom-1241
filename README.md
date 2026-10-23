@@ -9,7 +9,7 @@ Later phases add the admin panel with Discord login, KvK sign-ups and history, a
 
 - [Next.js 16](https://nextjs.org) (App Router, TypeScript, Cache Components) on **Vercel**
 - [Supabase](https://supabase.com) Postgres + Storage for content and images
-- [Gemini](https://ai.google.dev) for translations — run only when content is added or edited, never on page view
+- AI translations — [Anthropic Claude](https://platform.claude.com) by default, [Gemini](https://ai.google.dev) as the free alternative, or off — run only when content is added or edited, never on page view
 - Tailwind CSS v4, self-hosted fonts (Nunito, Noto Sans KR, Noto Sans Arabic)
 
 See **[SETUP.md](SETUP.md)** for getting the keys, deploying and the CI/CD pipeline, **[docs/PLAN.md](docs/PLAN.md)** for the full product plan and phases, and **[CLAUDE.md](CLAUDE.md)** for the working conventions.
@@ -36,7 +36,7 @@ src/
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password lock (signed cookie), Server Actions, formation helpers
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
-  lib/translate/          Gemini client, glossary, batched row translator with change hashes
+  lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/tools/              pure calculator logic (rally refill, pack value)
 tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts)
 public/heroes/            128px hero portraits (from kingshotdata.com)
@@ -55,7 +55,7 @@ scripts/
 
 - The list of offered languages is the `languages` table (seeded with English, German, Korean, Polish, Arabic). Each code maps to a text direction and font stack in `src/lib/i18n/languages.ts`; Arabic renders fully right-to-left.
 - Every translatable field is a JSON object `{"en": …, "de": …}`. English is the source; pages fall back to English for anything missing.
-- Translation happens in `src/lib/translate`: a Supabase webhook (or `npm run translate`) sends the English text with a game-term glossary to Gemini. A hash of the English source is stored on the row, so unchanged rows — including the pipeline's own writes — are skipped.
+- Translation happens in `src/lib/translate`: a Supabase webhook (or `npm run translate`) sends the English text with a game-term glossary to the configured provider (Anthropic Claude or Gemini; `TRANSLATION_PROVIDER` switches or turns it off). A hash of the English source is stored on the row, so unchanged rows — including the pipeline's own writes — are skipped.
 
 ### KvK battle plan
 

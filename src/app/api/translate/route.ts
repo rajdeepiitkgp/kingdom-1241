@@ -5,7 +5,7 @@ import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
 import { createLogger, elapsedMs, requestId, type Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
-import { isGeminiConfigured } from "@/lib/translate/gemini";
+import { isTranslationConfigured, translationProvider } from "@/lib/translate/provider";
 import { getTranslatableTable } from "@/lib/translate/tables";
 import { getEnabledLocalesForTranslation, translateRow, translateRows, type TranslateRowResult } from "@/lib/translate/translate-row";
 
@@ -76,10 +76,11 @@ export async function POST(request: Request) {
     log.error("SUPABASE_SECRET_KEY is not configured");
     return reply({ ok: false, error: "SUPABASE_SECRET_KEY is not configured" }, 500);
   }
-  if (!isGeminiConfigured()) {
+  if (!isTranslationConfigured()) {
+    // Translation switched off (or no provider key): still refresh the cache so edits show up.
     revalidate(tag, log);
-    log.error("GEMINI_API_KEY is not configured");
-    return reply({ ok: false, error: "GEMINI_API_KEY is not configured" }, 500);
+    log.info("Translation is off, revalidated only", { table, provider: translationProvider() });
+    return reply({ ok: true, action: "revalidated", table, translation: "off" });
   }
 
   const id = payload.id ?? (payload.record ? (payload.record[config.primaryKey] as string | undefined) : undefined);

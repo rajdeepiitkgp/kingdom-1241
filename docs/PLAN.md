@@ -54,7 +54,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 - A modern web app hosted for free (Next.js on Vercel).
 - A free database for content, roles and submissions (Supabase Postgres + Storage).
-- A free AI service for translations (Gemini).
+- An AI service for translations (Anthropic Claude for quality, about a dollar a month; Google Gemini's free tier as the alternative; can be switched or turned off at any time).
 
 ## Phases
 

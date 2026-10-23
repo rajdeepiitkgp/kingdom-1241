@@ -183,6 +183,7 @@ export function mapSettings(rows: Row[], defaults: SiteSettings): SiteSettings {
     dailyResetUtcHour: num(values.daily_reset_utc_hour, defaults.dailyResetUtcHour),
     discordInviteUrl: strOrNull(values.discord_invite_url) ?? defaults.discordInviteUrl,
     transferContact: values.transfer_contact ? loc(values.transfer_contact) : defaults.transferContact,
+    createdBy: strOrNull(values.created_by) ?? defaults.createdBy,
   };
 }
 
@@ -200,6 +201,7 @@ export function settingsToRows(settings: SiteSettings): Array<{ key: string; val
     { key: "daily_reset_utc_hour", value: settings.dailyResetUtcHour },
     { key: "discord_invite_url", value: settings.discordInviteUrl },
     { key: "transfer_contact", value: settings.transferContact },
+    { key: "created_by", value: settings.createdBy },
   ];
   return rows.filter((row) => row.value !== null && row.value !== undefined);
 }

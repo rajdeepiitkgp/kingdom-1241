@@ -11,4 +11,5 @@ export const SEED_SETTINGS: SiteSettings = {
   transferContact: {
     en: "Transfers are currently closed. Ask an R4/R5 of any alliance on Discord if you have questions.",
   },
+  createdBy: "Rudy",
 };

@@ -1,6 +1,6 @@
 # Kingdom 1241 — instructions for Claude
 
-Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later KvK sign-ups and an admin panel). Free hosting: Vercel + Supabase + Gemini. The product plan with all phases is in `docs/PLAN.md`; setup and keys are in `SETUP.md`; the code map is in `README.md`. Read those before starting a task.
+Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later KvK sign-ups and an admin panel). Free hosting: Vercel + Supabase; translations by Anthropic Claude (Gemini optional). The product plan with all phases is in `docs/PLAN.md`; setup and keys are in `SETUP.md`; the code map is in `README.md`. Read those before starting a task.
 
 ## Working agreement
 
@@ -39,7 +39,7 @@ Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later
 - Content fields are `Localized` JSON (`{ en, de, ... }`); read with `pick(value, locale)` which falls back to English. English is always the source language.
 - Use logical CSS (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`) and `rtl:` variants, never left/right, so Arabic mirrors correctly. Put `dir="auto"` on elements that show content text (so English fallback reads correctly on RTL pages) and `dir="ltr"` on codes, numbers and clocks.
 - Language list = `languages` table (seeded in `src/content/seed/languages.ts`); direction/font per code = `src/lib/i18n/languages.ts`. Adding a language means both places plus `npm run translate`.
-- Translation is done only by the pipeline in `src/lib/translate` (Gemini, glossary in `glossary.ts`), triggered by Supabase webhooks → `POST /api/translate` or `npm run translate`. Never translate during a page render. Rows carry a `source_hash`; keep that mechanism when adding tables (add them to `src/lib/translate/tables.ts` and `supabase/webhooks.sql`).
+- Translation is done only by the pipeline in `src/lib/translate`, triggered by Supabase webhooks → `POST /api/translate` or `npm run translate`. Never translate during a page render. Providers are behind `provider.ts` (`TRANSLATION_PROVIDER=anthropic|gemini|off`, auto-detected from the keys): `anthropic.ts` (Claude, default `claude-opus-5-5`, structured JSON output, `fallbacks: "default"`) and `gemini.ts` share the prompt, glossary, retry and JSON parsing; a new provider implements the same `translateFields` contract. Keep `off` working: the site must run with no provider at all. Rows carry a `source_hash`; keep that mechanism when adding tables (add them to `src/lib/translate/tables.ts` and `supabase/webhooks.sql`).
 
 ## Data and security
 

@@ -5,7 +5,7 @@ import { sourceHash } from "@/lib/translate/hash";
 const fakeTranslate = async (fields: Record<string, string>, locale: string) =>
   Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, `[${locale}] ${v}`]));
 const translateFields = vi.fn(fakeTranslate);
-vi.mock("@/lib/translate/gemini", () => ({
+vi.mock("@/lib/translate/provider", () => ({
   translateFields: (fields: Record<string, string>, locale: string) => translateFields(fields, locale),
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
