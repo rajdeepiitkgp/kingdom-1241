@@ -95,6 +95,9 @@
   --font-sans: "Nunito Variable", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-korean: "Noto Sans KR Variable", "Nunito Variable", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --font-arabic: "Noto Sans Arabic Variable", "Nunito Variable", "Segoe UI", Tahoma, system-ui, sans-serif;
+  /* CJK: the device's own fonts (bundling Noto Sans JP/TC would add many megabytes). */
+  --font-japanese: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, "Nunito Variable", system-ui, sans-serif;
+  --font-chinese: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", "Nunito Variable", system-ui, sans-serif;
 
   --radius-card: var(--radius-card);
 
@@ -125,6 +128,8 @@ body {
 /* Language-specific font stacks (set on <html> by the layout). */
 .font-korean { font-family: var(--font-korean); }
 .font-arabic { font-family: var(--font-arabic); }
+.font-japanese { font-family: var(--font-japanese); }
+.font-chinese { font-family: var(--font-chinese); }
 
 /* Numbers that should line up (countdowns, tables). */
 @utility tabular {

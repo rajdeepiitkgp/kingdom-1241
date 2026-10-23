@@ -11,7 +11,8 @@
 
 export type TextDirection = "ltr" | "rtl";
 
-export type FontStack = "latin" | "korean" | "arabic";
+/** Which font stack the layout applies (see `--font-*` in globals.css). CJK stacks use the device's fonts. */
+export type FontStack = "latin" | "korean" | "arabic" | "japanese" | "chinese";
 
 export interface LanguageInfo {
   /** BCP-47 code used in URLs, e.g. "en", "de", "pt-BR". */
@@ -43,9 +44,9 @@ export const LANGUAGE_REGISTRY: Record<string, LanguageInfo> = {
   nl: { code: "nl", name: "Dutch", nativeName: "Nederlands", direction: "ltr", font: "latin", flag: "🇳🇱" },
   vi: { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", direction: "ltr", font: "latin", flag: "🇻🇳" },
   id: { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", direction: "ltr", font: "latin", flag: "🇮🇩" },
-  ja: { code: "ja", name: "Japanese", nativeName: "日本語", direction: "ltr", font: "latin", flag: "🇯🇵" },
-  "zh-TW": { code: "zh-TW", name: "Chinese (Traditional)", nativeName: "繁體中文", direction: "ltr", font: "latin", flag: "🇹🇼" },
-  "zh-CN": { code: "zh-CN", name: "Chinese (Simplified)", nativeName: "简体中文", direction: "ltr", font: "latin", flag: "🇨🇳" },
+  ja: { code: "ja", name: "Japanese", nativeName: "日本語", direction: "ltr", font: "japanese", flag: "🇯🇵" },
+  "zh-TW": { code: "zh-TW", name: "Chinese (Traditional)", nativeName: "繁體中文", direction: "ltr", font: "chinese", flag: "🇹🇼" },
+  "zh-CN": { code: "zh-CN", name: "Chinese (Simplified)", nativeName: "简体中文", direction: "ltr", font: "chinese", flag: "🇨🇳" },
   he: { code: "he", name: "Hebrew", nativeName: "עברית", direction: "rtl", font: "latin", flag: "🇮🇱" },
   fa: { code: "fa", name: "Persian", nativeName: "فارسی", direction: "rtl", font: "arabic", flag: "🇮🇷" },
 };
