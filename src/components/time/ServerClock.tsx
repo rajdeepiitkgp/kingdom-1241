@@ -26,8 +26,8 @@ export function ServerClock({
           <Clock className="size-6" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{dict["time.serverTime"]}</p>
-          <p className="tabular text-3xl font-black leading-tight text-ink" dir="ltr" suppressHydrationWarning>
+          <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{dict["time.serverTime"]}</p>
+          <p className="text-3xl/tight font-black text-ink tabular" dir="ltr" suppressHydrationWarning>
             {now ? formatUtcClock(now) : "--:--:--"}
           </p>
           <p className="truncate text-xs font-semibold text-ink-faint" suppressHydrationWarning>
@@ -41,7 +41,7 @@ export function ServerClock({
           <RotateCcw className="size-6" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{dict["time.resetIn"]}</p>
+          <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{dict["time.resetIn"]}</p>
           <div className="leading-tight text-ink" suppressHydrationWarning>
             {now && reset ? <DurationUnits ms={reset.getTime() - now.getTime()} dict={dict} /> : <span className="text-2xl font-black">--:--:--</span>}
           </div>

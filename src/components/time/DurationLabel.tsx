@@ -30,7 +30,7 @@ export function DurationUnits({ ms, dict }: { ms: number; dict: Dictionary }) {
     <span className="inline-flex items-baseline gap-2 tabular" dir="ltr">
       {units.map(([value, label], index) => (
         <span key={index} className="inline-flex items-baseline gap-0.5">
-          <span className="text-2xl font-black leading-none">{pad2(value)}</span>
+          <span className="text-2xl leading-none font-black">{pad2(value)}</span>
           <span className="text-xs font-bold text-ink-muted">{label}</span>
         </span>
       ))}

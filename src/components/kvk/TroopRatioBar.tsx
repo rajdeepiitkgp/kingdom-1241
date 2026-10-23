@@ -24,7 +24,7 @@ export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, numb
             <span className={clsx("size-2.5 shrink-0 rounded-full", BAR_COLORS[type])} aria-hidden />
             <span aria-hidden>{TROOP_ICONS[type]}</span>
             <span className="truncate">{labels[type]}</span>
-            <span className="tabular ms-auto ps-1 text-ink" dir="ltr">
+            <span className="ms-auto ps-1 text-ink tabular" dir="ltr">
               {ratio[type]}%
             </span>
           </li>

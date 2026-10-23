@@ -165,7 +165,7 @@ export function FormationBoard({
 
       {/* Filters (only when the council tagged formations) */}
       {filters.length > 1 && (
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label={dict["kvk.formations"]}>
+        <div className="-mx-4 no-scrollbar flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label={dict["kvk.formations"]}>
           {filters.map((value) => (
             <button
               key={value}
@@ -240,7 +240,7 @@ export function FormationBoard({
                     </button>
                   </header>
 
-                  <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pt-1">
+                  <div className="-mx-1 no-scrollbar flex gap-2 overflow-x-auto px-1 pt-1">
                     {f.heroSlugs.map((slug, index) => (
                       <HeroAvatar
                         key={index}
@@ -256,7 +256,7 @@ export function FormationBoard({
                   <div>
                     <p className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink-muted">
                       <span>{dict["kvk.troopRatio"]}</span>
-                      <span className="tabular text-ink" dir="ltr">
+                      <span className="text-ink tabular" dir="ltr">
                         {ratioLabel(f)}
                       </span>
                     </p>

@@ -46,7 +46,7 @@ export function NavLinkView({ href, icon, label, variant, active }: NavLinkProps
       href={href}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "flex min-w-0 flex-col items-center gap-1 px-0.5 pb-2 pt-2.5 text-[11px] font-extrabold leading-none transition-colors",
+        "flex min-w-0 flex-col items-center gap-1 px-0.5 pt-2.5 pb-2 text-[11px] leading-none font-extrabold transition-colors",
         active ? "text-primary" : "text-ink-faint hover:text-ink-muted",
       )}
     >

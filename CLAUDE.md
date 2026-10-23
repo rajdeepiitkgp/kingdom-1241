@@ -22,7 +22,8 @@ Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later
 - Routes with dynamic params below `[locale]` should `await params` inside a Suspense boundary (see `guides/[slug]/page.tsx`) and provide `generateStaticParams`.
 - The root layout is `src/app/[locale]/layout.tsx`; `[locale]` is a root param, read it with `import { locale } from "next/root-params"`. `proxy.ts` (not middleware) adds the locale prefix to bare URLs.
 - React lint rules are strict: no `setState` directly inside effects (use `useSyncExternalStore` for external state), no impure calls during render.
-- Tailwind v4: tokens are CSS variables in `src/app/globals.css` mapped through `@theme inline`; custom component classes live in `@layer components` and must not be `@apply`-ed by other classes (define a `@utility` instead, e.g. `tabular`). Dark mode is the `.dark` class (next-themes).
+- Tailwind v4: tokens are CSS variables in `src/app/globals.css` mapped through `@theme inline`; custom component classes live in `@layer components` and must not be `@apply`-ed by other classes (define a `@utility` instead, e.g. `tabular`, `no-scrollbar`). Dark mode is the `.dark` class (next-themes).
+- Tailwind classes are linted by `eslint-plugin-better-tailwindcss` (part of `npm run lint`, which fails on warnings): canonical forms (`max-h-[28rem]` → `max-h-112`, `leading-tight` folded into `text-xs/tight`, `start-1` → `inset-s-1`, `[var(--x)]` → `(--x)`), shorthands, class order, duplicate/conflicting/unknown classes. Run `npx eslint --fix` to apply the automatic ones. `@apply` lines in CSS aren't linted — keep them canonical by hand. The `enforce-logical-properties` rule is off on purpose (it also rewrites heights and borders); keep using `ms-/me-/ps-/pe-/start-/end-/text-start` for the inline axis yourself.
 
 ## Logging
 

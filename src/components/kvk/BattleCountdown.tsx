@@ -18,16 +18,16 @@ export function BattleCountdown({ battleAt, dict, locale }: { battleAt: string; 
     <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-primary-soft px-4 py-3">
       <CalendarClock className="size-5 shrink-0 text-primary" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{dict["kvk.battleAt"]}</p>
+        <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{dict["kvk.battleAt"]}</p>
         <p className="font-extrabold text-ink" suppressHydrationWarning>
           {now ? formatLocalDateTime(start, locale) : "…"}{" "}
-          <span className="whitespace-nowrap text-xs font-semibold text-ink-faint" dir="ltr">
+          <span className="text-xs font-semibold whitespace-nowrap text-ink-faint" dir="ltr">
             ({formatUtcTime(start)})
           </span>
         </p>
       </div>
       <p
-        className={clsx("tabular rounded-xl px-3 py-1.5 text-sm font-extrabold", future ? "bg-card text-primary" : "bg-success-soft text-success")}
+        className={clsx("rounded-xl px-3 py-1.5 text-sm font-extrabold tabular", future ? "bg-card text-primary" : "bg-success-soft text-success")}
         suppressHydrationWarning
       >
         {ms === null ? "--:--:--" : future ? `${dict["kvk.battleStartsIn"]} ${formatDuration(ms, dict, true)}` : dict["kvk.battleStarted"]}

@@ -65,7 +65,7 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                     {alliance.power != null && (
                       <div className="rounded-xl bg-card-soft px-3 py-2">
                         <dt className="text-xs font-bold text-ink-faint">{dict["alliance.power"]}</dt>
-                        <dd className="tabular font-extrabold text-ink" title={alliance.power.toLocaleString("en-US")}>
+                        <dd className="font-extrabold text-ink tabular" title={alliance.power.toLocaleString("en-US")}>
                           {formatPower(alliance.power, locale)}
                         </dd>
                       </div>
@@ -76,7 +76,7 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                           <Users className="size-3" aria-hidden />
                           {dict["alliance.members"]}
                         </dt>
-                        <dd className="tabular font-extrabold text-ink">
+                        <dd className="font-extrabold text-ink tabular">
                           {alliance.members} / {alliance.maxMembers}
                         </dd>
                       </div>

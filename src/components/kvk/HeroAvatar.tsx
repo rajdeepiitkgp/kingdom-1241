@@ -26,7 +26,7 @@ export function HeroAvatar({
   skillTitle: string;
 }) {
   const px = size === "lg" ? 72 : 56;
-  const box = size === "lg" ? "size-[4.5rem] rounded-[1.1rem]" : "size-14 rounded-2xl";
+  const box = size === "lg" ? "size-18 rounded-[1.1rem]" : "size-14 rounded-2xl";
 
   if (!hero) {
     return (
@@ -34,7 +34,7 @@ export function HeroAvatar({
         <span className={clsx("grid place-items-center border-2 border-dashed border-line bg-card-soft text-2xl text-ink-faint", box)} aria-hidden>
           +
         </span>
-        <figcaption className="w-full text-xs font-bold leading-tight text-ink-faint">{anyLabel}</figcaption>
+        <figcaption className="w-full text-xs/tight font-bold text-ink-faint">{anyLabel}</figcaption>
       </figure>
     );
   }
@@ -61,18 +61,18 @@ export function HeroAvatar({
         {/* The game shows the expedition skill at the top-right corner of the portrait — kept physical on purpose. */}
         <span
           className={clsx(
-            "absolute -right-1.5 -top-1.5 grid place-items-center rounded-full bg-gold font-black text-gold-ink ring-2 ring-card",
+            "absolute -top-1.5 -right-1.5 grid place-items-center rounded-full bg-gold font-black text-gold-ink ring-2 ring-card",
             size === "lg" ? "size-7 text-xs" : "size-6 text-[11px]",
           )}
           title={`${skillTitle}: ${skillLevel}`}
         >
           {skillLevel}
         </span>
-        <span className="absolute -bottom-1 -start-1 grid size-5 place-items-center rounded-full bg-card text-[11px] ring-1 ring-line" aria-hidden>
+        <span className="absolute -inset-s-1 -bottom-1 grid size-5 place-items-center rounded-full bg-card text-[11px] ring-1 ring-line" aria-hidden>
           {TROOP_ICONS[hero.troopType]}
         </span>
       </span>
-      <figcaption className="w-full truncate text-xs font-extrabold leading-tight text-ink" dir="auto" title={name}>
+      <figcaption className="w-full truncate text-xs/tight font-extrabold text-ink" dir="auto" title={name}>
         {name}
       </figcaption>
     </figure>

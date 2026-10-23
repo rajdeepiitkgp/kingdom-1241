@@ -39,14 +39,14 @@ export function BattlePlan({
     <div className="space-y-10">
       {/* Plan header */}
       <section className="card relative overflow-hidden p-5 md:p-7">
-        <div className="pointer-events-none absolute -end-12 -top-12 size-44 rounded-full bg-gold/25 blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute -inset-e-12 -top-12 size-44 rounded-full bg-gold/25 blur-2xl" aria-hidden />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className={plan.eventType === "kvk" ? "chip bg-danger-soft text-danger" : "chip bg-gold-soft text-gold-strong"}>
               {plan.eventType === "kvk" ? <Swords className="size-3.5" aria-hidden /> : <Castle className="size-3.5" aria-hidden />}
               {dict[`kvk.event.${plan.eventType}`]}
             </p>
-            <h2 className="mt-2 text-2xl font-black leading-tight text-ink md:text-3xl" dir="auto">
+            <h2 className="mt-2 text-2xl/tight font-black text-ink md:text-3xl" dir="auto">
               {pick(plan.title, locale)}
             </h2>
             {plan.opponent && (
@@ -71,7 +71,7 @@ export function BattlePlan({
               <li key={rule.id} className="card flex items-start gap-3 px-4 py-3">
                 <RuleIcon kind={rule.kind} />
                 <div className="min-w-0 flex-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-ink-faint">{dict[`kvk.rule.${rule.kind}`]}</span>
+                  <span className="text-[11px] font-black tracking-wider text-ink-faint uppercase">{dict[`kvk.rule.${rule.kind}`]}</span>
                   <p className="text-[0.98rem] font-semibold text-ink" dir="auto">
                     {pick(rule.text, locale)}
                   </p>
@@ -93,7 +93,7 @@ export function BattlePlan({
               if (members.length === 0) return null;
               return (
                 <div key={team} className="card p-4">
-                  <h3 className="text-sm font-black uppercase tracking-wider text-ink-muted">{dict[`kvk.coordinators.${team}`]}</h3>
+                  <h3 className="text-sm font-black tracking-wider text-ink-muted uppercase">{dict[`kvk.coordinators.${team}`]}</h3>
                   <ul className="mt-3 grid gap-2">
                     {members.map((c) => {
                       const note = pick(c.note, locale);
@@ -142,7 +142,7 @@ export function BattlePlan({
               anyLabel={dict["kvk.anyHero"]}
               skillTitle={dict["kvk.skillLevel"]}
             />
-            <p className="max-w-[9rem] text-xs font-bold leading-snug text-ink-muted">
+            <p className="max-w-36 text-xs/snug font-bold text-ink-muted">
               {dict["kvk.skillLevel"]}: <span className="text-gold-strong">{plan.minSkillLevel}</span>
               <br />
               <span className="text-gold-strong">{"★".repeat(plan.minHeroStars)}</span>+
