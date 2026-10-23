@@ -2,6 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
 import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
+import { createLogger, requestId } from "@/lib/log";
 
 /**
  * POST /api/revalidate   { "table": "announcements" }   (table optional)
@@ -11,9 +12,17 @@ import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
  * non-translatable column, or after running the seed script).
  * Protected by the same secret as /api/translate.
  */
+
+const log = createLogger("revalidate");
+
 export async function POST(request: Request) {
+  const reqId = requestId(request);
+  const reply = (body: Record<string, unknown>, status = 200) =>
+    NextResponse.json({ ...body, reqId }, { status, headers: { "x-request-id": reqId } });
+
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    log.warn("Unauthorized call", { reqId });
+    return reply({ error: "unauthorized" }, 401);
   }
 
   let table: string | undefined;
@@ -26,5 +35,6 @@ export async function POST(request: Request) {
 
   const tag = table ? (cacheTagForTable(table) ?? CACHE_TAGS.all) : CACHE_TAGS.all;
   revalidateTag(tag, { expire: 0 });
-  return NextResponse.json({ ok: true, tag, now: Date.now() });
+  log.info("Cache revalidated", { reqId, table: table ?? "*", tag });
+  return reply({ ok: true, tag, now: Date.now() });
 }
