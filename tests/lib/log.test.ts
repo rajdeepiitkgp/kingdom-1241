@@ -57,6 +57,10 @@ describe("requestId", () => {
     expect(requestId({ headers: new Headers({ "x-vercel-id": "fra1::abc" }) })).toBe("fra1::abc");
     expect(requestId({ headers: new Headers() })).toMatch(/^[0-9a-f-]{8}$/);
     expect(requestId(new Headers({ "x-request-id": "direct" }))).toBe("direct");
+    // Next's ReadonlyHeaders adapter: a Headers-like object that ALSO carries a raw `headers` map.
+    const adapter = Object.assign(new Headers({ "x-request-id": "adapter" }), { headers: { "x-request-id": "adapter" } });
+    expect(requestId(adapter as unknown as Headers)).toBe("adapter");
+    expect(requestId({ headers: { get: () => null } })).toMatch(/^[0-9a-f-]{8}$/);
     expect(requestId()).toMatch(/^[0-9a-f-]{8}$/);
   });
 });

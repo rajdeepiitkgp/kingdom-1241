@@ -6,6 +6,7 @@ Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later
 
 - Work on a feature branch (`feat/<phase-or-topic>`), commit in small steps with clear messages, open a PR against `main` when done. Never commit secrets: `.env.local` is ignored, only `.env.example` is tracked.
 - Before pushing, all of these must pass: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`. The same four run in GitHub Actions (`.github/workflows/ci.yml`) on every PR; `main` is protected by that check and Vercel deploys `main`.
+- Node 24 everywhere: `.nvmrc` drives CI (`node-version-file`) and `engines.node` in package.json tells Vercel which runtime to use. Newer local versions work; don't lower it.
 - Unit tests live in `tests/`, mirroring `src/` (`src/lib/kvk/access.ts` → `tests/lib/kvk/access.test.ts`), never next to the source file. Import the code under test through the `@/` alias. Add tests for any new pure logic (helpers, mappers, seed validity).
 - Keep the site light: it runs on free tiers. No new dependencies without a clear reason, no client-side libraries for things CSS or a few lines can do, small images (hero portraits are 128px and rendered with `unoptimized` to save image transformations), everything cacheable stays in the static shell.
 - For UI changes, check the result in a browser on a phone-width viewport (390px) and desktop, in light and dark mode, and in Arabic (`/ar/...`) for RTL. Playwright with the bundled Chromium works for screenshots.

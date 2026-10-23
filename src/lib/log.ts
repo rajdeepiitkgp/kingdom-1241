@@ -114,9 +114,16 @@ export function createLogger(scope: string, base: LogFields = {}): Logger {
  */
 type HeaderSource = { get(name: string): string | null };
 
+function isHeaderSource(value: unknown): value is HeaderSource {
+  return typeof (value as HeaderSource | null)?.get === "function";
+}
+
 export function requestId(source?: { headers: HeaderSource } | HeaderSource | null): string {
-  const headers = source && "headers" in source ? source.headers : source;
-  const given = headers?.get("x-request-id") ?? headers?.get("x-vercel-id");
+  // Accepts a Request, a Headers object or Next's ReadonlyHeaders. Detect by
+  // capability: Next's headers adapter also has an internal `headers` field,
+  // so checking for that property first would pick the wrong object.
+  const headers = isHeaderSource(source) ? source : isHeaderSource(source?.headers) ? source.headers : null;
+  const given = headers ? (headers.get("x-request-id") ?? headers.get("x-vercel-id")) : null;
   if (given) return given.slice(0, 64);
   return globalThis.crypto.randomUUID().slice(0, 8);
 }
