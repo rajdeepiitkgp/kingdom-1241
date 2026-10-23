@@ -37,11 +37,10 @@ async function main() {
   const seed = buildSeedContent();
   const summary: string[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function upsertMissing(
     table: string,
     key: string,
-    rows: Array<Record<string, any>>,
+    rows: Array<Record<string, unknown>>,
     replace = overwrite,
   ) {
     if (rows.length === 0) return;
