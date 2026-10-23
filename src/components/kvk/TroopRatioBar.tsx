@@ -9,7 +9,10 @@ const BAR_COLORS: Record<TroopType, string> = {
   archers: "bg-emerald-400",
 };
 
-/** Infantry / cavalry / archers split as a bar plus a legend with percentages. */
+/**
+ * Infantry / cavalry / archers split as a bar plus a legend. Each legend entry
+ * is its own pill so a percentage can never be read as part of the next entry.
+ */
 export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, number>; labels: Record<TroopType, string> }) {
   return (
     <div>
@@ -18,13 +21,21 @@ export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, numb
           <div key={type} className={BAR_COLORS[type]} style={{ width: `${ratio[type]}%` }} />
         ))}
       </div>
-      <ul className="mt-2 grid grid-cols-3 gap-1 text-xs font-bold text-ink-muted">
+      <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
         {TROOP_ORDER.map((type) => (
-          <li key={type} className={clsx("flex min-w-0 items-center gap-1", ratio[type] === 0 && "opacity-50")}>
+          <li
+            key={type}
+            className={clsx(
+              "flex min-w-0 items-center gap-1.5 rounded-xl bg-card-soft px-2 py-1.5 text-xs",
+              ratio[type] === 0 && "opacity-50",
+            )}
+          >
             <span className={clsx("size-2.5 shrink-0 rounded-full", BAR_COLORS[type])} aria-hidden />
-            <span aria-hidden>{TROOP_ICONS[type]}</span>
-            <span className="truncate">{labels[type]}</span>
-            <span className="ms-auto ps-1 text-ink tabular" dir="ltr">
+            <span className="shrink-0" aria-hidden>
+              {TROOP_ICONS[type]}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-bold text-ink-muted">{labels[type]}</span>
+            <span className="shrink-0 font-black text-ink tabular" dir="ltr">
               {ratio[type]}%
             </span>
           </li>
