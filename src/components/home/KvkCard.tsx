@@ -11,7 +11,7 @@ export function KvkCard({ dict, locale }: { dict: Dictionary; locale: string }) 
       className="card group relative flex items-center gap-4 overflow-hidden border-2 border-gold/60 p-5 transition-shadow hover:shadow-lift md:p-6"
     >
       <div className="pointer-events-none absolute -inset-e-10 -top-10 size-32 rounded-full bg-gold/20 blur-2xl" aria-hidden />
-      <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-gold-ink shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
+      <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
         <Swords className="size-7" />
       </span>
       <div className="relative min-w-0 flex-1">

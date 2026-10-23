@@ -62,8 +62,8 @@ export function HeroAvatar({
         {/* The game shows the Top Expedition Skill (flag icon) at the top-right corner of the portrait — kept physical on purpose. */}
         <span
           className={clsx(
-            "absolute -top-1.5 -right-1.5 inline-flex items-center gap-0.5 rounded-full bg-gold font-black text-gold-ink ring-2 ring-card",
-            size === "lg" ? "h-7 px-1.5 text-xs" : "h-6 px-1 text-[11px]",
+            "absolute -top-2 -right-2 inline-flex items-center gap-0.5 rounded-full bg-gold font-black text-on-gold shadow-[0_2px_0_0_var(--gold-strong)] ring-2 ring-card",
+            size === "lg" ? "h-7 px-2 text-sm" : "h-6 px-1.5 text-xs",
           )}
           title={`${skillTitle}: ${skillLevel}`}
         >

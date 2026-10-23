@@ -201,7 +201,7 @@ export function FormationBoard({
                 <article className={clsx("card flex h-full flex-col gap-4 p-4 transition-shadow", isSaved && "ring-4 ring-success/30")}>
                   <header className="flex items-center gap-3">
                     <span
-                      className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold text-2xl font-black text-gold-ink shadow-[0_3px_0_0_var(--gold-strong)]"
+                      className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold text-2xl font-black text-on-gold shadow-[0_3px_0_0_var(--gold-strong)]"
                       dir="ltr"
                     >
                       {f.label}

@@ -26,6 +26,8 @@
   --gold-strong: #d8961c;
   --gold-soft: #fff4d9;
   --gold-ink: #4a3300;
+  /* Text on SOLID gold (badges, gold buttons): stays dark in both themes. */
+  --on-gold: #3b2a00;
 
   --success: #2fb67c;
   --success-soft: #dcf7ea;
@@ -83,6 +85,7 @@
   --color-gold-strong: var(--gold-strong);
   --color-gold-soft: var(--gold-soft);
   --color-gold-ink: var(--gold-ink);
+  --color-on-gold: var(--on-gold);
 
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -170,7 +173,7 @@ body {
 
   .btn-gold {
     --btn-shadow: var(--gold-strong);
-    @apply bg-gold text-gold-ink;
+    @apply bg-gold text-on-gold;
   }
   .btn-gold:hover:not(:disabled) {
     background-color: color-mix(in oklab, var(--gold) 90%, white);

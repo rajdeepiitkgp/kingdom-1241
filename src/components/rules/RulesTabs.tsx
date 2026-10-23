@@ -94,7 +94,7 @@ export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict:
           <ol className="grid gap-3">
             {active.rules.map((rule, index) => (
               <li key={rule.id} className="card flex gap-4 p-5">
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gold text-sm font-black text-gold-ink shadow-[0_3px_0_0_var(--gold-strong)]">
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gold text-sm font-black text-on-gold shadow-[0_3px_0_0_var(--gold-strong)]">
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
