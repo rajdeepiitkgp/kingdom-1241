@@ -207,6 +207,7 @@ body {
     @apply text-[1.02rem] leading-relaxed text-ink;
   }
   .prose-game > * + * { margin-top: 0.9em; }
+  .prose-game > :first-child { margin-top: 0; }
   .prose-game h2 { @apply mt-8 text-xl font-extrabold text-ink; }
   .prose-game h3 { @apply mt-6 text-lg font-extrabold text-ink; }
   .prose-game h4 { @apply mt-4 text-base font-extrabold text-ink; }

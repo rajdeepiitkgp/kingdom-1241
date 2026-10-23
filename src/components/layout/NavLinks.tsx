@@ -1,35 +1,27 @@
-"use client";
-
-import clsx from "clsx";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { localePath, stripLocale } from "@/lib/i18n/paths";
-import { isActivePath, NAV_ITEMS } from "./nav-items";
-import { NavIcon } from "./NavIcon";
+import { localePath } from "@/lib/i18n/paths";
+import { NAV_ITEMS } from "./nav-items";
+import { ActiveNavLink, NavLinkView } from "./NavLink";
+
+/**
+ * Navigation. The links themselves are rendered on the server; only the
+ * "is this the current page" highlight needs the client pathname, so that
+ * part lives in a tiny leaf component behind a Suspense boundary (required
+ * for routes with dynamic params under Cache Components). The fallback is the
+ * same link without the highlight, so nothing shifts.
+ */
 
 /** Desktop navigation (top bar). */
 export function DesktopNav({ locale, dict }: { locale: string; dict: Dictionary }) {
-  const pathname = usePathname();
-  const current = stripLocale(pathname);
-
   return (
     <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
       {NAV_ITEMS.map((item) => {
-        const active = isActivePath(current, item.href);
+        const props = { href: localePath(locale, item.href), section: item.href, icon: item.icon, label: dict[item.labelKey], variant: "desktop" as const };
         return (
-          <Link
-            key={item.href}
-            href={localePath(locale, item.href)}
-            aria-current={active ? "page" : undefined}
-            className={clsx(
-              "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold transition-colors",
-              active ? "bg-primary text-primary-ink shadow-[0_3px_0_0_var(--primary-strong)]" : "text-ink-muted hover:bg-primary-soft hover:text-ink",
-            )}
-          >
-            <NavIcon icon={item.icon} className="size-4" />
-            {dict[item.labelKey]}
-          </Link>
+          <Suspense key={item.href} fallback={<NavLinkView {...props} active={false} />}>
+            <ActiveNavLink {...props} />
+          </Suspense>
         );
       })}
     </nav>
@@ -38,9 +30,6 @@ export function DesktopNav({ locale, dict }: { locale: string; dict: Dictionary 
 
 /** Mobile bottom tab bar. */
 export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }) {
-  const pathname = usePathname();
-  const current = stripLocale(pathname);
-
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur md:hidden"
@@ -48,27 +37,12 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {NAV_ITEMS.map((item) => {
-          const active = isActivePath(current, item.href);
+          const props = { href: localePath(locale, item.href), section: item.href, icon: item.icon, label: dict[item.labelKey], variant: "mobile" as const };
           return (
             <li key={item.href}>
-              <Link
-                href={localePath(locale, item.href)}
-                aria-current={active ? "page" : undefined}
-                className={clsx(
-                  "flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-extrabold leading-none transition-colors",
-                  active ? "text-primary" : "text-ink-faint hover:text-ink-muted",
-                )}
-              >
-                <span
-                  className={clsx(
-                    "flex h-8 w-14 items-center justify-center rounded-full transition-colors",
-                    active && "bg-primary-soft",
-                  )}
-                >
-                  <NavIcon icon={item.icon} className="size-5" />
-                </span>
-                <span className="truncate">{dict[item.labelKey]}</span>
-              </Link>
+              <Suspense fallback={<NavLinkView {...props} active={false} />}>
+                <ActiveNavLink {...props} />
+              </Suspense>
             </li>
           );
         })}

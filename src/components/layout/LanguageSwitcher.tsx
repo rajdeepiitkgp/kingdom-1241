@@ -1,7 +1,7 @@
 "use client";
 
 import { Languages } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LOCALE_COOKIE, type SiteLanguage } from "@/lib/i18n/languages";
 import { switchLocaleInPath } from "@/lib/i18n/paths";
@@ -23,7 +23,6 @@ export function LanguageSwitcher({
   languages: SiteLanguage[];
   label: string;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
 
   // Remember the language of the page the visitor is on (also covers direct links).
@@ -42,7 +41,9 @@ export function LanguageSwitcher({
         onChange={(event) => {
           const next = event.target.value;
           rememberLocale(next);
-          router.push(switchLocaleInPath(pathname, next));
+          // Read the URL in the handler (not during render) so this component
+          // never blocks prerendering of routes with dynamic params.
+          router.push(switchLocaleInPath(window.location.pathname, next));
         }}
         className="h-10 max-w-[9.5rem] cursor-pointer appearance-none truncate rounded-full border border-line bg-card ps-9 pe-7 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 sm:max-w-none"
         aria-label={label}

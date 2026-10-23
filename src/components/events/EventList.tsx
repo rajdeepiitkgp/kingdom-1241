@@ -118,7 +118,7 @@ export function EventCard({
             <dt className="sr-only">{dict["events.next"]}</dt>
             <dd className="font-bold" suppressHydrationWarning>
               {formatLocalDateTime(start, locale)}
-              <span className="ms-2 text-xs font-semibold text-ink-faint" dir="ltr">
+              <span className="ms-2 whitespace-nowrap text-xs font-semibold text-ink-faint" dir="ltr">
                 ({formatUtcTime(start)})
               </span>
             </dd>
