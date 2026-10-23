@@ -38,8 +38,8 @@ export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, numb
               ratio[type] === 0 && "opacity-60",
             )}
           >
-            <span className={clsx("size-2.5 shrink-0 rounded-full", BAR_COLORS[type])} aria-hidden />
-            <span className="shrink-0" aria-hidden>
+            {/* Icon on a neutral disc: the brown horse emoji disappears on the amber tint otherwise. */}
+            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-card text-[11px] ring-1 ring-line" aria-hidden>
               {TROOP_ICONS[type]}
             </span>
             <span className="min-w-0 flex-1 truncate font-bold text-ink">{labels[type]}</span>
