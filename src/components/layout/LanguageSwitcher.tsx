@@ -35,7 +35,7 @@ export function LanguageSwitcher({
   return (
     <label className="relative inline-flex items-center">
       <span className="sr-only">{label}</span>
-      <Languages className="pointer-events-none absolute start-3 size-4 text-primary" aria-hidden />
+      <Languages className="pointer-events-none absolute inset-s-3 size-4 text-primary" aria-hidden />
       <select
         value={locale}
         onChange={(event) => {
@@ -45,7 +45,7 @@ export function LanguageSwitcher({
           // never blocks prerendering of routes with dynamic params.
           router.push(switchLocaleInPath(window.location.pathname, next));
         }}
-        className="h-10 max-w-[9.5rem] cursor-pointer appearance-none truncate rounded-full border border-line bg-card ps-9 pe-7 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 sm:max-w-none"
+        className="h-10 max-w-38 cursor-pointer appearance-none truncate rounded-full border border-line bg-card ps-9 pe-7 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 sm:max-w-none"
         aria-label={label}
       >
         {languages.map((language) => (
@@ -54,7 +54,7 @@ export function LanguageSwitcher({
           </option>
         ))}
       </select>
-      <span className="pointer-events-none absolute end-3 text-xs text-ink-muted" aria-hidden>
+      <span className="pointer-events-none absolute inset-e-3 text-xs text-ink-muted" aria-hidden>
         ▾
       </span>
       {current && <span className="sr-only">{current.name}</span>}

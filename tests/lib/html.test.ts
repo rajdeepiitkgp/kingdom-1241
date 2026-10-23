@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToExcerpt, markdownToHtml, sanitizeRichText } from "./html";
+import { htmlToExcerpt, markdownToHtml, sanitizeRichText } from "@/lib/html";
 
 describe("sanitizeRichText", () => {
   it("strips scripts, event handlers and javascript: links", () => {

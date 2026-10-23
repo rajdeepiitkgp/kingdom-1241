@@ -105,7 +105,7 @@ export function EventCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-extrabold leading-tight text-ink" dir="auto">{pick(event.name, locale)}</h3>
+          <h3 className="text-lg/tight font-extrabold text-ink" dir="auto">{pick(event.name, locale)}</h3>
           <span className="chip bg-primary-soft text-primary">{dict[`events.category.${event.category}`]}</span>
           {live && <span className="chip bg-success-soft text-success">● {dict["time.live"]}</span>}
         </div>
@@ -118,7 +118,7 @@ export function EventCard({
             <dt className="sr-only">{dict["events.next"]}</dt>
             <dd className="font-bold" suppressHydrationWarning>
               {formatLocalDateTime(start, locale)}
-              <span className="ms-2 whitespace-nowrap text-xs font-semibold text-ink-faint" dir="ltr">
+              <span className="ms-2 text-xs font-semibold whitespace-nowrap text-ink-faint" dir="ltr">
                 ({formatUtcTime(start)})
               </span>
             </dd>
@@ -137,7 +137,7 @@ export function EventCard({
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <p
             className={clsx(
-              "tabular rounded-xl px-3 py-1.5 text-sm font-extrabold",
+              "rounded-xl px-3 py-1.5 text-sm font-extrabold tabular",
               live ? "bg-success-soft text-success" : soon ? "bg-gold-soft text-gold-strong" : "bg-primary-soft text-primary",
             )}
             suppressHydrationWarning

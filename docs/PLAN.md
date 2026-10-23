@@ -17,7 +17,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 - **Guides:** how 1241 plays each event (Vikings, Bear Hunt, Swordland, KvK, Alliance Championship, more later).
 - **Tools:** rally troop refill, pack value check.
 - **KvK:** battle day sign-ups and group lists; minister appointment booking with automatic slot allocation (later phase).
-- **KvK battle plan (password-locked):** rally leaders with their heroes, stars and troop ratio; which players join which rally leader; minimum heroes, stars and troop tiers per role; attack and defence groups with their UTC hours. Players can search their name to see their assignment.
+- **KvK battle plan (password-locked):** one page for both of the kingdom's battle events — the internal castle battle and KvK, which alternate every two weeks. It holds the formations every player must save in the game (hero portraits, required top-right skill level and stars, troop ratio, attack/defence and rally-lead/rally-join tags), the coordinators of the two battle alliances ([KvK] rallies the castle, [TMP] counter-rallies) and the battle-day instructions. Later: which players join which rally leader, attack and defence groups with their UTC hours, and a name search for assignments.
 - **KvK history:** every past KvK with opponent, result and notes.
 - **Alliance pages:** leaders, power, members and requirements, updated automatically from MightPulse.
 - **Transfers:** a section that admins can switch on or off; when off, a short note naming who to contact about transfers.
@@ -59,13 +59,20 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 ## Phases
 
 1. Site layout, languages, home, events, rules, guides and tools. — **done (PR "Phase 1")**
-2. Admin panel with Discord login, roles and the content editor.
-3. KvK sign-ups, group lists, battle plan and KvK history.
+2. Admin panel with Discord login, roles and the content editor (including the battle plan and formations).
+3. KvK: battle plan with formations, coordinators and instructions — **done (PR "KvK battle plan")**; sign-ups, group lists, assignments and KvK history — open.
 4. Alliance pages from MightPulse and the transfer section.
 5. Minister appointment booking and slot allocation.
 
+## Operations
+
+- Code on GitHub; every pull request runs lint, typecheck, tests and build; `main` is protected by that check.
+- Vercel deploys `main` to production and every pull request to a preview link.
+- Database changes are SQL files in `supabase/migrations/`, applied to Supabase by a GitHub Action when they reach `main`.
+- Logs are structured (JSON in production) with a request id on every API response, so problems can be traced.
+
 ## Open questions
 
-- Final alliance list, tags and colours.
-- Real event times and rules for 1241.
+- Alliance leaders, member counts, descriptions and Discord links (tags, names and power are in).
+- Real event times and rules for 1241; the exact dates of the castle battle / KvK two-week cycle.
 - Site address: free subdomain or a custom domain.

@@ -5,6 +5,8 @@
  *   npm run db:seed -- --overwrite  # also replace existing seed rows (drops their translations!)
  *
  * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local.
+ * The KvK battle plan is seeded with the password from KVK_SEED_PASSWORD
+ * (default "1241") — change it in the kvk_plans table afterwards.
  * After seeding, run `npm run translate` to fill in the other languages.
  */
 import { loadEnv, parseArgs } from "./env";
@@ -174,8 +176,91 @@ async function main() {
     })),
   );
 
+  await upsertMissing(
+    "heroes",
+    "id",
+    seed.heroes.map((h) => ({
+      id: h.id,
+      slug: h.slug,
+      name: h.name,
+      troop_type: h.troopType,
+      rarity: h.rarity,
+      generation: h.generation,
+      icon_url: h.iconUrl,
+      sort_order: h.sortOrder,
+      published: h.published,
+    })),
+  );
+
+  // KvK battle plan. Only one plan may be active; if the council already has
+  // one, the placeholder goes in as inactive so it never replaces the real plan.
+  const plan = seed.kvkPlan;
+  const { data: activePlans, error: activeError } = await supabase.from("kvk_plans").select("id").eq("active", true);
+  if (activeError) throw new Error(`kvk_plans: ${activeError.message}`);
+  const otherActive = (activePlans ?? []).some((row) => row.id !== plan.id);
+
+  await upsertMissing("kvk_plans", "id", [
+    {
+      id: plan.id,
+      slug: plan.slug,
+      event_type: plan.eventType,
+      title: plan.title,
+      opponent: plan.opponent,
+      battle_at: plan.battleAt,
+      intro: plan.intro,
+      min_hero_stars: plan.minHeroStars,
+      min_skill_level: plan.minSkillLevel,
+      password: plan.password,
+      active: otherActive ? false : plan.active,
+      published: plan.published,
+    },
+  ]);
+
+  await upsertMissing(
+    "kvk_rules",
+    "id",
+    plan.rules.map((r) => ({ id: r.id, plan_id: r.planId, kind: r.kind, text: r.text, sort_order: r.sortOrder, published: r.published })),
+  );
+
+  await upsertMissing(
+    "kvk_coordinators",
+    "id",
+    plan.coordinators.map((c) => ({
+      id: c.id,
+      plan_id: c.planId,
+      team: c.team,
+      name: c.name,
+      alliance_tag: c.allianceTag,
+      note: c.note,
+      sort_order: c.sortOrder,
+      published: c.published,
+    })),
+  );
+
+  await upsertMissing(
+    "kvk_formations",
+    "id",
+    plan.formations.map((f) => ({
+      id: f.id,
+      plan_id: f.planId,
+      label: f.label,
+      side: f.side,
+      role: f.role,
+      hero_1: f.heroSlugs[0],
+      hero_2: f.heroSlugs[1],
+      hero_3: f.heroSlugs[2],
+      infantry_pct: f.infantry,
+      cavalry_pct: f.cavalry,
+      archers_pct: f.archers,
+      note: f.note,
+      sort_order: f.sortOrder,
+      published: f.published,
+    })),
+  );
+
   console.log(summary.join("\n"));
   console.log("\nDone. Next: `npm run translate` to fill in the other languages, then refresh the site cache (see SETUP.md).");
+  console.log("KvK: the placeholder battle plan uses the password from KVK_SEED_PASSWORD (default \"1241\") — change it in the kvk_plans table.");
 }
 
 main().catch((error) => {

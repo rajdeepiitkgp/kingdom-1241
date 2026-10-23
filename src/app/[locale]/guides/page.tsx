@@ -25,7 +25,7 @@ export default async function GuidesPage() {
           <li key={guide.id}>
             <Link
               href={localePath(locale, `/guides/${guide.slug}`)}
-              className="card group flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+              className="card group flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:outline-none"
             >
               <span className="grid size-14 place-items-center rounded-2xl bg-primary-soft text-3xl" aria-hidden>
                 {guide.icon}

@@ -65,7 +65,7 @@ async function GuideArticle({ params }: Pick<PageProps<"/[locale]/guides/[slug]"
 
       {relatedEvents.length > 0 && (
         <section className="mt-5">
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-ink-muted">{dict["guides.relatedEvent"]}</h2>
+          <h2 className="mb-2 text-sm font-bold tracking-wider text-ink-muted uppercase">{dict["guides.relatedEvent"]}</h2>
           <EventList events={relatedEvents} dict={dict} locale={locale} compact />
         </section>
       )}

@@ -22,7 +22,7 @@ export interface GlossaryEntry {
 export const GLOSSARY: GlossaryEntry[] = [
   { term: "Kingshot", keep: true, note: "The name of the game." },
   { term: "Kingdom 1241", keep: true, note: "Our kingdom. Keep the number." },
-  { term: "KvK", keep: true, note: "Kingdom vs Kingdom. Keep the abbreviation." },
+  { term: "KvK", keep: true, note: "Kingdom vs Kingdom; also the tag of the kingdom's castle-rally alliance [KvK]. Keep the abbreviation." },
   { term: "R4", keep: true, note: "Alliance rank 4 (officer)." },
   { term: "R5", keep: true, note: "Alliance rank 5 (leader)." },
   { term: "UTC", keep: true },
@@ -173,6 +173,50 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Daily reset",
     translations: { de: "Täglicher Reset", pl: "Dzienny reset", ko: "일일 초기화", ar: "إعادة التعيين اليومية" },
+  },
+  { term: "TMP", keep: true, note: "Tag of one of Kingdom 1241's two battle alliances ([TMP] counter-rallies, [KvK] rallies the castle). Keep the tag." },
+  {
+    term: "Counter-rally",
+    translations: { de: "Gegen-Rally", pl: "Kontr-rajd", ko: "카운터 집결", ar: "حشد مضاد" },
+    note: "A rally launched against the enemy's rally or against the castle they hold.",
+  },
+  {
+    term: "Castle Battle",
+    translations: { de: "Burgschlacht", pl: "Bitwa o Zamek", ko: "성 전투", ar: "معركة القلعة" },
+    note: "The fight for the castle on KvK battle day.",
+  },
+  {
+    term: "Formation",
+    translations: { de: "Formation", pl: "Formacja", ko: "편성", ar: "التشكيلة" },
+    note: "A saved set of heroes + troop ratio.",
+  },
+  {
+    term: "Troop Ratio",
+    translations: { de: "Truppenverhältnis", pl: "Proporcje wojsk", ko: "병력 비율", ar: "نسبة توزيع القوات" },
+    note: "The in-game preset feature where formations are saved.",
+  },
+  {
+    term: "Rally lead",
+    translations: { de: "Rally-Leiter", pl: "Lider rajdu", ko: "집결 대장", ar: "قائد الحشد" },
+    note: "The player who starts a rally.",
+  },
+  {
+    term: "Coordinator",
+    translations: { de: "Koordinator", pl: "Koordynator", ko: "코디네이터", ar: "المنسق" },
+    note: "A player directing others on KvK battle day.",
+  },
+  {
+    term: "Buff",
+    translations: { de: "Buff", pl: "Buff", ko: "버프", ar: "تعزيز" },
+  },
+  {
+    term: "Pet",
+    translations: { de: "Haustier", pl: "Zwierzak", ko: "펫", ar: "الحيوان الأليف" },
+  },
+  {
+    term: "Deployment Capacity",
+    translations: { de: "Einsatzkapazität", pl: "Pojemność rozmieszczenia", ko: "배치 수용량", ar: "سعة الانتشار" },
+    note: "A buff that lets a player send more troops.",
   },
 ];
 

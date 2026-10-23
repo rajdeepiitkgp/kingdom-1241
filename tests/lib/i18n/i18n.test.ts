@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { format } from "./dictionary";
-import { pick } from "./localized";
-import { negotiateLocale, parseAcceptLanguage } from "./negotiate";
-import { localePath, stripLocale, switchLocaleInPath } from "./paths";
+import { format } from "@/lib/i18n/dictionary";
+import { pick } from "@/lib/i18n/localized";
+import { negotiateLocale, parseAcceptLanguage } from "@/lib/i18n/negotiate";
+import { localePath, stripLocale, switchLocaleInPath } from "@/lib/i18n/paths";
 
 describe("pick", () => {
   it("prefers the locale, then English, then anything", () => {

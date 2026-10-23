@@ -2,6 +2,7 @@ import { revalidateTag } from "next/cache";
 import { after, NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
 import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
+import { createLogger, elapsedMs, requestId, type Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import { isGeminiConfigured } from "@/lib/translate/gemini";
@@ -21,9 +22,12 @@ import { getEnabledLocalesForTranslation, translateRow, translateRows, type Tran
  *
  * The response is sent immediately; translation runs after the response so
  * the webhook never times out. The page cache is refreshed when it finishes.
+ * Every log line and response carries `reqId` for tracing in the Vercel logs.
  */
 
 export const maxDuration = 300;
+
+const baseLog = createLogger("translate");
 
 interface WebhookPayload {
   type?: "INSERT" | "UPDATE" | "DELETE";
@@ -36,42 +40,52 @@ interface WebhookPayload {
 }
 
 export async function POST(request: Request) {
+  const reqId = requestId(request);
+  const started = performance.now();
+  const log = baseLog.child({ reqId });
+  const reply = (body: Record<string, unknown>, status = 200) =>
+    NextResponse.json({ ...body, reqId }, { status, headers: { "x-request-id": reqId } });
+
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    log.warn("Unauthorized webhook call");
+    return reply({ error: "unauthorized" }, 401);
   }
 
   let payload: WebhookPayload;
   try {
     payload = (await request.json()) as WebhookPayload;
   } catch {
-    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+    return reply({ error: "invalid JSON body" }, 400);
   }
 
   const table = payload.table?.trim();
-  if (!table) return NextResponse.json({ error: "missing table" }, { status: 400 });
+  if (!table) return reply({ error: "missing table" }, 400);
 
   const tag = cacheTagForTable(table);
   const config = getTranslatableTable(table);
 
   // Deletes and non-translatable tables only need a cache refresh.
   if (payload.type === "DELETE" || !config) {
-    revalidate(tag);
-    return NextResponse.json({ ok: true, action: "revalidated", table });
+    revalidate(tag, log);
+    log.info("Revalidated only", { table, type: payload.type ?? "manual" });
+    return reply({ ok: true, action: "revalidated", table });
   }
 
   if (!isSupabaseAdminConfigured()) {
-    revalidate(tag);
-    return NextResponse.json({ ok: false, error: "SUPABASE_SECRET_KEY is not configured" }, { status: 500 });
+    revalidate(tag, log);
+    log.error("SUPABASE_SECRET_KEY is not configured");
+    return reply({ ok: false, error: "SUPABASE_SECRET_KEY is not configured" }, 500);
   }
   if (!isGeminiConfigured()) {
-    revalidate(tag);
-    return NextResponse.json({ ok: false, error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+    revalidate(tag, log);
+    log.error("GEMINI_API_KEY is not configured");
+    return reply({ ok: false, error: "GEMINI_API_KEY is not configured" }, 500);
   }
 
   const id = payload.id ?? (payload.record ? (payload.record[config.primaryKey] as string | undefined) : undefined);
 
   if (table !== "site_settings" && !id) {
-    return NextResponse.json({ error: "missing record id" }, { status: 400 });
+    return reply({ error: "missing record id" }, 400);
   }
 
   // Cheap short-circuit for webhook loops: an UPDATE that didn't touch any
@@ -83,8 +97,9 @@ export async function POST(request: Request) {
       (column) => JSON.stringify(payload.record?.[column]) !== JSON.stringify(payload.old_record?.[column]),
     );
     if (!changed) {
-      revalidate(tag);
-      return NextResponse.json({ ok: true, action: "unchanged", table, id });
+      revalidate(tag, log);
+      log.info("Row unchanged, revalidated only", { table, id });
+      return reply({ ok: true, action: "unchanged", table, id });
     }
   }
 
@@ -92,40 +107,47 @@ export async function POST(request: Request) {
     try {
       const supabase = createAdminClient();
       const locales = await getEnabledLocalesForTranslation(supabase);
+      const options = { force: payload.force, log: (message: string) => log.debug(message) };
       let results: TranslateRowResult[];
 
       if (table === "site_settings" && !id) {
         const { data, error } = await supabase.from(table).select("*");
         if (error) throw error;
-        results = await translateRows(supabase, table, data ?? [], locales, { force: payload.force, log: console.log });
+        results = await translateRows(supabase, table, data ?? [], locales, options);
       } else {
         const { data, error } = await supabase.from(table).select("*").eq(config.primaryKey, id!).maybeSingle();
         if (error) throw error;
         if (!data) {
-          console.warn(`[translate] ${table}/${id} not found (deleted?)`);
-          revalidate(tag);
+          log.warn("Row not found (deleted?)", { table, id });
+          revalidate(tag, log);
           return;
         }
-        results = [await translateRow(supabase, table, data, locales, { force: payload.force, log: console.log })];
+        results = [await translateRow(supabase, table, data, locales, options)];
       }
 
       const didWrite = results.some((r) => !r.skipped);
-      console.log(`[translate] ${table}/${id ?? "*"}: ${results.map((r) => (r.skipped ? `skipped (${r.reason})` : r.translated.join(","))).join("; ")}`);
-      revalidate(tag);
-      if (didWrite) revalidate(CACHE_TAGS.all);
+      log.info("Translation finished", {
+        table,
+        id: id ?? "*",
+        ms: elapsedMs(started),
+        translated: results.filter((r) => !r.skipped).length,
+        skipped: results.filter((r) => r.skipped).map((r) => r.reason ?? "?"),
+      });
+      revalidate(tag, log);
+      if (didWrite) revalidate(CACHE_TAGS.all, log);
     } catch (error) {
-      console.error(`[translate] ${table}/${id ?? "*"} failed`, error);
-      revalidate(tag);
+      log.error("Translation failed", { table, id: id ?? "*", ms: elapsedMs(started), error });
+      revalidate(tag, log);
     }
   });
 
-  return NextResponse.json({ ok: true, action: "scheduled", table, id: id ?? null }, { status: 202 });
+  return reply({ ok: true, action: "scheduled", table, id: id ?? null }, 202);
 }
 
-function revalidate(tag: string | null) {
+function revalidate(tag: string | null, log: Logger) {
   try {
     revalidateTag(tag ?? CACHE_TAGS.all, { expire: 0 });
   } catch (error) {
-    console.error("[translate] revalidateTag failed", error);
+    log.error("revalidateTag failed", { tag, error });
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GameEvent } from "@/lib/data/types";
-import { nextOccurrence, upcomingOccurrences } from "./occurrences";
+import { nextOccurrence, upcomingOccurrences } from "@/lib/events/occurrences";
 
 const base: GameEvent = {
   id: "1",

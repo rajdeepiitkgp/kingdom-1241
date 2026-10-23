@@ -20,7 +20,7 @@ export function ThemeToggle({ label }: { label: string }) {
       aria-label={label}
       title={label}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="btn-ghost btn-sm size-10 rounded-full !px-0 !py-0"
+      className="btn-ghost btn-sm size-10 rounded-full p-0!"
     >
       {isDark ? <Sun className="size-5 text-gold" aria-hidden /> : <Moon className="size-5 text-primary" aria-hidden />}
     </button>

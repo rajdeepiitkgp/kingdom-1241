@@ -134,7 +134,7 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
 
           <div className="overflow-hidden rounded-2xl border border-line">
             <table className="w-full text-sm">
-              <thead className="bg-primary-soft text-xs font-extrabold uppercase tracking-wide text-ink-muted">
+              <thead className="bg-primary-soft text-xs font-extrabold tracking-wide text-ink-muted uppercase">
                 <tr>
                   <th className="px-3 py-2 text-start">{dict["tools.refill.type"]}</th>
                   <th className="px-3 py-2 text-end">{dict["tools.refill.current"]}</th>
@@ -192,7 +192,7 @@ function Stat({ label, value, highlight = false }: { label: string; value: strin
   return (
     <div className={clsx("rounded-2xl px-4 py-3", highlight ? "bg-primary text-primary-ink" : "bg-card-soft text-ink")}>
       <p className={clsx("text-xs font-bold", highlight ? "text-primary-ink/80" : "text-ink-muted")}>{label}</p>
-      <p className="tabular text-2xl font-black leading-tight">{value}</p>
+      <p className="text-2xl/tight font-black tabular">{value}</p>
     </div>
   );
 }
@@ -221,7 +221,7 @@ function RatioBar({
         {rows.map((row) => (
           <li key={row.type} className="inline-flex items-center gap-1.5">
             <span className={clsx("size-2.5 rounded-full", BAR_COLORS[row.type])} aria-hidden />
-            {labelFor(row.type)} <span className="tabular text-ink">{row.afterPercent.toFixed(1)}%</span>
+            {labelFor(row.type)} <span className="text-ink tabular">{row.afterPercent.toFixed(1)}%</span>
           </li>
         ))}
       </ul>

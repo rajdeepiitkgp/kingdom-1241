@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SEED_LANGUAGES } from "@/content/seed/languages";
 import { LOCALE_COOKIE } from "@/lib/i18n/languages";
 import { negotiateLocale } from "@/lib/i18n/negotiate";
+import { createLogger, requestId } from "@/lib/log";
+
+const log = createLogger("proxy");
 
 /**
  * Locale routing.
@@ -42,7 +45,7 @@ async function getEnabledLocales(): Promise<string[]> {
     cachedLocales = { codes: result, fetchedAt: now };
     return result;
   } catch (error) {
-    console.error("[proxy] Could not load languages from Supabase, using seed list.", error);
+    log.warn("Could not load languages from Supabase, using seed list", { error });
     cachedLocales = { codes: fallback, fetchedAt: now };
     return fallback;
   }
@@ -53,9 +56,17 @@ export async function proxy(request: NextRequest) {
   const segments = pathname.split("/").filter(Boolean);
   const locales = await getEnabledLocales();
 
+  // One id per request, forwarded to the page/action and echoed back, so a
+  // player's screenshot of an error can be matched with the server log.
+  const reqId = requestId(request);
+  const forwarded = new Headers(request.headers);
+  forwarded.set("x-request-id", reqId);
+
   const first = segments[0];
   if (first && locales.some((l) => l === first)) {
-    return NextResponse.next();
+    const response = NextResponse.next({ request: { headers: forwarded } });
+    response.headers.set("x-request-id", reqId);
+    return response;
   }
 
   // A locale that differs only in case (e.g. /EN) → canonical spelling.

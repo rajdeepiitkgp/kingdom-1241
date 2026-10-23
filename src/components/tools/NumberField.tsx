@@ -48,7 +48,7 @@ export function NumberField({
           dir="ltr"
         />
         {suffix && (
-          <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-sm font-bold text-ink-faint">
+          <span className="pointer-events-none absolute inset-y-0 inset-e-3 flex items-center text-sm font-bold text-ink-faint">
             {suffix}
           </span>
         )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculatePackValue, PACK_ITEM_CATALOG, ratePack, type PackLine } from "./pack-value";
+import { calculatePackValue, PACK_ITEM_CATALOG, ratePack, type PackLine } from "@/lib/tools/pack-value";
 
 const line = (itemId: string, quantity: number, overrides: Partial<PackLine> = {}): PackLine => {
   const item = PACK_ITEM_CATALOG.find((i) => i.id === itemId)!;

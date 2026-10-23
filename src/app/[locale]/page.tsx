@@ -5,6 +5,7 @@ import { EventList } from "@/components/events/EventList";
 import { AllianceGrid } from "@/components/home/AllianceGrid";
 import { Announcements } from "@/components/home/Announcements";
 import { GiftCodes } from "@/components/home/GiftCodes";
+import { KvkCard } from "@/components/home/KvkCard";
 import { ServerClock } from "@/components/time/ServerClock";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getAlliances, getAnnouncements, getEvents, getGiftCodes, getSettings } from "@/lib/data";
@@ -26,18 +27,18 @@ export default async function HomePage() {
   return (
     <div className="space-y-10 md:space-y-14">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-[2rem] border border-line bg-card p-6 shadow-lift md:p-10">
+      <section className="relative overflow-hidden rounded-4xl border border-line bg-card p-6 shadow-lift md:p-10">
         <div
-          className="pointer-events-none absolute -end-16 -top-16 size-56 rounded-full bg-gold/25 blur-2xl"
+          className="pointer-events-none absolute -inset-e-16 -top-16 size-56 rounded-full bg-gold/25 blur-2xl"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute -bottom-20 -start-10 size-64 rounded-full bg-primary/20 blur-3xl"
+          className="pointer-events-none absolute -inset-s-10 -bottom-20 size-64 rounded-full bg-primary/20 blur-3xl"
           aria-hidden
         />
         <div className="relative">
           <p className="chip bg-gold-soft text-gold-strong">Kingshot · #{settings.kingdomNumber}</p>
-          <h1 className="mt-3 text-3xl font-black leading-tight text-ink md:text-5xl" dir="auto">{pick(settings.kingdomName, locale)}</h1>
+          <h1 className="mt-3 text-3xl/tight font-black text-ink md:text-5xl" dir="auto">{pick(settings.kingdomName, locale)}</h1>
           <p className="mt-3 max-w-2xl text-base font-semibold text-ink-muted md:text-lg" dir="auto">{pick(settings.tagline, locale)}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={localePath(locale, "/events")} className="btn-primary">
@@ -58,6 +59,11 @@ export default async function HomePage() {
       {/* Server clock & reset */}
       <section aria-label={dict["time.serverTime"]}>
         <ServerClock dict={dict} locale={locale} resetHourUtc={settings.dailyResetUtcHour} />
+      </section>
+
+      {/* KvK battle plan (locked) */}
+      <section aria-label={dict["home.kvkCard.title"]}>
+        <KvkCard dict={dict} locale={locale} />
       </section>
 
       {/* Announcements */}

@@ -1,6 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { getLanguageInfo } from "@/lib/i18n/languages";
+import { createLogger } from "@/lib/log";
 import { glossaryForPrompt } from "./glossary";
+
+const log = createLogger("gemini");
 
 /**
  * Thin wrapper around the Gemini API for translating a set of named fields
@@ -116,7 +119,7 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 4, baseDelay
       const retryable = /429|rate|quota|503|502|overloaded|timeout|ECONNRESET|fetch failed/i.test(message);
       if (!retryable || attempt === attempts - 1) throw error;
       const delay = baseDelayMs * 2 ** attempt;
-      console.warn(`[translate] ${message.slice(0, 120)} — retrying in ${delay / 1000}s`);
+      log.warn("Gemini request failed, retrying", { attempt: attempt + 1, of: attempts, delayMs: delay, error: message.slice(0, 200) });
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }

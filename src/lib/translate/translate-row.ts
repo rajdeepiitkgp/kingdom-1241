@@ -244,6 +244,16 @@ function contextFor(table: string): string {
       return "What a gift code rewards.";
     case "site_settings":
       return "Site-wide text such as the kingdom name or tagline.";
+    case "heroes":
+      return "The name of a hero in Kingshot. Use the hero's official in-game name in the target language (the game transliterates names, e.g. Arabic أماني for Amane); never translate the name literally.";
+    case "kvk_plans":
+      return "Title and introduction of the kingdom's KvK battle plan, written by the coordinators for all players.";
+    case "kvk_rules":
+      return "A short instruction for players on KvK battle day (what to do or not do).";
+    case "kvk_coordinators":
+      return "A short note about a KvK coordinator, e.g. the languages they speak.";
+    case "kvk_formations":
+      return "A short note about a troop formation for KvK (when to use it).";
     default:
       return "";
   }

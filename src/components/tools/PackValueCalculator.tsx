@@ -114,7 +114,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
 
           <fieldset>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <legend className="label !mb-0">{dict["tools.pack.contents"]}</legend>
+              <legend className="label mb-0!">{dict["tools.pack.contents"]}</legend>
               <div className="flex items-center gap-2">
                 <label className="relative">
                   <span className="sr-only">{dict["tools.pack.addItem"]}</span>
@@ -137,9 +137,9 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                       <option value="custom">{dict["tools.pack.custom"]}</option>
                     </optgroup>
                   </select>
-                  <Plus className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-primary" aria-hidden />
+                  <Plus className="pointer-events-none absolute inset-s-2.5 top-1/2 size-4 -translate-y-1/2 text-primary" aria-hidden />
                 </label>
-                <button type="button" className="btn-ghost btn-sm !py-1.5" onClick={() => setLines([])} aria-label={dict["tools.pack.reset"]} title={dict["tools.pack.reset"]}>
+                <button type="button" className="btn-ghost btn-sm py-1.5!" onClick={() => setLines([])} aria-label={dict["tools.pack.reset"]} title={dict["tools.pack.reset"]}>
                   <RotateCcw className="size-4" aria-hidden />
                 </button>
               </div>
@@ -173,12 +173,12 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                       <NumberField compact decimals label={dict["tools.pack.gemValue"]} value={line.gems} onChange={(v) => updateLine(line.key, { gems: v })} />
                       <div className="hidden text-end sm:block">
                         <p className="label mb-1 text-xs">{dict["tools.pack.share"]}</p>
-                        <p className="tabular py-2 text-sm font-extrabold text-ink">{lineResult ? `${pf.format(lineResult.share)}%` : "—"}</p>
+                        <p className="py-2 text-sm font-extrabold text-ink tabular">{lineResult ? `${pf.format(lineResult.share)}%` : "—"}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setLines((current) => current.filter((l) => l.key !== line.key))}
-                        className="btn-ghost btn-sm mb-0.5 !px-2.5"
+                        className="btn-ghost btn-sm mb-0.5 px-2.5!"
                         aria-label={dict["tools.pack.remove"]}
                         title={dict["tools.pack.remove"]}
                       >
@@ -197,7 +197,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
               type="checkbox"
               checked={excludeResources}
               onChange={(e) => setExcludeResources(e.target.checked)}
-              className="size-5 accent-[var(--primary)]"
+              className="size-5 accent-(--primary)"
             />
             {dict["tools.pack.excludeResources"]}
           </label>
@@ -205,24 +205,24 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
 
         {/* Results */}
         <div className="space-y-3">
-          <div className={clsx("rounded-[1.5rem] p-5 text-center", RATING_STYLE[result.rating])}>
-            <p className="text-xs font-bold uppercase tracking-wider opacity-80">{dict["tools.pack.valuePercent"]}</p>
-            <p className="tabular mt-1 text-5xl font-black leading-none">{hasLines ? `${pf.format(result.valuePercent)}%` : "—"}</p>
+          <div className={clsx("rounded-3xl p-5 text-center", RATING_STYLE[result.rating])}>
+            <p className="text-xs font-bold tracking-wider uppercase opacity-80">{dict["tools.pack.valuePercent"]}</p>
+            <p className="mt-1 text-5xl leading-none font-black tabular">{hasLines ? `${pf.format(result.valuePercent)}%` : "—"}</p>
             <p className="mt-2 text-sm font-extrabold">{hasLines ? dict[`tools.pack.rating.${result.rating}`] : dict["tools.pack.empty"]}</p>
           </div>
 
           <div className="h-3 overflow-hidden rounded-full bg-card-soft" dir="ltr" aria-hidden>
-            <div className="h-full rounded-full bg-gradient-to-r from-primary to-gold transition-all" style={{ width: `${barWidth}%` }} />
+            <div className="h-full rounded-full bg-linear-to-r from-primary to-gold transition-all" style={{ width: `${barWidth}%` }} />
           </div>
 
           <dl className="grid grid-cols-2 gap-2">
             <div className="rounded-2xl bg-card-soft px-4 py-3">
               <dt className="text-xs font-bold text-ink-muted">{dict["tools.pack.totalGems"]}</dt>
-              <dd className="tabular text-xl font-black text-ink">💎 {nf.format(Math.round(result.totalGems))}</dd>
+              <dd className="text-xl font-black text-ink tabular">💎 {nf.format(Math.round(result.totalGems))}</dd>
             </div>
             <div className="rounded-2xl bg-card-soft px-4 py-3">
               <dt className="text-xs font-bold text-ink-muted">{dict["tools.pack.baselineGems"]}</dt>
-              <dd className="tabular text-xl font-black text-ink">💎 {nf.format(Math.round(result.baselineGems))}</dd>
+              <dd className="text-xl font-black text-ink tabular">💎 {nf.format(Math.round(result.baselineGems))}</dd>
             </div>
           </dl>
 
