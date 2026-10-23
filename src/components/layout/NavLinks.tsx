@@ -35,7 +35,7 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur md:hidden"
       aria-label="Main"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
+      <ul className="mx-auto grid max-w-lg grid-cols-6">
         {NAV_ITEMS.map((item) => {
           const props = { href: localePath(locale, item.href), section: item.href, icon: item.icon, label: dict[item.labelKey], variant: "mobile" as const };
           return (

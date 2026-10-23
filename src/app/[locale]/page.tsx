@@ -5,6 +5,7 @@ import { EventList } from "@/components/events/EventList";
 import { AllianceGrid } from "@/components/home/AllianceGrid";
 import { Announcements } from "@/components/home/Announcements";
 import { GiftCodes } from "@/components/home/GiftCodes";
+import { KvkCard } from "@/components/home/KvkCard";
 import { ServerClock } from "@/components/time/ServerClock";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getAlliances, getAnnouncements, getEvents, getGiftCodes, getSettings } from "@/lib/data";
@@ -58,6 +59,11 @@ export default async function HomePage() {
       {/* Server clock & reset */}
       <section aria-label={dict["time.serverTime"]}>
         <ServerClock dict={dict} locale={locale} resetHourUtc={settings.dailyResetUtcHour} />
+      </section>
+
+      {/* KvK battle plan (locked) */}
+      <section aria-label={dict["home.kvkCard.title"]}>
+        <KvkCard dict={dict} locale={locale} />
       </section>
 
       {/* Announcements */}

@@ -4,7 +4,7 @@ export interface NavItem {
   /** Path without locale prefix. */
   href: string;
   labelKey: UiKey;
-  icon: "home" | "events" | "rules" | "guides" | "tools";
+  icon: "home" | "events" | "rules" | "guides" | "kvk" | "tools";
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -12,6 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/events", labelKey: "nav.events", icon: "events" },
   { href: "/rules", labelKey: "nav.rules", icon: "rules" },
   { href: "/guides", labelKey: "nav.guides", icon: "guides" },
+  { href: "/kvk", labelKey: "nav.kvk", icon: "kvk" },
   { href: "/tools", labelKey: "nav.tools", icon: "tools" },
 ];
 
