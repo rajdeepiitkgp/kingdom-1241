@@ -38,7 +38,7 @@ Supabase content (announcements, rules, the KvK plan…) is edited in the Supaba
 
 1. <https://aistudio.google.com/apikey> → **Create API key** → `GEMINI_API_KEY`.
 2. The free tier is enough: the pipeline only runs when content is added or edited and batches small texts together. If a rate limit is hit the scripts wait and retry.
-3. Optional: `GEMINI_MODEL` overrides the model (default `gemini-2.5-flash`).
+3. Optional: `GEMINI_MODEL` overrides the model (default `gemini-3.8-flash`).
 
 ## 3. Secrets you generate yourself
 
