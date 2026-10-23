@@ -1,26 +1,243 @@
 @import "tailwindcss";
 
+/* Dark mode is driven by next-themes putting `class="dark"` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — light theme ("cute & polished": soft blue, white cards,
+ * gold accents). Dark values are overridden further down.
+ * ------------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #eaf2ff;
+  --bg-deep: #dce9ff;
+  --card: #ffffff;
+  --card-soft: #f5f9ff;
+  --line: #d6e3f8;
+  --ink: #1b2743;
+  --ink-muted: #5c6c8d;
+  --ink-faint: #8a98b5;
+
+  --primary: #4f8df7;
+  --primary-strong: #2f6fdc;
+  --primary-soft: #e2edff;
+  --primary-ink: #ffffff;
+
+  --gold: #f5b942;
+  --gold-strong: #d8961c;
+  --gold-soft: #fff4d9;
+  --gold-ink: #4a3300;
+
+  --success: #2fb67c;
+  --success-soft: #dcf7ea;
+  --danger: #e5564f;
+  --danger-soft: #ffe3e1;
+
+  --shadow-color: 214 70% 40%;
+  --radius-card: 1.5rem;
+}
+
+.dark {
+  --bg: #0f1627;
+  --bg-deep: #0a1020;
+  --card: #182239;
+  --card-soft: #1e2a46;
+  --line: #2a3a5e;
+  --ink: #e9eefb;
+  --ink-muted: #a2b1d1;
+  --ink-faint: #70809f;
+
+  --primary: #6ea4ff;
+  --primary-strong: #4b84e6;
+  --primary-soft: #21325a;
+  --primary-ink: #0b1430;
+
+  --gold: #f7c45c;
+  --gold-strong: #d8a12d;
+  --gold-soft: #3a2e12;
+  --gold-ink: #fff3d1;
+
+  --success: #41cf93;
+  --success-soft: #153a2c;
+  --danger: #ff7b73;
+  --danger-soft: #45201f;
+
+  --shadow-color: 220 60% 3%;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-deep: var(--bg-deep);
+  --color-card: var(--card);
+  --color-card-soft: var(--card-soft);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+
+  --color-gold: var(--gold);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: "Nunito Variable", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-korean: "Noto Sans KR Variable", "Nunito Variable", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-arabic: "Noto Sans Arabic Variable", "Nunito Variable", "Segoe UI", Tahoma, system-ui, sans-serif;
+
+  --radius-card: var(--radius-card);
+
+  --shadow-soft: 0 10px 30px -12px hsl(var(--shadow-color) / 0.25), 0 2px 6px -2px hsl(var(--shadow-color) / 0.12);
+  --shadow-lift: 0 18px 40px -16px hsl(var(--shadow-color) / 0.35), 0 4px 10px -4px hsl(var(--shadow-color) / 0.15);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(60rem 30rem at 10% -10%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%),
+    radial-gradient(40rem 24rem at 100% 0%, color-mix(in oklab, var(--gold) 16%, transparent), transparent 60%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+/* Language-specific font stacks (set on <html> by the layout). */
+.font-korean { font-family: var(--font-korean); }
+.font-arabic { font-family: var(--font-arabic); }
+
+/* Numbers that should line up (countdowns, tables). */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Components
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .card {
+    @apply rounded-[var(--radius-card)] border border-line bg-card shadow-soft;
+  }
+
+  .card-soft {
+    @apply rounded-[var(--radius-card)] border border-line bg-card-soft;
+  }
+
+  /* Chunky, game-style buttons with a pressed state. */
+  .btn,
+  .btn-primary,
+  .btn-gold,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-extrabold tracking-wide
+      transition-[transform,box-shadow,background-color] duration-100 select-none
+      focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40
+      disabled:cursor-not-allowed disabled:opacity-60;
+    transform: translateY(0);
+    box-shadow: 0 4px 0 0 var(--btn-shadow, transparent);
+  }
+  .btn:active:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-gold:active:not(:disabled),
+  .btn-ghost:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 var(--btn-shadow, transparent);
+  }
+
+  .btn-primary {
+    --btn-shadow: var(--primary-strong);
+    @apply bg-primary text-primary-ink;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--primary) 90%, white);
+  }
+
+  .btn-gold {
+    --btn-shadow: var(--gold-strong);
+    @apply bg-gold text-gold-ink;
+  }
+  .btn-gold:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--gold) 90%, white);
+  }
+
+  .btn-ghost {
+    --btn-shadow: var(--line);
+    @apply border border-line bg-card text-ink;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--card-soft);
+  }
+
+  .btn-sm {
+    @apply px-3.5 py-2 text-sm rounded-xl;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold;
+  }
+
+  .input {
+    @apply w-full rounded-2xl border border-line bg-card-soft px-4 py-3 text-base font-semibold text-ink tabular
+      placeholder:text-ink-faint
+      focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/25;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-bold text-ink-muted;
+  }
+
+  /* Rich text coming from the editor / seed markdown. */
+  .prose-game {
+    @apply text-[1.02rem] leading-relaxed text-ink;
+  }
+  .prose-game > * + * { margin-top: 0.9em; }
+  .prose-game h2 { @apply mt-8 text-xl font-extrabold text-ink; }
+  .prose-game h3 { @apply mt-6 text-lg font-extrabold text-ink; }
+  .prose-game h4 { @apply mt-4 text-base font-extrabold text-ink; }
+  .prose-game p { @apply text-ink; }
+  .prose-game a { @apply font-bold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary; }
+  .prose-game strong { @apply font-extrabold; }
+  .prose-game ul { @apply list-disc space-y-1.5 ps-6; }
+  .prose-game ol { @apply list-decimal space-y-1.5 ps-6; }
+  .prose-game li > ul, .prose-game li > ol { margin-top: 0.4em; }
+  .prose-game blockquote {
+    @apply rounded-2xl border-s-4 border-gold bg-gold-soft px-4 py-3 text-ink;
+  }
+  .prose-game blockquote > * + * { margin-top: 0.5em; }
+  .prose-game code { @apply rounded-md bg-primary-soft px-1.5 py-0.5 text-[0.9em] font-bold text-ink; }
+  .prose-game pre { @apply overflow-x-auto rounded-2xl bg-card-soft p-4 text-sm; }
+  .prose-game pre code { @apply bg-transparent p-0; }
+  .prose-game hr { @apply my-6 border-line; }
+  .prose-game img { @apply mx-auto max-h-[28rem] rounded-2xl; }
+  .prose-game table { @apply w-full border-collapse overflow-hidden rounded-2xl text-start text-[0.95em]; }
+  .prose-game thead th { @apply bg-primary-soft px-3 py-2 text-start font-extrabold text-ink; }
+  .prose-game tbody td { @apply border-t border-line px-3 py-2 align-top; }
+  .prose-game tbody tr:nth-child(even) td { background-color: color-mix(in oklab, var(--card-soft) 60%, transparent); }
+  .prose-game .table-wrap { @apply overflow-x-auto; }
+}
+
+/* Hide scrollbars on horizontally scrolling tab strips. */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .btn { transition: none; }
 }
