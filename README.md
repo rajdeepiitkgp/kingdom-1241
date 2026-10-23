@@ -12,7 +12,7 @@ Later phases add the admin panel with Discord login, KvK sign-ups and battle pla
 - [Gemini](https://ai.google.dev) for translations — run only when content is added or edited, never on page view
 - Tailwind CSS v4, self-hosted fonts (Nunito, Noto Sans KR, Noto Sans Arabic)
 
-See **[SETUP.md](SETUP.md)** for getting the keys and deploying.
+See **[SETUP.md](SETUP.md)** for getting the keys and deploying, **[docs/PLAN.md](docs/PLAN.md)** for the full product plan and phases, and **[CLAUDE.md](CLAUDE.md)** for the working conventions.
 
 ## Quick start
 
