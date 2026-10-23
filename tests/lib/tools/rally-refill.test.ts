@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateRefill, largestRemainderRound } from "./rally-refill";
+import { calculateRefill, largestRemainderRound } from "@/lib/tools/rally-refill";
 
 describe("calculateRefill", () => {
   it("fills an empty rally exactly to the target ratio", () => {

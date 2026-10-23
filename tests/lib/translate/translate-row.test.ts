@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { sourceHash } from "./hash";
+import { sourceHash } from "@/lib/translate/hash";
 
 // Mock Gemini: pretend-translate by prefixing the locale.
 const fakeTranslate = async (fields: Record<string, string>, locale: string) =>
   Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, `[${locale}] ${v}`]));
 const translateFields = vi.fn(fakeTranslate);
-vi.mock("./gemini", () => ({
+vi.mock("@/lib/translate/gemini", () => ({
   translateFields: (fields: Record<string, string>, locale: string) => translateFields(fields, locale),
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
-import { translateRows } from "./translate-row";
+import { translateRows } from "@/lib/translate/translate-row";
 
 /** Minimal in-memory stand-in for the Supabase client used by translateRows. */
 function fakeSupabase(rows: Record<string, Record<string, unknown>>) {
