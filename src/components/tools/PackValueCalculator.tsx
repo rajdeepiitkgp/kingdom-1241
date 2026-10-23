@@ -133,7 +133,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                         ))}
                       </optgroup>
                     ))}
-                    <optgroup label={dict["tools.pack.category.other"]}>
+                    <optgroup label={dict["tools.pack.custom"]}>
                       <option value="custom">{dict["tools.pack.custom"]}</option>
                     </optgroup>
                   </select>

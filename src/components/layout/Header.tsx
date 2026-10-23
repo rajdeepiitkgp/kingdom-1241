@@ -27,7 +27,7 @@ export function Header({
             👑
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="whitespace-nowrap text-sm text-ink sm:text-base" dir="auto">{kingdomName}</span>
+            <span className="max-w-[42vw] truncate text-sm text-ink sm:max-w-none sm:text-base" dir="auto">{kingdomName}</span>
             <span className="hidden text-[11px] font-bold uppercase tracking-widest text-ink-faint sm:block">Kingshot · #{kingdomNumber}</span>
           </span>
         </Link>
