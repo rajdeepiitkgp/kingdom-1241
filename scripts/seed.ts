@@ -2,6 +2,7 @@
  * Seed the Supabase database with the boilerplate content from src/content/seed.
  *
  *   npm run db:seed               # insert anything that is missing (safe to re-run)
+ *   npm run db:seed -- --sync-ui    # also update the interface strings (ui_strings) from the code
  *   npm run db:seed -- --overwrite  # also replace existing seed rows (drops their translations!)
  *
  * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local.
@@ -15,6 +16,9 @@ loadEnv();
 
 const args = parseArgs(process.argv.slice(2));
 const overwrite = args.overwrite === true;
+// UI strings are maintained in code (src/content/seed/ui-strings.ts, with hand
+// translations), so they may be re-synced without touching any content row.
+const syncUi = overwrite || args["sync-ui"] === true;
 
 async function main() {
   const [{ buildSeedContent, SEED_LANGUAGES }, { settingsToRows }, { createAdminClient }, { sourceHash }] =
@@ -30,19 +34,19 @@ async function main() {
   const summary: string[] = [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function upsertMissing(table: string, key: string, rows: Array<Record<string, any>>) {
+  async function upsertMissing(table: string, key: string, rows: Array<Record<string, any>>, replace = overwrite) {
     if (rows.length === 0) return;
     const { data: existing, error } = await supabase.from(table).select(key);
     if (error) throw new Error(`${table}: ${error.message}`);
     const present = new Set(((existing ?? []) as unknown as Array<Record<string, unknown>>).map((r) => String(r[key])));
-    const toWrite = overwrite ? rows : rows.filter((r) => !present.has(String(r[key])));
+    const toWrite = replace ? rows : rows.filter((r) => !present.has(String(r[key])));
     if (toWrite.length === 0) {
       summary.push(`${table}: nothing to do (${present.size} rows present)`);
       return;
     }
     const { error: upsertError } = await supabase.from(table).upsert(toWrite, { onConflict: key });
     if (upsertError) throw new Error(`${table}: ${upsertError.message}`);
-    summary.push(`${table}: ${overwrite ? "wrote" : "inserted"} ${toWrite.length} row(s)`);
+    summary.push(`${table}: ${replace ? "wrote" : "inserted"} ${toWrite.length} row(s)`);
   }
 
   await upsertMissing(
@@ -63,6 +67,7 @@ async function main() {
     "ui_strings",
     "key",
     seed.uiStrings.map((s) => ({ key: s.key, text: s.text, source_hash: sourceHash({ text: s.text.en ?? "" }) })),
+    syncUi,
   );
 
   await upsertMissing(

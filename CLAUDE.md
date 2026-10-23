@@ -35,7 +35,7 @@ Community website for Kingshot Kingdom 1241 (rules, events, guides, tools, later
 
 ## Internationalisation rules
 
-- Every piece of text players see is translatable. Interface strings live in `src/content/seed/ui-strings.ts` (typed keys; English + hand-written de/ko/pl/ar); pages get them via `getDictionary(locale)` and pass the `Dictionary` object down as a prop to Client Components. Add a new key there with all five languages when you add UI text.
+- Every piece of text players see is translatable. Interface strings live in `src/content/seed/ui-strings.ts` (typed keys; English + hand-written de/ko/pl/ar); pages get them via `getDictionary(locale)` and pass the `Dictionary` object down as a prop to Client Components. Add a new key there with all five languages when you add UI text. Production reads them from the `ui_strings` table: a new key falls back to the bundled text automatically, but a **changed** key only reaches the site after `npm run db:seed -- --sync-ui` (or the Maintenance workflow's `sync-ui` task).
 - Content fields are `Localized` JSON (`{ en, de, ... }`); read with `pick(value, locale)` which falls back to English. English is always the source language.
 - Use logical CSS (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`) and `rtl:` variants, never left/right, so Arabic mirrors correctly. Put `dir="auto"` on elements that show content text (so English fallback reads correctly on RTL pages) and `dir="ltr"` on codes, numbers and clocks.
 - Language list = `languages` table (seeded in `src/content/seed/languages.ts`); direction/font per code = `src/lib/i18n/languages.ts`. Adding a language means both places plus `npm run translate`.

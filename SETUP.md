@@ -64,7 +64,7 @@ Without any env vars the site still runs with the bundled English seed content (
 
 | Command | What it does |
 | --- | --- |
-| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --overwrite` replaces seed rows, dropping their translations. |
+| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change). `-- --overwrite` replaces every seed row, dropping translations. |
 | `npm run translate` | Translates everything missing or outdated. `-- --table guides`, `-- --locale de`, `-- --force`, `-- --dry-run`. |
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |

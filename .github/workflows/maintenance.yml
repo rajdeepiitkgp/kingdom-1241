@@ -16,6 +16,7 @@ on:
         default: seed
         options:
           - seed
+          - sync-ui
           - translate
           - translate-dry-run
           - revalidate
@@ -52,6 +53,10 @@ jobs:
       - name: Seed database
         if: inputs.task == 'seed'
         run: npm run db:seed
+
+      - name: Sync interface strings
+        if: inputs.task == 'sync-ui'
+        run: npm run db:seed -- --sync-ui
 
       - name: Translate content
         if: inputs.task == 'translate'
