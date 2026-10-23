@@ -52,7 +52,8 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
                 <p className="text-ink" dir="auto">{pick(code.rewards, locale)}</p>
                 <p className="text-xs font-semibold text-ink-faint">
                   {code.expiresAt
-                    ? `${dict["home.expires"]}: ${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(code.expiresAt))}`
+                    ? // UTC on purpose: the server (UTC) and the visitor's browser must render the same text, or React reports a hydration mismatch.
+                      `${dict["home.expires"]}: ${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(code.expiresAt))}`
                     : dict["home.noExpiry"]}
                 </p>
               </div>
