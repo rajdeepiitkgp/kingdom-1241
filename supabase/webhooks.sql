@@ -23,7 +23,8 @@ begin
 
   foreach t in array array[
     'languages', 'site_settings', 'ui_strings', 'announcements', 'events',
-    'rule_topics', 'rules', 'guides', 'alliances', 'gift_codes'
+    'rule_topics', 'rules', 'guides', 'alliances', 'gift_codes',
+    'heroes', 'kvk_plans', 'kvk_rules', 'kvk_coordinators', 'kvk_formations'
   ] loop
     execute format('drop trigger if exists %I on public.%I', 'webhook_translate_' || t, t);
     execute format(

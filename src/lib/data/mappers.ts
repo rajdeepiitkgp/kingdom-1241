@@ -2,13 +2,25 @@ import type { Localized } from "@/lib/i18n/localized";
 import type {
   Alliance,
   Announcement,
+  CoordinatorTeam,
   EventCategory,
+  FormationRole,
+  FormationSide,
   GameEvent,
   GiftCode,
   Guide,
+  Hero,
+  HeroRarity,
+  KvkCoordinator,
+  KvkEventType,
+  KvkFormation,
+  KvkPlanWithSecret,
+  KvkRule,
+  KvkRuleKind,
   Rule,
   RuleTopic,
   SiteSettings,
+  TroopType,
   UiString,
 } from "./types";
 
@@ -184,4 +196,111 @@ export function settingsToRows(settings: SiteSettings): Array<{ key: string; val
     { key: "discord_invite_url", value: settings.discordInviteUrl },
     { key: "transfer_contact", value: settings.transferContact },
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Heroes & KvK battle plan
+// ---------------------------------------------------------------------------
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+}
+
+const TROOP_TYPES: readonly TroopType[] = ["infantry", "cavalry", "archers"];
+const RARITIES: readonly HeroRarity[] = ["legendary", "epic", "rare"];
+const SIDES: readonly FormationSide[] = ["attack", "defense", "any"];
+const ROLES: readonly FormationRole[] = ["rally_lead", "rally_join", "any"];
+const RULE_KINDS: readonly KvkRuleKind[] = ["do", "dont", "info"];
+const TEAMS: readonly CoordinatorTeam[] = ["kvk", "tmp"];
+const EVENT_TYPES: readonly KvkEventType[] = ["castle_battle", "kvk"];
+
+/** Whole percentage between 0 and 100. */
+function pct(value: unknown): number {
+  return Math.min(100, Math.max(0, Math.round(num(value, 0))));
+}
+
+/** 0–5 (hero stars / skill level). */
+function stars(value: unknown, fallback: number): number {
+  return Math.min(5, Math.max(0, Math.round(num(value, fallback))));
+}
+
+export function mapHero(row: Row): Hero {
+  return {
+    id: str(row.id),
+    slug: str(row.slug),
+    name: loc(row.name),
+    troopType: oneOf(row.troop_type, TROOP_TYPES, "infantry"),
+    rarity: oneOf(row.rarity, RARITIES, "legendary"),
+    generation: numOrNull(row.generation),
+    iconUrl: strOrNull(row.icon_url),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+export function mapKvkRule(row: Row): KvkRule {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    kind: oneOf(row.kind, RULE_KINDS, "info"),
+    text: loc(row.text),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+export function mapKvkCoordinator(row: Row): KvkCoordinator {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    team: oneOf(row.team, TEAMS, "kvk"),
+    name: str(row.name),
+    allianceTag: strOrNull(row.alliance_tag),
+    note: loc(row.note),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+export function mapKvkFormation(row: Row): KvkFormation {
+  const slot = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    label: str(row.label, "?"),
+    side: oneOf(row.side, SIDES, "any"),
+    role: oneOf(row.role, ROLES, "any"),
+    heroSlugs: [slot(row.hero_1), slot(row.hero_2), slot(row.hero_3)],
+    infantry: pct(row.infantry_pct),
+    cavalry: pct(row.cavalry_pct),
+    archers: pct(row.archers_pct),
+    note: loc(row.note),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+/** A plan row with its child rows (any plan's rows may be passed; they are filtered by plan_id). */
+export function mapKvkPlan(row: Row, rules: Row[], coordinators: Row[], formations: Row[]): KvkPlanWithSecret {
+  const id = str(row.id);
+  const ofPlan = (r: Row) => str(r.plan_id) === id;
+  const byOrder = <T extends { sortOrder: number }>(a: T, b: T) => a.sortOrder - b.sortOrder;
+  return {
+    id,
+    slug: str(row.slug),
+    eventType: oneOf(row.event_type, EVENT_TYPES, "kvk"),
+    title: loc(row.title),
+    opponent: strOrNull(row.opponent),
+    battleAt: row.battle_at ? iso(row.battle_at, "") || null : null,
+    intro: loc(row.intro),
+    minHeroStars: stars(row.min_hero_stars, 4),
+    minSkillLevel: stars(row.min_skill_level, 5),
+    active: Boolean(row.active),
+    published: row.published !== false,
+    updatedAt: iso(row.updated_at, new Date(0).toISOString()),
+    password: str(row.password),
+    rules: rules.filter(ofPlan).map(mapKvkRule).filter((r) => r.published).sort(byOrder),
+    coordinators: coordinators.filter(ofPlan).map(mapKvkCoordinator).filter((c) => c.published).sort(byOrder),
+    formations: formations.filter(ofPlan).map(mapKvkFormation).filter((f) => f.published).sort(byOrder),
+  };
 }

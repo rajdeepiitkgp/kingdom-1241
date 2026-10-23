@@ -118,3 +118,102 @@ export interface UiString {
   key: string;
   text: Localized;
 }
+
+// ---------------------------------------------------------------------------
+// Heroes & KvK battle plan
+// ---------------------------------------------------------------------------
+
+export type TroopType = "infantry" | "cavalry" | "archers";
+
+export type HeroRarity = "legendary" | "epic" | "rare";
+
+export interface Hero {
+  id: string;
+  slug: string;
+  name: Localized;
+  troopType: TroopType;
+  rarity: HeroRarity;
+  generation: number | null;
+  /** Portrait URL (`/heroes/<slug>.png` for the bundled ones, or any https URL). */
+  iconUrl: string | null;
+  sortOrder: number;
+  published: boolean;
+}
+
+/** Attack rallies on the castle, defence (garrison/reinforce), or either. */
+export type FormationSide = "attack" | "defense" | "any";
+/** Leading a rally, joining one, or either. */
+export type FormationRole = "rally_lead" | "rally_join" | "any";
+
+export interface KvkFormation {
+  id: string;
+  planId: string;
+  /** The preset name players save in the game ("A", "B", …; the game offers 12 slots). */
+  label: string;
+  side: FormationSide;
+  role: FormationRole;
+  /** The three hero slots; `null` = any hero of the player's choice. */
+  heroSlugs: [string | null, string | null, string | null];
+  /** Troop ratio in percent; the three add up to 100. */
+  infantry: number;
+  cavalry: number;
+  archers: number;
+  note: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+export type KvkRuleKind = "do" | "dont" | "info";
+
+export interface KvkRule {
+  id: string;
+  planId: string;
+  kind: KvkRuleKind;
+  text: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+/** The two battle alliances of the kingdom: [KvK] rallies the castle, [TMP] counter-rallies. */
+export type CoordinatorTeam = "kvk" | "tmp";
+
+/** Internal castle battle (practice inside 1241) or the cross-kingdom KvK; they alternate every two weeks. */
+export type KvkEventType = "castle_battle" | "kvk";
+
+export interface KvkCoordinator {
+  id: string;
+  planId: string;
+  team: CoordinatorTeam;
+  /** In-game name. */
+  name: string;
+  allianceTag: string | null;
+  note: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+export interface KvkPlan {
+  id: string;
+  slug: string;
+  eventType: KvkEventType;
+  title: Localized;
+  opponent: string | null;
+  /** Start of the castle battle, ISO timestamp (UTC), or null when not set yet. */
+  battleAt: string | null;
+  /** Sanitised HTML. */
+  intro: Localized;
+  minHeroStars: number;
+  /** Required level of the hero's top-right (expedition) skill. */
+  minSkillLevel: number;
+  active: boolean;
+  published: boolean;
+  updatedAt: string;
+  rules: KvkRule[];
+  coordinators: KvkCoordinator[];
+  formations: KvkFormation[];
+}
+
+/** The plan plus its shared password — server only, never passed to components. */
+export interface KvkPlanWithSecret extends KvkPlan {
+  password: string;
+}

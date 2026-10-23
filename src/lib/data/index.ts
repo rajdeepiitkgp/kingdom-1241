@@ -1,7 +1,9 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { buildSeedContent, SEED_LANGUAGES, SEED_SETTINGS } from "@/content/seed";
 import { getLanguageInfo, type SiteLanguage } from "@/lib/i18n/languages";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createLogger } from "@/lib/log";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isSupabaseAdminConfigured, isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
   mapAlliance,
@@ -9,6 +11,8 @@ import {
   mapEvent,
   mapGiftCode,
   mapGuide,
+  mapHero,
+  mapKvkPlan,
   mapRule,
   mapRuleTopic,
   mapSettings,
@@ -20,6 +24,8 @@ import type {
   GameEvent,
   GiftCode,
   Guide,
+  Hero,
+  KvkPlanWithSecret,
   RuleTopic,
   SiteSettings,
   UiString,
@@ -48,6 +54,8 @@ export const CACHE_TAGS = {
   guides: "content:guides",
   alliances: "content:alliances",
   giftCodes: "content:gift_codes",
+  heroes: "content:heroes",
+  kvk: "content:kvk",
 } as const;
 
 /** Map a table name (as used by Supabase webhooks) to its cache tag. */
@@ -72,6 +80,13 @@ export function cacheTagForTable(table: string): string | null {
       return CACHE_TAGS.alliances;
     case "gift_codes":
       return CACHE_TAGS.giftCodes;
+    case "heroes":
+      return CACHE_TAGS.heroes;
+    case "kvk_plans":
+    case "kvk_rules":
+    case "kvk_coordinators":
+    case "kvk_formations":
+      return CACHE_TAGS.kvk;
     default:
       return null;
   }
@@ -83,8 +98,10 @@ function dropExpired<T extends { expiresAt: string | null }>(rows: T[]): T[] {
   return rows.filter((row) => !row.expiresAt || Date.parse(row.expiresAt) > now);
 }
 
+const log = createLogger("data");
+
 function logFallback(what: string, error: unknown) {
-  console.error(`[data] Failed to load ${what} from Supabase, using seed content instead.`, error);
+  log.error("Failed to load from Supabase, using seed content instead", { what, error });
 }
 
 // ---------------------------------------------------------------------------
@@ -284,5 +301,76 @@ export async function getGiftCodes(): Promise<GiftCode[]> {
   } catch (error) {
     logFallback("gift codes", error);
     return dropExpired(buildSeedContent().giftCodes);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Heroes & KvK battle plan
+// ---------------------------------------------------------------------------
+
+export async function getHeroes(): Promise<Hero[]> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.heroes);
+
+  if (!isSupabaseConfigured()) return buildSeedContent().heroes;
+  try {
+    const supabase = createPublicClient()!;
+    const { data, error } = await supabase.from("heroes").select("*").eq("published", true).order("sort_order");
+    if (error) throw error;
+    if (!data || data.length === 0) return buildSeedContent().heroes;
+    return data.map(mapHero);
+  } catch (error) {
+    logFallback("heroes", error);
+    return buildSeedContent().heroes;
+  }
+}
+
+/**
+ * The active KvK battle plan, including its shared password.
+ *
+ * The `kvk_*` tables have no public read policy, so this goes through the
+ * service-role client — server only. Callers must check the visitor's access
+ * cookie before rendering anything from it, and must never pass the password
+ * to a component. On any problem this returns `null` (the page shows "no plan")
+ * rather than the seed plan, so a misconfigured deployment never unlocks
+ * placeholder content with the default password. The seed plan is only used
+ * when Supabase isn't configured at all (local design work).
+ */
+export async function getActiveKvkPlan(): Promise<KvkPlanWithSecret | null> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.kvk);
+
+  if (!isSupabaseConfigured()) return buildSeedContent().kvkPlan;
+  if (!isSupabaseAdminConfigured()) {
+    log.error("The KvK battle plan needs SUPABASE_SECRET_KEY on the server (see SETUP.md)");
+    return null;
+  }
+  try {
+    const supabase = createAdminClient();
+    const { data: plan, error } = await supabase
+      .from("kvk_plans")
+      .select("*")
+      .eq("active", true)
+      .eq("published", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!plan) return null;
+
+    const [rules, coordinators, formations] = await Promise.all([
+      supabase.from("kvk_rules").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+      supabase.from("kvk_coordinators").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+      supabase.from("kvk_formations").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+    ]);
+    if (rules.error) throw rules.error;
+    if (coordinators.error) throw coordinators.error;
+    if (formations.error) throw formations.error;
+
+    return mapKvkPlan(plan, rules.data ?? [], coordinators.data ?? [], formations.data ?? []);
+  } catch (error) {
+    log.error("Failed to load the KvK battle plan from Supabase", { error });
+    return null;
   }
 }

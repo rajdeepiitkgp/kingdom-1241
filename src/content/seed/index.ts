@@ -4,6 +4,8 @@ import type {
   GameEvent,
   GiftCode,
   Guide,
+  Hero,
+  KvkPlanWithSecret,
   RuleTopic,
   SiteSettings,
   UiString,
@@ -15,6 +17,8 @@ import { SEED_ANNOUNCEMENTS } from "./announcements";
 import { SEED_EVENTS } from "./events";
 import { SEED_GIFT_CODES } from "./gift-codes";
 import { SEED_GUIDES } from "./guides";
+import { bundledHeroIcon, SEED_HEROES } from "./heroes";
+import { kvkCoordinatorId, kvkFormationId, kvkRuleId, SEED_KVK_PLAN, seedKvkPassword } from "./kvk";
 import { SEED_LANGUAGES } from "./languages";
 import { SEED_RULE_TOPICS } from "./rules";
 import { SEED_SETTINGS } from "./settings";
@@ -36,6 +40,9 @@ export interface SeedContent {
   guides: Guide[];
   alliances: Alliance[];
   giftCodes: GiftCode[];
+  heroes: Hero[];
+  /** Placeholder battle plan, with the seed password — server only. */
+  kvkPlan: KvkPlanWithSecret;
 }
 
 export function buildSeedContent(): SeedContent {
@@ -118,6 +125,69 @@ export function buildSeedContent(): SeedContent {
       expiresAt: c.expiresAt,
       active: true,
       addedAt: c.addedAt,
+    })),
+    heroes: SEED_HEROES.map((h, index) => ({
+      id: h.id,
+      slug: h.slug,
+      name: en(h.name),
+      troopType: h.troopType,
+      rarity: h.rarity,
+      generation: h.generation,
+      iconUrl: bundledHeroIcon(h.slug),
+      sortOrder: index,
+      published: true,
+    })),
+    kvkPlan: buildSeedKvkPlan(now),
+  };
+}
+
+function buildSeedKvkPlan(now: string): KvkPlanWithSecret {
+  const plan = SEED_KVK_PLAN;
+  return {
+    id: plan.id,
+    slug: plan.slug,
+    eventType: plan.eventType,
+    title: en(plan.title),
+    opponent: plan.opponent,
+    battleAt: plan.battleAt,
+    intro: en(markdownToHtml(plan.introMarkdown)),
+    minHeroStars: plan.minHeroStars,
+    minSkillLevel: plan.minSkillLevel,
+    active: true,
+    published: true,
+    updatedAt: now,
+    password: seedKvkPassword(),
+    rules: plan.rules.map((rule, index) => ({
+      id: kvkRuleId(index),
+      planId: plan.id,
+      kind: rule.kind,
+      text: en(rule.text),
+      sortOrder: index,
+      published: true,
+    })),
+    coordinators: plan.coordinators.map((c, index) => ({
+      id: kvkCoordinatorId(index),
+      planId: plan.id,
+      team: c.team,
+      name: c.name,
+      allianceTag: c.allianceTag,
+      note: en(c.note),
+      sortOrder: index,
+      published: true,
+    })),
+    formations: plan.formations.map((f, index) => ({
+      id: kvkFormationId(index),
+      planId: plan.id,
+      label: f.label,
+      side: f.side,
+      role: f.role,
+      heroSlugs: f.heroes,
+      infantry: f.infantry,
+      cavalry: f.cavalry,
+      archers: f.archers,
+      note: en(f.note),
+      sortOrder: index,
+      published: true,
     })),
   };
 }
