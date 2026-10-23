@@ -142,8 +142,10 @@ export function BattlePlan({
               anyLabel={dict["kvk.anyHero"]}
               skillTitle={dict["kvk.skillLevel"]}
             />
-            <p className="max-w-36 text-xs/snug font-bold text-ink-muted">
+            <p className="max-w-40 text-xs/snug font-bold text-ink-muted">
               {dict["kvk.skillLevel"]}: <span className="text-gold-strong">{plan.minSkillLevel}</span>
+              <br />
+              <span className="font-semibold text-ink-faint">{dict["kvk.skillHint"]}</span>
               <br />
               <span className="text-gold-strong">{"★".repeat(plan.minHeroStars)}</span>+
             </p>

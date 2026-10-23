@@ -54,7 +54,7 @@ export const SEED_KVK_PLAN: SeedKvkPlan = {
 
 We will be trying different strategies and different heroes to prepare for the real KvK battle. Because of this, the formations will change. Please listen to the coordinators to know which formation to use.
 
-Make the formations below, but only with heroes where you have the top-right skill at level 5. If you don't have the hero at 4 stars, don't make that formation. Save each formation as a Troop Ratio.
+Make the formations below, but only with heroes whose Top Expedition Skill (the top-right skill with the flag icon) is at level 5. If you don't have the hero at 4 stars, don't make that formation. Save each formation as a Troop Ratio.
 
 > Kingdom council: this is placeholder text. Edit the plan in the \`kvk_plans\` table (title, date, this introduction), the names in \`kvk_coordinators\` and the formations in \`kvk_formations\`.`,
   minHeroStars: 4,

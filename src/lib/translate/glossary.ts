@@ -123,6 +123,11 @@ export const GLOSSARY: GlossaryEntry[] = [
     translations: { de: "Expeditionsfähigkeit", pl: "Umiejętność ekspedycyjna", ko: "원정 스킬", ar: "مهارة الحملة" },
   },
   {
+    term: "Top Expedition Skill",
+    translations: { de: "Oberste Expeditionsfähigkeit", pl: "Główna umiejętność ekspedycyjna", ko: "최상위 원정 스킬", ar: "مهارة الحملة العليا" },
+    note: "The hero's top-right skill, marked with a flag icon in the game.",
+  },
+  {
     term: "Lethality",
     translations: { de: "Tödlichkeit", pl: "Śmiercionośność", ko: "치명", ar: "الفتك" },
   },
