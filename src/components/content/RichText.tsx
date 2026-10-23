@@ -9,6 +9,7 @@ export function RichText({ html, className }: { html: string; className?: string
   return (
     <div
       className={clsx("prose-game", className)}
+      dir="auto"
       // Sanitised above; tables get a scroll wrapper on small screens.
       dangerouslySetInnerHTML={{ __html: wrapTables(sanitizeRichText(html)) }}
     />

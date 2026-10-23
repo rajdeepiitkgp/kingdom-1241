@@ -21,14 +21,14 @@ export function Header({
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
         <Link href={localePath(locale, "/")} className="flex items-center gap-2.5 font-extrabold" aria-label={kingdomName}>
           <span className="grid size-10 place-items-center rounded-2xl bg-gold text-xl shadow-[0_3px_0_0_var(--gold-strong)]" aria-hidden>
             👑
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-base text-ink">{kingdomName}</span>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-ink-faint">Kingshot · #{kingdomNumber}</span>
+            <span className="whitespace-nowrap text-sm text-ink sm:text-base" dir="auto">{kingdomName}</span>
+            <span className="hidden text-[11px] font-bold uppercase tracking-widest text-ink-faint sm:block">Kingshot · #{kingdomNumber}</span>
           </span>
         </Link>
 

@@ -30,8 +30,8 @@ export default async function GuidesPage() {
               <span className="grid size-14 place-items-center rounded-2xl bg-primary-soft text-3xl" aria-hidden>
                 {guide.icon}
               </span>
-              <h2 className="mt-4 text-xl font-extrabold text-ink">{pick(guide.title, locale)}</h2>
-              <p className="mt-2 flex-1 text-sm text-ink-muted">{pick(guide.summary, locale)}</p>
+              <h2 className="mt-4 text-xl font-extrabold text-ink" dir="auto">{pick(guide.title, locale)}</h2>
+              <p className="mt-2 flex-1 text-sm text-ink-muted" dir="auto">{pick(guide.summary, locale)}</p>
               <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-extrabold text-primary">
                 {dict["guides.read"]}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" aria-hidden />

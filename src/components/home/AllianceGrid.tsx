@@ -52,14 +52,14 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
             </dl>
 
             {pick(alliance.description, locale) && (
-              <p className="mt-3 text-sm text-ink-muted">{pick(alliance.description, locale)}</p>
+              <p className="mt-3 text-sm text-ink-muted" dir="auto">{pick(alliance.description, locale)}</p>
             )}
 
             <div className="mt-3 space-y-1 text-sm">
               {pick(alliance.requirements, locale) && (
                 <p>
                   <span className="font-bold text-ink-muted">{dict["alliance.requirements"]}:</span>{" "}
-                  <span className="text-ink">{pick(alliance.requirements, locale)}</span>
+                  <span className="text-ink" dir="auto">{pick(alliance.requirements, locale)}</span>
                 </p>
               )}
               {alliance.languages && (

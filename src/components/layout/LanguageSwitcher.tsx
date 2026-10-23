@@ -44,7 +44,7 @@ export function LanguageSwitcher({
           rememberLocale(next);
           router.push(switchLocaleInPath(pathname, next));
         }}
-        className="h-10 cursor-pointer appearance-none rounded-full border border-line bg-card ps-9 pe-8 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+        className="h-10 max-w-[9.5rem] cursor-pointer appearance-none truncate rounded-full border border-line bg-card ps-9 pe-7 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 sm:max-w-none"
         aria-label={label}
       >
         {languages.map((language) => (

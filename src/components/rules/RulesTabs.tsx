@@ -98,7 +98,7 @@ export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict:
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-extrabold text-ink">{pick(rule.title, locale)}</h3>
+                  <h3 className="text-lg font-extrabold text-ink" dir="auto">{pick(rule.title, locale)}</h3>
                   <RichText html={pick(rule.body, locale)} className="mt-1.5 text-[0.98rem]" />
                 </div>
               </li>

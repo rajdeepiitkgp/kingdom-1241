@@ -54,13 +54,13 @@ async function GuideArticle({ params }: Pick<PageProps<"/[locale]/guides/[slug]"
             {guide.icon}
           </span>
           <div>
-            <h1 className="text-2xl font-black text-ink md:text-4xl">{pick(guide.title, locale)}</h1>
+            <h1 className="text-2xl font-black text-ink md:text-4xl" dir="auto">{pick(guide.title, locale)}</h1>
             <p className="mt-1 text-xs font-bold text-ink-faint">
               {dict["guides.updated"]}: <time dateTime={guide.updatedAt}>{updated}</time>
             </p>
           </div>
         </div>
-        {pick(guide.summary, locale) && <p className="mt-4 text-base font-semibold text-ink-muted">{pick(guide.summary, locale)}</p>}
+        {pick(guide.summary, locale) && <p className="mt-4 text-base font-semibold text-ink-muted" dir="auto">{pick(guide.summary, locale)}</p>}
       </header>
 
       {relatedEvents.length > 0 && (

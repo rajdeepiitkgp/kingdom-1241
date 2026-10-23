@@ -42,9 +42,10 @@ create table if not exists public.languages (
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.site_settings (
-  key         text primary key,
-  value       jsonb not null,
-  updated_at  timestamptz not null default now()
+  key          text primary key,
+  value        jsonb not null,
+  source_hash  text,                             -- only used for translatable values
+  updated_at   timestamptz not null default now()
 );
 
 drop trigger if exists site_settings_updated_at on public.site_settings;

@@ -38,7 +38,7 @@ export function Announcements({
                 )}
               </time>
             </div>
-            <h3 className="mt-1.5 text-lg font-extrabold text-ink">{pick(announcement.title, locale)}</h3>
+            <h3 className="mt-1.5 text-lg font-extrabold text-ink" dir="auto">{pick(announcement.title, locale)}</h3>
             <RichText html={pick(announcement.body, locale)} className="mt-2 text-[0.98rem]" />
           </article>
         </li>

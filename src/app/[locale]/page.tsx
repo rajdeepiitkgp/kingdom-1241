@@ -37,8 +37,8 @@ export default async function HomePage() {
         />
         <div className="relative">
           <p className="chip bg-gold-soft text-gold-strong">Kingshot · #{settings.kingdomNumber}</p>
-          <h1 className="mt-3 text-3xl font-black leading-tight text-ink md:text-5xl">{pick(settings.kingdomName, locale)}</h1>
-          <p className="mt-3 max-w-2xl text-base font-semibold text-ink-muted md:text-lg">{pick(settings.tagline, locale)}</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight text-ink md:text-5xl" dir="auto">{pick(settings.kingdomName, locale)}</h1>
+          <p className="mt-3 max-w-2xl text-base font-semibold text-ink-muted md:text-lg" dir="auto">{pick(settings.tagline, locale)}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={localePath(locale, "/events")} className="btn-primary">
               {dict["nav.events"]} <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />

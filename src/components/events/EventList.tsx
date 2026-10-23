@@ -105,12 +105,12 @@ export function EventCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-extrabold leading-tight text-ink">{pick(event.name, locale)}</h3>
+          <h3 className="text-lg font-extrabold leading-tight text-ink" dir="auto">{pick(event.name, locale)}</h3>
           <span className="chip bg-primary-soft text-primary">{dict[`events.category.${event.category}`]}</span>
           {live && <span className="chip bg-success-soft text-success">● {dict["time.live"]}</span>}
         </div>
 
-        {!compact && <p className="mt-1 text-sm text-ink-muted">{pick(event.summary, locale)}</p>}
+        {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{pick(event.summary, locale)}</p>}
 
         <dl className="mt-3 grid gap-1.5 text-sm">
           <div className="flex items-center gap-2 text-ink">
