@@ -1,0 +1,48 @@
+# Checks every pull request and every push to main.
+# Vercel deploys independently (see SETUP.md § 6); protect `main` so a PR can
+# only be merged — and therefore deployed — when this workflow is green.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      # Builds without Supabase/Gemini keys: the site falls back to the bundled
+      # seed content, which is exactly what we want to verify compiles.
+      - name: Build
+        run: npm run build
