@@ -4,7 +4,7 @@ import { KeyRound, Wrench } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useSyncExternalStore } from "react";
-import { hasSessionCookie, isAdminPath } from "@/lib/auth/session-hint";
+import { hasSessionMarker, isAdminPath } from "@/lib/auth/session-hint";
 import { stripLocale } from "@/lib/i18n/paths";
 
 export interface AdminEntryLabels {
@@ -23,9 +23,10 @@ export interface AdminEntryLabels {
  * admin area it disappears, because the admin bar there has the identity and
  * the "Sign out" button; two sign-in/out controls on one screen were confusing.
  *
- * The session state is read from the cookie in the browser (see
- * session-hint.ts): the chrome is static and cached, so the server renders the
- * signed-out variant and the browser corrects it right after hydration.
+ * The session state comes from a harmless marker cookie the server sets next
+ * to the HttpOnly session (see session-hint.ts): the chrome is static and
+ * cached, so the server renders the signed-out variant and the browser
+ * corrects it right after hydration.
  */
 export function AdminEntry({ href, labels, variant }: { href: string; labels: AdminEntryLabels; variant: "header" | "footer" }) {
   return (
@@ -49,7 +50,7 @@ const subscribe = (onChange: () => void) => {
 /** Leaf with the client-only data (pathname, cookie); re-renders on every navigation, so a sign-out redirect is picked up. */
 function AdminEntryState({ href, labels, variant }: { href: string; labels: AdminEntryLabels; variant: "header" | "footer" }) {
   const pathname = usePathname();
-  const signedIn = useSyncExternalStore(subscribe, () => hasSessionCookie(document.cookie), () => false);
+  const signedIn = useSyncExternalStore(subscribe, () => hasSessionMarker(document.cookie), () => false);
   if (isAdminPath(stripLocale(pathname))) return null;
   return <AdminEntryView href={href} labels={labels} variant={variant} signedIn={signedIn} />;
 }

@@ -53,3 +53,17 @@ describe("removeAccountProblem", () => {
     expect(removeAccountProblem({ ...base, targetRole: "admin", actorIsOwner: true })).toBeNull();
   });
 });
+
+describe("grantsFor", () => {
+  it("matches pre-authorisations by Discord handle or e-mail only", async () => {
+    const { grantsFor } = await import("@/lib/auth/roles");
+    const grants = [
+      { id: "1", discordUsername: "cleo", email: null },
+      { id: "2", discordUsername: null, email: "cleo@x.y" },
+      { id: "3", discordUsername: "other", email: null },
+      { id: "4", discordUsername: null, email: null },
+    ];
+    expect(grantsFor(grants, { discordUsername: "cleo", email: "cleo@x.y" }).map((g) => g.id)).toEqual(["1", "2"]);
+    expect(grantsFor(grants, { discordUsername: null, email: null })).toEqual([]);
+  });
+});

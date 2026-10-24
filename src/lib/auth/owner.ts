@@ -10,6 +10,8 @@ import { normalizeEmail, normalizeHandle } from "./identity";
  * and the dev e-mail account are both owners); production holds one entry.
  */
 export interface OwnerIdentity {
+  /** Discord user id (the stable choice: handles can be changed and re-registered). */
+  discordId?: string | null;
   discordUsername: string | null;
   email: string | null;
 }
@@ -17,12 +19,13 @@ export interface OwnerIdentity {
 export function parseOwner(value: string | null | undefined): OwnerIdentity | null {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
+  if (/^\d{15,22}$/.test(raw)) return { discordId: raw, discordUsername: null, email: null };
   if (raw.includes("@") && !raw.startsWith("@")) {
     const email = normalizeEmail(raw);
-    return email ? { discordUsername: null, email } : null;
+    return email ? { discordId: null, discordUsername: null, email } : null;
   }
   const handle = normalizeHandle(raw);
-  return handle ? { discordUsername: handle, email: null } : null;
+  return handle ? { discordId: null, discordUsername: handle, email: null } : null;
 }
 
 /** Every owner configured in a comma-separated `SITE_OWNER` (normally exactly one). */
@@ -38,7 +41,9 @@ export function isOwnerIdentity(
   owner: OwnerIdentity | OwnerIdentity[] | null = parseOwners(process.env.SITE_OWNER),
 ): boolean {
   const owners = owner === null ? [] : Array.isArray(owner) ? owner : [owner];
-  return owners.some((candidate) =>
-    candidate.discordUsername ? identity.discordUsername === candidate.discordUsername : Boolean(candidate.email) && identity.email === candidate.email,
-  );
+  return owners.some((candidate) => {
+    if (candidate.discordId) return Boolean(identity.discordId) && identity.discordId === candidate.discordId;
+    if (candidate.discordUsername) return identity.discordUsername === candidate.discordUsername;
+    return Boolean(candidate.email) && identity.email === candidate.email;
+  });
 }

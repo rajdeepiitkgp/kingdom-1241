@@ -27,6 +27,12 @@ export async function audit(
   log.info("Admin action", { action, table, rowId, actor: actor.id });
 }
 
+/** An entry written by the site itself (no signed-in actor), e.g. a detected brute-force attempt. */
+export async function systemAudit(action: string, table: string | null, rowId: string | null, details: Record<string, unknown> = {}): Promise<void> {
+  const { error } = await createAdminClient().from("audit_log").insert({ actor_id: null, actor_name: "Site", action, table_name: table, row_id: rowId, details });
+  if (error) log.error("Could not write the audit entry", { action, error: error.message });
+}
+
 export interface AuditEntry {
   id: number;
   actorName: string;

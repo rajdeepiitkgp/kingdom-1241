@@ -32,17 +32,22 @@ export function normalizeEmail(value: string | null | undefined): string | null 
 
 /**
  * Picks the name, Discord id/handle and avatar out of a Supabase Auth user.
- * Discord sign-ins carry `name` (the handle), `full_name` / `custom_claims.global_name`
- * (the display name), `provider_id` and `avatar_url` in the user metadata.
+ *
+ * Security: for Discord accounts everything comes from `identities[].identity_data`
+ * (written by Supabase from Discord's answer) and the identity's provider id,
+ * never from `user_metadata`. A signed-in user can rewrite `user_metadata` through
+ * the Auth API at will, so a handle taken from there could impersonate the owner
+ * or match somebody else's pre-authorisation. `user_metadata` is only consulted
+ * for e-mail accounts' display name, which carries no rights.
  */
 export function identityFromUser(
   user: Pick<User, "id" | "email" | "user_metadata" | "app_metadata" | "identities">,
 ): Identity {
   const meta = (user.user_metadata ?? {}) as Meta;
-  const claims = (meta.custom_claims ?? {}) as Meta;
   const discord = user.identities?.find((i) => i.provider === "discord") ?? null;
   const discordData = (discord?.identity_data ?? {}) as Meta;
-  const email = normalizeEmail(user.email ?? text(meta.email));
+  const discordClaims = (discordData.custom_claims ?? {}) as Meta;
+  const email = normalizeEmail(user.email ?? (discord ? text(discordData.email) : text(meta.email)));
 
   const provider: Identity["provider"] = discord
     ? "discord"
@@ -50,11 +55,9 @@ export function identityFromUser(
       ? "email"
       : "unknown";
 
-  const handle = discord ? normalizeHandle(text(meta.name) ?? text(meta.preferred_username) ?? text(discordData.name)) : null;
+  const handle = discord ? normalizeHandle(text(discordData.name) ?? text(discordData.preferred_username)) : null;
   const displayName =
-    text(meta.full_name) ??
-    text(claims.global_name) ??
-    text(discordData.full_name) ??
+    (discord ? (text(discordClaims.global_name) ?? text(discordData.full_name)) : text(meta.full_name)) ??
     handle ??
     (email ? email.split("@")[0] : null) ??
     "Unknown";
@@ -62,9 +65,9 @@ export function identityFromUser(
   return {
     provider,
     displayName,
-    discordId: discord ? (text(discord.id) ?? text(meta.provider_id) ?? text(meta.sub)) : null,
+    discordId: discord ? (text(discord.id) ?? text(discordData.provider_id) ?? text(discordData.sub)) : null,
     discordUsername: handle,
     email,
-    avatarUrl: text(meta.avatar_url) ?? text(meta.picture),
+    avatarUrl: discord ? (text(discordData.avatar_url) ?? text(discordData.picture)) : (text(meta.avatar_url) ?? text(meta.picture)),
   };
 }

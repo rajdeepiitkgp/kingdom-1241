@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { loginPath, safeNextPath } from "@/lib/auth/paths";
 import { createSessionClient, syncProfile } from "@/lib/auth/server";
+import { ADMIN_MARKER_COOKIE, markerCookieOptions } from "@/lib/auth/session-hint";
 import { createLogger, requestId } from "@/lib/log";
 
 /**
@@ -40,5 +41,6 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(new URL(next, origin));
   response.headers.set("x-request-id", reqId);
+  response.cookies.set(ADMIN_MARKER_COOKIE, "1", markerCookieOptions(process.env.NODE_ENV === "production"));
   return response;
 }

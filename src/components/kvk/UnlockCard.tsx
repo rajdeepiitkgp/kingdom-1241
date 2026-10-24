@@ -2,16 +2,29 @@
 
 import { KeyRound, LockKeyhole } from "lucide-react";
 import { useActionState } from "react";
-import type { Dictionary } from "@/lib/i18n/dictionary";
+import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { unlockKvk, type UnlockState } from "@/lib/kvk/actions";
+import { formatDuration } from "../time/DurationLabel";
+import { useNow } from "../time/useNow";
 
 const INITIAL: UnlockState = { status: "idle" };
 
 /** Password form. On success the Server Action sets the cookie and the page re-renders unlocked. */
 export function UnlockCard({ dict }: { dict: Dictionary }) {
   const [state, formAction, pending] = useActionState(unlockKvk, INITIAL);
+  const now = useNow(1000);
+  // After too many wrong passwords the server names a moment; the form waits for it with a countdown.
+  const waitMs = state.status === "throttled" && state.retryAt && now ? Math.max(0, state.retryAt - now.getTime()) : 0;
+  const waiting = state.status === "throttled" && (now === null || waitMs > 0);
   const error =
-    state.status === "wrong" ? dict["kvk.wrongPassword"] : state.status === "unavailable" ? dict["kvk.unavailable"] : null;
+    state.status === "wrong"
+      ? dict["kvk.wrongPassword"]
+      : state.status === "unavailable"
+        ? dict["kvk.unavailable"]
+        : waiting
+          ? format(dict["kvk.throttled"], { time: now ? formatDuration(waitMs, dict) : "…" })
+          : null;
+  const hint = state.status === "wrong" && state.triesLeft !== undefined && state.triesLeft <= 2 ? format(dict["kvk.triesLeft"], { n: state.triesLeft }) : null;
 
   return (
     <form action={formAction} className="card mx-auto max-w-md p-6 text-center md:p-8">
@@ -33,15 +46,17 @@ export function UnlockCard({ dict }: { dict: Dictionary }) {
         required
         autoFocus
         dir="ltr"
+        disabled={waiting}
         aria-invalid={state.status === "wrong"}
         aria-describedby={error ? "kvk-password-error" : undefined}
       />
       {error && (
-        <p id="kvk-password-error" role="alert" className="mt-2 rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger">
+        <p id="kvk-password-error" role="alert" className="mt-2 rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger" suppressHydrationWarning>
           {error}
+          {hint && <span className="mt-1 block font-semibold">{hint}</span>}
         </p>
       )}
-      <button type="submit" className="btn-primary mt-4 w-full" disabled={pending}>
+      <button type="submit" className="btn-primary mt-4 w-full" disabled={pending || waiting}>
         <KeyRound className="size-4" aria-hidden />
         {dict["kvk.unlock"]}
       </button>

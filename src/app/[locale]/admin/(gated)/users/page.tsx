@@ -10,7 +10,7 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { utcLabel } from "@/lib/admin/format";
 import { deleteGrant, removeAccount } from "@/lib/admin/users-actions";
 import { listGrants, listProfiles } from "@/lib/admin/users-data";
-import { canManageUsers, ROLE_LABELS } from "@/lib/auth/roles";
+import { canManageUsers, grantsFor, ROLE_LABELS } from "@/lib/auth/roles";
 import { requireEditor } from "@/lib/auth/server";
 
 export const metadata: Metadata = { title: "Users" };
@@ -58,6 +58,12 @@ async function Users({ locale }: { locale: string }) {
                     <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
                       {formatGameName(profile.gameName, profile.allianceTag) ?? <span className="text-ink-faint">no in-game name yet</span>}
                       {profile.isOwner && <span className="chip bg-gold-soft text-gold-ink">Owner</span>}
+                      {!profile.isOwner &&
+                        grantsFor(grants, profile).map((grant) => (
+                          <span key={grant.id} className="chip bg-primary-soft text-primary" title="A pre-authorisation re-applies this role at every sign-in; remove it below to make a demotion stick.">
+                            pre-authorised: {ROLE_LABELS[grant.role]}
+                          </span>
+                        ))}
                       {profile.id === user.id && <span className="text-xs font-bold text-ink-faint">(you)</span>}
                     </p>
                     <p className="text-sm text-ink-muted" dir="ltr">

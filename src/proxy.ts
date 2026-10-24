@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SEED_LANGUAGES } from "@/content/seed/languages";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/cookies";
+import { ADMIN_MARKER_COOKIE, markerCookieOptions } from "@/lib/auth/session-hint";
 import { loginPath } from "@/lib/auth/paths";
 import { LOCALE_COOKIE } from "@/lib/i18n/languages";
 import { negotiateLocale } from "@/lib/i18n/negotiate";
@@ -118,6 +120,7 @@ async function withFreshSession(request: NextRequest, reqId: string, pathname: s
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (toSet) => {
@@ -135,13 +138,19 @@ async function withFreshSession(request: NextRequest, reqId: string, pathname: s
     log.warn("Could not refresh the admin session", { reqId, error });
   }
 
+  // The marker cookie tells the (static, cached) site chrome whether someone is signed in.
+  const marked = request.cookies.get(ADMIN_MARKER_COOKIE)?.value === "1";
   const [locale, , third] = pathname.split("/").filter(Boolean);
   if (!signedIn && third !== "login") {
     const url = request.nextUrl.clone();
     url.pathname = loginPath(locale);
     url.search = `?next=${encodeURIComponent(pathname)}`;
-    return NextResponse.redirect(url, 307);
+    const redirect = NextResponse.redirect(url, 307);
+    if (marked) redirect.cookies.delete(ADMIN_MARKER_COOKIE);
+    return redirect;
   }
+  if (signedIn && !marked) response.cookies.set(ADMIN_MARKER_COOKIE, "1", markerCookieOptions(process.env.NODE_ENV === "production"));
+  if (!signedIn && marked) response.cookies.delete(ADMIN_MARKER_COOKIE);
   return response;
 }
 

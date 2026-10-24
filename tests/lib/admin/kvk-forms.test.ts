@@ -38,10 +38,10 @@ describe("parsePlanForm", () => {
   });
 
   it("reports every invalid field at once", () => {
-    const result = parsePlanForm(form({ ...valid, title: "", password: "ab", battleAt: "soon", minHeroStars: "7" }));
+    const result = parsePlanForm(form({ ...valid, title: "", password: "abc", battleAt: "soon", minHeroStars: "7", introSource: "x".repeat(20_001) }));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(Object.keys(result.errors).sort()).toEqual(["battleAt", "minHeroStars", "password", "slug", "title"]);
+    expect(Object.keys(result.errors).sort()).toEqual(["battleAt", "introSource", "minHeroStars", "password", "slug", "title"]);
   });
 });
 

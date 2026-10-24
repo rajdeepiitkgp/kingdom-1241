@@ -261,6 +261,20 @@ export const UI_STRINGS = {
     pl: "Błędne hasło. Zapytaj swojego R4/R5 na Discordzie.",
     ar: "كلمة المرور خاطئة. اسأل R4/R5 على ديسكورد.",
   },
+  "kvk.throttled": {
+    en: "Too many wrong passwords. Try again in {time}.",
+    de: "Zu viele falsche Passwörter. Versuch es in {time} noch einmal.",
+    ko: "비밀번호를 너무 많이 틀렸습니다. {time} 후에 다시 시도하세요.",
+    pl: "Zbyt wiele błędnych haseł. Spróbuj ponownie za {time}.",
+    ar: "كلمات مرور خاطئة كثيرة. حاول مرة أخرى بعد {time}.",
+  },
+  "kvk.triesLeft": {
+    en: "{n} more tries before a longer wait.",
+    de: "Noch {n} Versuche, dann folgt eine längere Wartezeit.",
+    ko: "{n}번 더 틀리면 더 오래 기다려야 합니다.",
+    pl: "Jeszcze {n} próby, potem dłuższa przerwa.",
+    ar: "بقيت {n} محاولات قبل انتظار أطول.",
+  },
   "kvk.unavailable": {
     en: "The battle plan is not available right now. Try again later.",
     de: "Der Schlachtplan ist gerade nicht verfügbar. Versuch es später noch einmal.",

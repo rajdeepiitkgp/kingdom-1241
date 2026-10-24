@@ -123,8 +123,10 @@ export function requestId(source?: { headers: HeaderSource } | HeaderSource | nu
   // capability: Next's headers adapter also has an internal `headers` field,
   // so checking for that property first would pick the wrong object.
   const headers = isHeaderSource(source) ? source : isHeaderSource(source?.headers) ? source.headers : null;
-  const given = headers ? (headers.get("x-request-id") ?? headers.get("x-vercel-id")) : null;
-  if (given) return given.slice(0, 64);
+  // Vercel's id first; a forwarded x-request-id is accepted but reduced to safe characters so a client can't inject log text.
+  const given = headers ? (headers.get("x-vercel-id") ?? headers.get("x-request-id")) : null;
+  const clean = given?.replace(/[^A-Za-z0-9:_.-]/g, "").slice(0, 64);
+  if (clean) return clean;
   return globalThis.crypto.randomUUID().slice(0, 8);
 }
 

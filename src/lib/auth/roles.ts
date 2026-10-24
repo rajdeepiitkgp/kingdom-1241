@@ -57,6 +57,18 @@ export function roleChangeProblem(change: {
   return null;
 }
 
+/** Pre-authorisations that apply to an account (same Discord handle or e-mail): they re-apply on every sign-in. */
+export function grantsFor<T extends { discordUsername: string | null; email: string | null }>(
+  grants: readonly T[],
+  identity: { discordUsername: string | null; email: string | null },
+): T[] {
+  return grants.filter(
+    (grant) =>
+      (grant.discordUsername !== null && grant.discordUsername === identity.discordUsername) ||
+      (grant.email !== null && grant.email === identity.email),
+  );
+}
+
 /** Why removing an account (sign-in and profile) is not allowed, or null when it is. */
 export function removeAccountProblem(removal: { actorIsOwner: boolean; actorIsTarget: boolean; targetIsOwner: boolean; targetRole: Role }): string | null {
   if (removal.targetIsOwner) return "The owner's account can't be removed.";
