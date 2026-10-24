@@ -37,6 +37,18 @@ describe("parsePlanForm", () => {
     expect(result.value.opponent).toBeNull();
   });
 
+  it("refuses a changed battle time in the past, but keeps an unchanged one", () => {
+    const now = new Date("2026-10-20T10:00:00.000Z"); // the valid sample (1 Nov) lies ahead of it
+    const past = { ...valid, battleAt: "2026-10-01T14:00" };
+    const rejected = parsePlanForm(form(past), { now });
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.errors.battleAt).toMatch(/past/);
+    // Editing an old plan without touching its time (stored in Postgres format) stays valid.
+    expect(parsePlanForm(form(past), { now, previousBattleAt: "2026-10-01T14:00:00+00:00" }).ok).toBe(true);
+    expect(parsePlanForm(form(valid), { now }).ok).toBe(true);
+    expect(parsePlanForm(form({ ...valid, battleAt: "" }), { now }).ok).toBe(true);
+  });
+
   it("reports every invalid field at once", () => {
     const result = parsePlanForm(form({ ...valid, title: "", password: "ab", battleAt: "soon", minHeroStars: "7" }));
     expect(result.ok).toBe(false);

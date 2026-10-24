@@ -61,6 +61,12 @@ export function DateTimeField({
 
   const ms = value ? Date.parse(`${value}Z`) : Number.NaN;
   const valid = !Number.isNaN(ms);
+  const past = valid && now !== null && ms < now.getTime();
+  // The picker greys out the past, except for an old plan whose stored time
+  // already lies behind us (it must stay saveable; the server allows an unchanged past time).
+  const storedMs = defaultValue ? Date.parse(`${defaultValue}Z`) : Number.NaN;
+  const storedInPast = !Number.isNaN(storedMs) && now !== null && storedMs < now.getTime();
+  const min = now && !storedInPast ? now.toISOString().slice(0, 16) : undefined;
   const clear = () => {
     if (input.current) input.current.value = "";
     setValue("");
@@ -77,6 +83,7 @@ export function DateTimeField({
             name={name}
             type="datetime-local"
             step={300}
+            min={min}
             defaultValue={defaultValue}
             onChange={(event) => setValue(event.target.value)}
             className="input ps-12 dark:scheme-dark"
@@ -89,9 +96,10 @@ export function DateTimeField({
         )}
       </div>
       {valid && (
-        <p className="text-xs font-semibold text-ink-muted" aria-live="polite">
+        <p className={past ? "text-xs font-bold text-danger" : "text-xs font-semibold text-ink-muted"} aria-live="polite">
           {UTC_FORMAT.format(ms)} UTC
           {now && <> · {LOCAL_FORMAT.format(ms)} where you are</>}
+          {past && <> · already in the past</>}
         </p>
       )}
     </Field>

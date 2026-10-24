@@ -37,7 +37,14 @@ export interface PlanInput {
   published: boolean;
 }
 
-export function parsePlanForm(fd: FormData): FormResult<PlanInput> {
+export interface PlanFormOptions {
+  /** The server's clock; a *changed* battle time must not be before it. */
+  now?: Date;
+  /** The stored battle time: leaving it as it is stays valid even once it is in the past. */
+  previousBattleAt?: string | null;
+}
+
+export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): FormResult<PlanInput> {
   const errors: Record<string, string> = {};
   const title = textField(fd, "title");
   if (!title) errors.title = "Give the plan a title.";
@@ -52,6 +59,9 @@ export function parsePlanForm(fd: FormData): FormResult<PlanInput> {
 
   const battleAt = utcDateTimeField(fd, "battleAt");
   if (battleAt === undefined) errors.battleAt = "Enter the date and time as the form shows them (UTC).";
+  else if (battleAt && options.now && Date.parse(battleAt) < options.now.getTime() && !sameMoment(battleAt, options.previousBattleAt)) {
+    errors.battleAt = "That time is already in the past. A battle is planned ahead; enter a future time (UTC).";
+  }
 
   const minHeroStars = intField(fd, "minHeroStars", 0, 5);
   if (minHeroStars === null) errors.minHeroStars = "Stars go from 0 to 5.";
@@ -173,6 +183,10 @@ export function parseFormationForm(fd: FormData, heroSlugs: readonly string[]): 
       published: boolField(fd, "published"),
     },
   };
+}
+
+function sameMoment(a: string, b: string | null | undefined): boolean {
+  return Boolean(b) && Date.parse(a) === Date.parse(b as string);
 }
 
 /** First preset letter not used by the plan yet, or null when all twelve are taken. */
