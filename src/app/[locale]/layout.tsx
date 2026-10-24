@@ -88,7 +88,7 @@ export default async function RootLayout({
       </head>
       {/* suppressHydrationWarning: browser extensions (Grammarly, ...) add attributes to <body>
           before React hydrates; the mismatch is harmless and only concerns this element. */}
-      <body className="flex min-h-full flex-col pb-24 md:pb-0" suppressHydrationWarning>
+      <body className="flex min-h-full flex-col pb-24 lg:pb-0" suppressHydrationWarning>
         <PersistentUiState locale={currentLocale} />
         <Header
             locale={currentLocale}
