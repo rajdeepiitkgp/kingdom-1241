@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isEditableTextColumn, parseEditLang, pendingColumns, translationPending, withLanguage } from "@/lib/admin/translation";
+import { introSourceFor, isEditableTextColumn, parseEditLang, pendingColumns, translationPending, withLanguage } from "@/lib/admin/translation";
 import { columnHashes, encodeColumnHashes, sourceHash } from "@/lib/translate/hash";
 
 describe("translationPending", () => {
@@ -41,5 +41,22 @@ describe("editable columns and languages", () => {
     expect(withLanguage({ en: "Hi", de: "Hallo" }, "de", "Servus")).toEqual({ en: "Hi", de: "Servus" });
     expect(withLanguage({ en: "Hi", de: "Hallo" }, "de", "")).toEqual({ en: "Hi" });
     expect(withLanguage(null, "fr", "Salut")).toEqual({ fr: "Salut" });
+  });
+});
+
+describe("introSourceFor", () => {
+  const plan = {
+    intro: { en: "<h2>Plan</h2><p>Rally at <strong>14:00</strong></p>", de: "<p>Sammeln um 14:00</p>" },
+    introSources: { en: "## Plan\n\nRally at **14:00**", pl: "   " },
+  };
+  it("prefers the stored Markdown source", () => {
+    expect(introSourceFor(plan, "en")).toBe("## Plan\n\nRally at **14:00**");
+  });
+  it("flattens the stored HTML when the source is missing or blank", () => {
+    expect(introSourceFor(plan, "de")).toBe("Sammeln um 14:00");
+    expect(introSourceFor({ ...plan, intro: { ...plan.intro, pl: "<p>Zbiórka</p>" } }, "pl")).toBe("Zbiórka");
+  });
+  it("is empty for a language with nothing stored", () => {
+    expect(introSourceFor(plan, "ko")).toBe("");
   });
 });

@@ -70,8 +70,9 @@ export function getLanguageInfo(code: string): LanguageInfo {
   );
 }
 
-export function directionFor(code: string): TextDirection {
-  return getLanguageInfo(code).direction;
+/** Shape of a locale code the site accepts in forms and paths: "en", "pt-BR", "zh-Hant" (not whether it is enabled). */
+export function isLocaleCode(value: unknown): value is string {
+  return typeof value === "string" && /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(value);
 }
 
 /** A language as configured by admins (database row), merged with registry info. */

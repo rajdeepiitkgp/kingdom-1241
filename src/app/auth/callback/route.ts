@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { loginPath, safeNextPath } from "@/lib/auth/paths";
 import { createSessionClient, syncProfile } from "@/lib/auth/server";
 import { ADMIN_MARKER_COOKIE, markerCookieOptions } from "@/lib/auth/session-hint";
+import { isLocaleCode } from "@/lib/i18n/languages";
 import { createLogger, requestId } from "@/lib/log";
 
 /**
@@ -13,7 +14,8 @@ export async function GET(request: NextRequest) {
   const log = createLogger("auth").child({ reqId });
   const { searchParams, origin } = request.nextUrl;
   const next = safeNextPath(searchParams.get("next"), "/en/admin");
-  const locale = next.split("/")[1] || "en";
+  const segment = next.split("/")[1];
+  const locale = isLocaleCode(segment) ? segment : "en";
 
   const fail = (reason: string) => {
     const response = NextResponse.redirect(new URL(`${loginPath(locale)}?error=${reason}`, origin));

@@ -4,7 +4,7 @@ import { pick, type Localized } from "@/lib/i18n/localized";
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { htmlToEditableText } from "./forms";
+import { htmlToEditableText, isUuid } from "./forms";
 import { pendingColumns } from "./translation";
 
 /**
@@ -52,6 +52,8 @@ export async function listPlans(): Promise<AdminPlanSummary[]> {
     log.error("Could not list plans", { error: plans.error.message });
     return [];
   }
+  // The counts are decoration: the list still works without them.
+  if (formations.error) log.warn("Could not count formations", { error: formations.error.message });
   const counts = new Map<string, number>();
   for (const row of formations.data ?? []) {
     const id = String(row.plan_id);
@@ -85,16 +87,8 @@ export interface AdminKvkPlan extends KvkPlanWithSecret {
   pendingRows: Record<string, string[]>;
 }
 
-/** Editable Markdown of the intro in `lang` (the stored source, else the HTML flattened to text). */
-export function introSourceFor(plan: AdminKvkPlan, lang: string): string {
-  const stored = plan.introSources[lang];
-  if (typeof stored === "string" && stored.trim()) return stored;
-  const html = plan.intro[lang];
-  return typeof html === "string" ? htmlToEditableText(html) : "";
-}
-
 export async function getPlanForEditing(id: string): Promise<AdminKvkPlan | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   if (!(await allowed("plan"))) return null;
   const admin = createAdminClient();
   const { data: plan, error } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();

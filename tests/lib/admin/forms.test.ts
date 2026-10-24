@@ -3,11 +3,14 @@ import {
   boolField,
   htmlToEditableText,
   intField,
+  isUuid,
+  localeField,
   localizedUpdate,
   oneOfField,
   slugify,
   toUtcInputValue,
   utcDateTimeField,
+  uuidField,
 } from "@/lib/admin/forms";
 
 function form(entries: Record<string, string>): FormData {
@@ -61,5 +64,33 @@ describe("htmlToEditableText", () => {
     expect(htmlToEditableText(html)).toBe(
       "Hi all! 👋 **Castle Battle tomorrow**\n\n- No buffs\n- Listen to *coordinators*\n\n> Council: edit me.",
     );
+  });
+});
+
+describe("uuidField / localeField", () => {
+  const fd = (entries: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(entries)) f.set(k, v);
+    return f;
+  };
+
+  it("accepts only a well-formed UUID, so a tampered hidden field never reaches the database", () => {
+    const id = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+    expect(isUuid(id)).toBe(true);
+    expect(isUuid(id.toUpperCase())).toBe(true);
+    expect(uuidField(fd({ id: ` ${id} ` }), "id")).toBe(id);
+    for (const bad of ["", "new", "3f2504e04f8911d39a0c0305e82c3301", "3f2504e0-4f89-11d3-9a0c-0305e82c330", "------------------------------------", "3f2504e0-4f89-11d3-9a0c-0305e82c33zz"]) {
+      expect(isUuid(bad), bad).toBe(false);
+      expect(uuidField(fd({ id: bad }), "id"), bad).toBeNull();
+    }
+    expect(isUuid(42)).toBe(false);
+  });
+
+  it("falls back to English for anything that is not a locale code", () => {
+    expect(localeField(fd({ locale: "de" }))).toBe("de");
+    expect(localeField(fd({ locale: "pt-BR" }))).toBe("pt-BR");
+    expect(localeField(fd({ locale: "../../etc" }))).toBe("en");
+    expect(localeField(fd({}))).toBe("en");
+    expect(localeField(fd({ lang: "ar" }), "lang")).toBe("ar");
   });
 });

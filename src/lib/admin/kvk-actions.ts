@@ -3,15 +3,17 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminPath } from "@/lib/auth/paths";
-import { checkAccess, type AccessDenial, type CurrentUser } from "@/lib/auth/server";
+import { checkAccess, type CurrentUser } from "@/lib/auth/server";
 import { CACHE_TAGS, getEnabledLocales } from "@/lib/data";
 import { markdownToHtml } from "@/lib/html";
+import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
-import { createLogger } from "@/lib/log";
+import type { Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { localizedUpdate, textField } from "./forms";
+import { localeField, localizedUpdate, textField, uuidField } from "./forms";
 import { isMoveDirection, MAX_FORMATIONS, moveInList, parseCoordinatorForm, parseFormationForm, parsePlanForm, parseRuleForm } from "./kvk-forms";
 import { isEditableTextColumn, pendingColumns, TEXT_LIMITS, withLanguage } from "./translation";
 
@@ -19,39 +21,25 @@ import { isEditableTextColumn, pendingColumns, TEXT_LIMITS, withLanguage } from 
  * Server Actions of the battle-plan editor. Every action re-checks the role
  * (these are reachable by a direct POST), writes with the service role, logs
  * to the audit table and expires the public page cache (`content:kvk`), so
- * players see the change on their next request.
+ * players see the change on their next request. Field parsing is in
+ * kvk-forms.ts, the shared replies in action-helpers.ts.
  */
 
-const log = createLogger("admin");
-const UUID = /^[0-9a-f-]{36}$/i;
+const PLAN_GONE: ActionState = { status: "error", message: "This plan no longer exists." };
 
-function denied(reason: AccessDenial): ActionState {
-  return {
-    status: "error",
-    message: reason === "signed_out" ? "Your session has ended. Sign in again." : "You don't have permission for this.",
-  };
+/** Columns a copied row must not carry over. */
+const ROW_META = new Set(["id", "created_at", "updated_at", "source_hash"]);
+
+function withoutRowMeta(row: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => !ROW_META.has(key)));
 }
 
-function failed(what: string, error: { message: string; code?: string }): ActionState {
-  log.error(`${what} failed`, { error: error.message, code: error.code });
-  return { status: "error", message: "Saving failed. Try again in a moment." };
+function editorPath(locale: string, planId: string, anchor?: string, query?: string): string {
+  return adminPath(locale, `/kvk/${planId}${query ? `?${query}` : ""}${anchor ? `#${anchor}` : ""}`);
 }
 
-function localeField(formData: FormData): string {
-  const value = textField(formData, "locale");
-  return /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(value) ? value : "en";
-}
-
-function idField(formData: FormData, name: string): string | null {
-  const value = textField(formData, name);
-  return UUID.test(value) ? value : null;
-}
-
-function editorPath(locale: string, planId: string, anchor?: string): string {
-  return adminPath(locale, `/kvk/${planId}${anchor ? `#${anchor}` : ""}`);
-}
-
-async function expirePublicPlan(locale: string, planId: string) {
+/** Players see the change on their next request; the editor re-renders in place. */
+function expirePlanCaches(locale: string, planId: string) {
   updateTag(CACHE_TAGS.kvk);
   revalidatePath(editorPath(locale, planId));
 }
@@ -63,21 +51,22 @@ async function expirePublicPlan(locale: string, planId: string) {
 export async function savePlan(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
   const locale = localeField(formData);
-  const id = idField(formData, "id");
+  const id = uuidField(formData, "id");
   const admin = createAdminClient();
 
   type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null };
   let existing: ExistingPlan | null = null;
   if (id) {
     const { data } = await admin.from("kvk_plans").select("title, intro, intro_source, battle_at").eq("id", id).maybeSingle();
-    if (!data) return { status: "error", message: "This plan no longer exists." };
+    if (!data) return PLAN_GONE;
     existing = data as ExistingPlan;
   }
 
   // A changed battle time must lie ahead; an old plan keeps its past time untouched.
   const parsed = parsePlanForm(formData, { now: new Date(), previousBattleAt: existing?.battle_at ?? null });
-  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
+  if (!parsed.ok) return invalid(parsed.errors);
   const input = parsed.value;
 
   // A changed English intro drops the other languages (HTML and Markdown sources alike);
@@ -106,17 +95,15 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
     let deactivate = admin.from("kvk_plans").update({ active: false }).eq("active", true);
     if (id) deactivate = deactivate.neq("id", id);
     const { error } = await deactivate;
-    if (error) return failed("Deactivating other plans", error);
+    if (error) return failed(log, "Deactivating other plans", error);
   }
 
   const result = id
     ? await admin.from("kvk_plans").update(row).eq("id", id).select("id").single()
     : await admin.from("kvk_plans").insert(row).select("id").single();
   if (result.error) {
-    if (result.error.code === "23505") {
-      return { status: "error", errors: { slug: "Another plan already uses this slug." }, message: "Please fix the highlighted fields." };
-    }
-    return failed("Saving the plan", result.error);
+    if (result.error.code === "23505") return invalid({ slug: "Another plan already uses this slug." });
+    return failed(log, "Saving the plan", result.error);
   }
 
   const planId = String(result.data.id);
@@ -125,7 +112,7 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
     active: input.active,
     published: input.published,
   });
-  await expirePublicPlan(locale, planId);
+  expirePlanCaches(locale, planId);
   if (!id) redirect(editorPath(locale, planId));
   return { status: "saved", message: "Plan saved." };
 }
@@ -134,8 +121,9 @@ export async function deletePlan(formData: FormData): Promise<void> {
   const locale = localeField(formData);
   const access = await checkAccess("admin");
   if ("denied" in access) redirect(adminPath(locale, "/kvk?error=forbidden"));
-  const id = idField(formData, "id");
+  const id = uuidField(formData, "id");
   if (!id) redirect(adminPath(locale, "/kvk"));
+  const log = await actionLogger();
 
   const admin = createAdminClient();
   const { data, error } = await admin.from("kvk_plans").delete().eq("id", id).select("slug").maybeSingle();
@@ -153,20 +141,26 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
   const locale = localeField(formData);
   const access = await checkAccess("moderator");
   if ("denied" in access) redirect(adminPath(locale, "/kvk?error=forbidden"));
-  const id = idField(formData, "id");
+  const id = uuidField(formData, "id");
   if (!id) redirect(adminPath(locale, "/kvk"));
+  const log = await actionLogger();
 
   const admin = createAdminClient();
   const { data: plan, error } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();
   if (error || !plan) redirect(adminPath(locale, "/kvk?error=missing"));
 
   const copyTitle = `Copy of ${String((plan.title as Localized)?.en ?? plan.slug)}`.slice(0, 120);
-  const { id: _oldId, created_at: _c, updated_at: _u, source_hash: _h, ...rest } = plan as Record<string, unknown>;
-  void _oldId; void _c; void _u; void _h;
   const copy = await admin
     .from("kvk_plans")
     // The copy starts without a battle time: the next battle's date is always new.
-    .insert({ ...rest, slug: `${String(plan.slug)}-copy-${Date.now().toString(36)}`.slice(0, 80), title: { en: copyTitle }, battle_at: null, active: false, published: false })
+    .insert({
+      ...withoutRowMeta(plan as Record<string, unknown>),
+      slug: `${String(plan.slug)}-copy-${Date.now().toString(36)}`.slice(0, 80),
+      title: { en: copyTitle },
+      battle_at: null,
+      active: false,
+      published: false,
+    })
     .select("id")
     .single();
   if (copy.error) {
@@ -178,11 +172,7 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
   for (const table of ["kvk_rules", "kvk_coordinators", "kvk_formations"] as const) {
     const { data: rows } = await admin.from(table).select("*").eq("plan_id", id);
     if (!rows || rows.length === 0) continue;
-    const copies = rows.map((row) => {
-      const { id: _rid, created_at: _rc, updated_at: _ru, source_hash: _rh, ...fields } = row as Record<string, unknown>;
-      void _rid; void _rc; void _ru; void _rh;
-      return { ...fields, plan_id: newId };
-    });
+    const copies = rows.map((row) => ({ ...withoutRowMeta(row as Record<string, unknown>), plan_id: newId }));
     const { error: copyError } = await admin.from(table).insert(copies);
     if (copyError) log.error("Copying plan rows failed", { table, from: id, to: newId, error: copyError.message });
   }
@@ -211,19 +201,28 @@ async function planExists(planId: string): Promise<boolean> {
   return Boolean(data);
 }
 
-/** New rows go to the end of their list; admins reorder with the arrows (moveRow), never by typing numbers. */
-async function nextSortOrder(table: ChildTable, planId: string): Promise<number> {
-  const { data } = await createAdminClient()
+/**
+ * New rows go to the end of their list; admins reorder with the arrows
+ * (moveRow), never by typing numbers. `null` when the list could not be read:
+ * guessing 0 would put the new row at the top.
+ */
+async function nextSortOrder(log: Logger, table: ChildTable, planId: string): Promise<number | null> {
+  const { data, error } = await createAdminClient()
     .from(table)
     .select("sort_order")
     .eq("plan_id", planId)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) {
+    log.error(`Reading the last position in ${table} failed`, { planId, error: error.message });
+    return null;
+  }
   return typeof data?.sort_order === "number" ? data.sort_order + 1 : 0;
 }
 
 async function saveChild(
+  log: Logger,
   user: CurrentUser,
   table: ChildTable,
   action: string,
@@ -231,40 +230,42 @@ async function saveChild(
   planId: string,
   id: string | null,
   row: Record<string, unknown>,
-  anchor: string,
 ): Promise<ActionState> {
   const admin = createAdminClient();
-  const result = id
-    ? await admin.from(table).update(row).eq("id", id).eq("plan_id", planId).select("id").single()
-    : await admin.from(table).insert({ ...row, plan_id: planId, sort_order: await nextSortOrder(table, planId) }).select("id").single();
+  let result;
+  if (id) {
+    result = await admin.from(table).update(row).eq("id", id).eq("plan_id", planId).select("id").single();
+  } else {
+    const sortOrder = await nextSortOrder(log, table, planId);
+    if (sortOrder === null) return failed(log, `Saving ${table}`, { message: "position unknown" });
+    result = await admin.from(table).insert({ ...row, plan_id: planId, sort_order: sortOrder }).select("id").single();
+  }
   if (result.error) {
-    if (result.error.code === "23505") {
-      return { status: "error", errors: { label: "This preset letter is already used in this plan." }, message: "Please fix the highlighted fields." };
-    }
-    return failed(`Saving ${table}`, result.error);
+    // Only formations have a unique key (plan + preset letter, migration 0002); elsewhere 23505 is unexpected.
+    if (result.error.code === "23505" && table === "kvk_formations") return invalid({ label: "This preset letter is already used in this plan." });
+    return failed(log, `Saving ${table}`, result.error);
   }
   await audit(user, action, table, String(result.data.id), { planId });
-  updateTag(CACHE_TAGS.kvk);
-  revalidatePath(editorPath(locale, planId, anchor));
+  expirePlanCaches(locale, planId);
   return { status: "saved", message: "Saved." };
 }
 
-async function deleteChild(
-  table: ChildTable,
-  action: string,
-  anchor: string,
-  formData: FormData,
-): Promise<void> {
+async function deleteChild(table: ChildTable, action: string, formData: FormData): Promise<void> {
+  const { anchor } = CHILD_TABLES[table];
   const locale = localeField(formData);
-  const planId = idField(formData, "planId");
-  const id = idField(formData, "id");
+  const planId = uuidField(formData, "planId");
+  const id = uuidField(formData, "id");
   if (!planId) redirect(adminPath(locale, "/kvk"));
   const access = await checkAccess("moderator");
-  if ("denied" in access) redirect(editorPath(locale, planId, anchor));
+  if ("denied" in access) redirect(editorPath(locale, planId, anchor, "error=forbidden"));
   if (id) {
+    const log = await actionLogger();
     const { error } = await createAdminClient().from(table).delete().eq("id", id).eq("plan_id", planId);
-    if (error) log.error(`Deleting from ${table} failed`, { id, error: error.message });
-    else await audit(access.user, action, table, id, { planId });
+    if (error) {
+      log.error(`Deleting from ${table} failed`, { id, error: error.message });
+      redirect(editorPath(locale, planId, anchor, "error=delete"));
+    }
+    await audit(access.user, action, table, id, { planId });
     updateTag(CACHE_TAGS.kvk);
   }
   redirect(editorPath(locale, planId, anchor));
@@ -280,32 +281,34 @@ async function existingLocalized(table: string, id: string | null, column: strin
 export async function saveRule(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
-  const planId = idField(formData, "planId");
-  if (!planId || !(await planExists(planId))) return { status: "error", message: "This plan no longer exists." };
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
   const parsed = parseRuleForm(formData);
-  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
-  const id = idField(formData, "id");
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
   const row = {
     kind: parsed.value.kind,
     text: localizedUpdate(await existingLocalized("kvk_rules", id, "text"), parsed.value.text),
     published: parsed.value.published,
   };
-  return saveChild(access.user, "kvk_rules", id ? "kvk_rule.update" : "kvk_rule.create", localeField(formData), planId, id, row, "rules");
+  return saveChild(log, access.user, "kvk_rules", id ? "kvk_rule.update" : "kvk_rule.create", localeField(formData), planId, id, row);
 }
 
 export async function deleteRule(formData: FormData): Promise<void> {
-  return deleteChild("kvk_rules", "kvk_rule.delete", "rules", formData);
+  return deleteChild("kvk_rules", "kvk_rule.delete", formData);
 }
 
 export async function saveCoordinator(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
-  const planId = idField(formData, "planId");
-  if (!planId || !(await planExists(planId))) return { status: "error", message: "This plan no longer exists." };
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
   const { data: alliances } = await createAdminClient().from("alliances").select("tag");
   const parsed = parseCoordinatorForm(formData, (alliances ?? []).map((a) => String(a.tag)));
-  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
-  const id = idField(formData, "id");
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
   const row = {
     team: parsed.value.team,
     name: parsed.value.name,
@@ -313,23 +316,24 @@ export async function saveCoordinator(_previous: ActionState, formData: FormData
     note: localizedUpdate(await existingLocalized("kvk_coordinators", id, "note"), parsed.value.note),
     published: parsed.value.published,
   };
-  return saveChild(access.user, "kvk_coordinators", id ? "kvk_coordinator.update" : "kvk_coordinator.create", localeField(formData), planId, id, row, "coordinators");
+  return saveChild(log, access.user, "kvk_coordinators", id ? "kvk_coordinator.update" : "kvk_coordinator.create", localeField(formData), planId, id, row);
 }
 
 export async function deleteCoordinator(formData: FormData): Promise<void> {
-  return deleteChild("kvk_coordinators", "kvk_coordinator.delete", "coordinators", formData);
+  return deleteChild("kvk_coordinators", "kvk_coordinator.delete", formData);
 }
 
 export async function saveFormation(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
-  const planId = idField(formData, "planId");
-  if (!planId || !(await planExists(planId))) return { status: "error", message: "This plan no longer exists." };
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
   const admin = createAdminClient();
   const { data: heroes } = await admin.from("heroes").select("slug");
   const parsed = parseFormationForm(formData, (heroes ?? []).map((h) => String(h.slug)));
-  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
-  const id = idField(formData, "id");
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
   if (!id) {
     const { count } = await admin.from("kvk_formations").select("id", { count: "exact", head: true }).eq("plan_id", planId);
     if ((count ?? 0) >= MAX_FORMATIONS) {
@@ -350,47 +354,48 @@ export async function saveFormation(_previous: ActionState, formData: FormData):
     note: localizedUpdate(await existingLocalized("kvk_formations", id, "note"), f.note),
     published: f.published,
   };
-  return saveChild(access.user, "kvk_formations", id ? "kvk_formation.update" : "kvk_formation.create", localeField(formData), planId, id, row, "formations");
+  return saveChild(log, access.user, "kvk_formations", id ? "kvk_formation.update" : "kvk_formation.create", localeField(formData), planId, id, row);
 }
 
 export async function deleteFormation(formData: FormData): Promise<void> {
-  return deleteChild("kvk_formations", "kvk_formation.delete", "formations", formData);
+  return deleteChild("kvk_formations", "kvk_formation.delete", formData);
 }
+
+const MOVE_FAILED = "The row could not be moved. Reload the page and try again.";
 
 /**
  * The ▲ / ▼ arrows next to a row: swaps it with its neighbour and renumbers
- * the list 0…n-1 (which also resolves ties left by older rows). Returns
- * without a redirect so the editor re-renders in place.
+ * the list 0…n-1 (which also resolves ties left by older rows). Returns a
+ * state instead of redirecting so the editor re-renders in place and the
+ * arrows can show a failure.
  */
-export async function moveRow(formData: FormData): Promise<void> {
+export async function moveRow(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const locale = localeField(formData);
-  const planId = idField(formData, "planId");
-  const id = idField(formData, "id");
+  const planId = uuidField(formData, "planId");
+  const id = uuidField(formData, "id");
   const table = textField(formData, "table");
   const direction = textField(formData, "direction");
-  if (!planId || !id || !isChildTable(table) || !isMoveDirection(direction)) return;
+  if (!planId || !id || !isChildTable(table) || !isMoveDirection(direction)) return { status: "error", message: MOVE_FAILED };
   const access = await checkAccess("moderator");
-  if ("denied" in access) return;
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
 
   const admin = createAdminClient();
   const { data: rows, error } = await admin.from(table).select("id, sort_order").eq("plan_id", planId).order("sort_order").order("created_at");
-  if (error) {
-    log.error(`Reordering ${table} failed`, { planId, error: error.message });
-    return;
-  }
+  if (error) return failed(log, `Reordering ${table}`, error, MOVE_FAILED);
   const ids = (rows ?? []).map((row) => String(row.id));
   const order = moveInList(ids, id, direction);
-  if (!order) return; // unknown row, or already at that end
+  if (!order) return { status: "idle" }; // deleted meanwhile, or already at that end: nothing to write
   const current = new Map((rows ?? []).map((row) => [String(row.id), Number(row.sort_order)]));
-  const writes = order.map((rowId, index) => ({ rowId, index })).filter(({ rowId, index }) => current.get(rowId) !== index);
-  const results = await Promise.all(
-    writes.map(({ rowId, index }) => admin.from(table).update({ sort_order: index }).eq("id", rowId).eq("plan_id", planId)),
-  );
-  const failure = results.find((result) => result.error)?.error;
-  if (failure) log.error(`Reordering ${table} failed`, { planId, error: failure.message });
+  // One row after the other: a failure stops the renumbering at a known point instead of leaving a random subset written.
+  for (const [index, rowId] of order.entries()) {
+    if (current.get(rowId) === index) continue;
+    const { error: writeError } = await admin.from(table).update({ sort_order: index }).eq("id", rowId).eq("plan_id", planId);
+    if (writeError) return failed(log, `Reordering ${table}`, writeError, MOVE_FAILED);
+  }
   await audit(access.user, `${CHILD_TABLES[table].action}.move`, table, id, { planId, direction });
-  updateTag(CACHE_TAGS.kvk);
-  revalidatePath(editorPath(locale, planId, CHILD_TABLES[table].anchor));
+  expirePlanCaches(locale, planId);
+  return { status: "saved" };
 }
 
 // ---------------------------------------------------------------------------
@@ -400,14 +405,15 @@ export async function moveRow(formData: FormData): Promise<void> {
 export async function saveTranslation(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
   const locale = localeField(formData);
   const table = textField(formData, "table");
   const column = textField(formData, "column");
   const lang = textField(formData, "lang");
-  const id = idField(formData, "id");
-  const planId = idField(formData, "planId");
+  const id = uuidField(formData, "id");
+  const planId = uuidField(formData, "planId");
   if (!id || !planId || !isEditableTextColumn(table, column)) return { status: "error", message: "Unknown field." };
-  if (lang === "en" || !/^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(lang)) return { status: "error", message: "English is edited in English mode." };
+  if (lang === "en" || !isLocaleCode(lang)) return { status: "error", message: "English is edited in English mode." };
   if (!(await getEnabledLocales()).includes(lang)) return { status: "error", message: "That language is not enabled." };
   const value = textField(formData, "value").slice(0, TEXT_LIMITS[column] ?? 400);
 
@@ -428,10 +434,9 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
       : { [column]: withLanguage(current, lang, value) };
   // source_hash is deliberately left alone: the English is unchanged, so the pipeline skips this row.
   const { error } = await admin.from(table).update(update).eq("id", id);
-  if (error) return failed("Saving the translation", error);
+  if (error) return failed(log, "Saving the translation", error);
 
   await audit(access.user, "translation.update", table, id, { column, lang, planId });
-  updateTag(CACHE_TAGS.kvk);
-  revalidatePath(editorPath(locale, planId));
+  expirePlanCaches(locale, planId);
   return { status: "saved", message: "Saved for this language only." };
 }
