@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { hasSessionCookie, isAdminPath } from "@/lib/auth/session-hint";
+import { ADMIN_MARKER_COOKIE, hasSessionMarker, isAdminPath, markerCookieOptions } from "@/lib/auth/session-hint";
 
-describe("hasSessionCookie", () => {
-  it("finds the Supabase session cookie, chunked or not", () => {
-    expect(hasSessionCookie("theme=dark; sb-hjbbjzwiykeovmvwujvb-auth-token=base64-abc")).toBe(true);
-    expect(hasSessionCookie("sb-hjbbjzwiykeovmvwujvb-auth-token.0=x; sb-hjbbjzwiykeovmvwujvb-auth-token.1=y")).toBe(true);
+describe("hasSessionMarker", () => {
+  it("finds the marker cookie and nothing else", () => {
+    expect(hasSessionMarker(`theme=dark; ${ADMIN_MARKER_COOKIE}=1`)).toBe(true);
+    expect(hasSessionMarker("")).toBe(false);
+    expect(hasSessionMarker(`${ADMIN_MARKER_COOKIE}=0; kd1241_kvk=abc`)).toBe(false);
+    expect(hasSessionMarker("sb-hjbbjzwiykeovmvwujvb-auth-token=base64-abc")).toBe(false);
   });
-  it("ignores other cookies and the code verifier", () => {
-    expect(hasSessionCookie("")).toBe(false);
-    expect(hasSessionCookie("kd1241_kvk=abc; sb-hjbbjzwiykeovmvwujvb-auth-token-code-verifier=zzz")).toBe(false);
+  it("is readable by the page but never HttpOnly", () => {
+    expect(markerCookieOptions(true)).toMatchObject({ httpOnly: false, secure: true, sameSite: "lax", path: "/" });
   });
 });
 

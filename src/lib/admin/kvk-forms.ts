@@ -54,7 +54,7 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
   if (!slug) errors.slug = "The slug needs at least one letter or digit.";
 
   const password = textField(fd, "password");
-  if (password.length < 3) errors.password = "Use at least 3 characters.";
+  if (password.length < 4) errors.password = "Use at least 4 characters (longer is safer; guesses are throttled either way).";
   else if (password.length > 64) errors.password = "Keep the password under 64 characters.";
 
   const battleAt = utcDateTimeField(fd, "battleAt");
@@ -62,6 +62,9 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
   else if (battleAt && options.now && Date.parse(battleAt) < options.now.getTime() && !sameMoment(battleAt, options.previousBattleAt)) {
     errors.battleAt = "That time is already in the past. A battle is planned ahead; enter a future time (UTC).";
   }
+
+  const introSource = textField(fd, "introSource");
+  if (introSource.length > 20_000) errors.introSource = "Keep the introduction under 20 000 characters.";
 
   const minHeroStars = intField(fd, "minHeroStars", 0, 5);
   if (minHeroStars === null) errors.minHeroStars = "Stars go from 0 to 5.";
@@ -77,7 +80,7 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
       title,
       opponent: optionalText(fd, "opponent"),
       battleAt: battleAt ?? null,
-      introSource: textField(fd, "introSource"),
+      introSource,
       minHeroStars: minHeroStars ?? 4,
       minSkillLevel: minSkillLevel ?? 5,
       password,

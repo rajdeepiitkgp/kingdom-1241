@@ -38,7 +38,7 @@ export async function listProfiles(): Promise<AdminProfile[]> {
   if (!(await allowed("profiles"))) return [];
   const { data, error } = await createAdminClient()
     .from("profiles")
-    .select("id, role, display_name, game_name, alliance_tag, discord_username, email, avatar_url, last_sign_in_at, created_at");
+    .select("id, role, display_name, game_name, alliance_tag, discord_id, discord_username, email, avatar_url, last_sign_in_at, created_at");
   if (error) {
     log.error("Could not list profiles", { error: error.message });
     return [];
@@ -47,7 +47,7 @@ export async function listProfiles(): Promise<AdminProfile[]> {
     .map((row) => {
       const discordUsername = typeof row.discord_username === "string" ? row.discord_username : null;
       const email = typeof row.email === "string" ? row.email : null;
-      const isOwner = isOwnerIdentity({ discordUsername, email });
+      const isOwner = isOwnerIdentity({ discordId: typeof row.discord_id === "string" ? row.discord_id : null, discordUsername, email });
       return {
         id: String(row.id),
         role: isOwner ? ("admin" as const) : parseRole(row.role),

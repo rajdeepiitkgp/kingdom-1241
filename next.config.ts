@@ -1,6 +1,28 @@
 import type { NextConfig } from "next";
 
+/** The Supabase project host, for the image optimiser's allow-list (empty when unknown, e.g. CI builds). */
+const supabaseHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return null;
+  }
+})();
+
+const SECURITY_HEADERS = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+  // No form-action: Chrome applies it to the redirect after the Discord sign-in form. HSTS comes from Vercel.
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
+  },
   cacheComponents: true,
   partialPrefetching: true,
   cacheLife: {
@@ -22,10 +44,8 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
-    remotePatterns: [
-      // Supabase Storage public buckets (images uploaded by admins).
-      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
-    ],
+    // Only this project's public Storage bucket may go through the optimiser (hero portraits are served unoptimised).
+    remotePatterns: supabaseHost ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : [],
   },
 };
 

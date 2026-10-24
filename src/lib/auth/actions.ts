@@ -1,10 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createLogger, requestId } from "@/lib/log";
 import { devLoginEnabled } from "./dev-login";
 import { adminPath, loginPath, safeNextPath } from "./paths";
+import { ADMIN_MARKER_COOKIE } from "@/lib/auth/session-hint";
 import { createSessionClient, syncProfile } from "./server";
 
 /**
@@ -78,5 +79,6 @@ export async function signOut(formData: FormData): Promise<void> {
     const { error } = await supabase.auth.signOut();
     if (error) log.warn("Sign-out reported an error", { error: error.message });
   }
+  (await cookies()).delete(ADMIN_MARKER_COOKIE);
   redirect(`/${locale}`);
 }

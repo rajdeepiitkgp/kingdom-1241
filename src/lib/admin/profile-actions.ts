@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { safeNextPath } from "@/lib/auth/paths";
+import { adminPath, safeNextPath } from "@/lib/auth/paths";
+import { isAdminPath } from "@/lib/auth/session-hint";
+import { stripLocale } from "@/lib/i18n/paths";
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,6 +30,8 @@ export async function saveProfile(_previous: ActionState, formData: FormData): P
     return { status: "error", message: "Saving failed. Try again in a moment." };
   }
   await audit({ ...access.user, gameName, allianceTag }, "profile.update", "profiles", access.user.id, { gameName, allianceTag });
-  revalidatePath(safeNextPath(textField(formData, "path"), "/"));
+  // Only admin pages show the profile; anything else would be a free cache-busting lever.
+  const path = safeNextPath(textField(formData, "path"), adminPath("en"));
+  revalidatePath(isAdminPath(stripLocale(path)) ? path : adminPath("en"));
   return { status: "saved", message: `Saved. Your changes are now logged as ${formatGameName(gameName, allianceTag)}.` };
 }

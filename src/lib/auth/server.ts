@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
 import { createLogger } from "@/lib/log";
+import { SESSION_COOKIE_OPTIONS } from "./cookies";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import { identityFromUser, type Identity } from "./identity";
@@ -44,6 +45,9 @@ export async function createSessionClient(): Promise<SupabaseClient | null> {
   if (!url || !key) return null;
   const store = await cookies();
   return createServerClient(url, key, {
+    // The session (access + refresh token) must never be readable by scripts; the
+    // site chrome uses a separate marker cookie (session-hint.ts) instead.
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll: () => store.getAll(),
       setAll: (toSet) => {

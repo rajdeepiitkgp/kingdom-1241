@@ -25,6 +25,8 @@ let warnedAboutSecret = false;
 export function kvkSessionSecret(): string {
   const secret = process.env.KVK_SESSION_SECRET?.trim() || process.env.TRANSLATE_WEBHOOK_SECRET?.trim();
   if (secret) return secret;
+  // A public fallback would let anyone forge the cookie; production must not start without a secret.
+  if (process.env.NODE_ENV === "production") throw new Error("KVK_SESSION_SECRET (or TRANSLATE_WEBHOOK_SECRET) must be set in production.");
   if (!warnedAboutSecret) {
     warnedAboutSecret = true;
     log.warn("KVK_SESSION_SECRET / TRANSLATE_WEBHOOK_SECRET not set — using an insecure development secret");

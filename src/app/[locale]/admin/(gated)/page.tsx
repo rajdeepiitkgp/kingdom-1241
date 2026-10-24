@@ -83,6 +83,7 @@ async function Overview({ locale }: { locale: string }) {
                 <span className="text-ink-muted" dir="ltr">
                   {entry.action}
                   {typeof entry.details.slug === "string" ? ` · ${entry.details.slug}` : ""}
+                  {typeof entry.details.summary === "string" ? ` · ${entry.details.summary}` : ""}
                 </span>
               </li>
             ))}

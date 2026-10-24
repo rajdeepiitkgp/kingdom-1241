@@ -39,7 +39,15 @@ describe("identityFromUser", () => {
           identity_id: "i1",
           user_id: "u1",
           provider: "discord",
-          identity_data: { name: "rudy_1241" },
+          identity_data: {
+            avatar_url: "https://cdn.discordapp.com/avatars/1/abc.png",
+            custom_claims: { global_name: "Rudy" },
+            email: "rudy@example.com",
+            full_name: "Rudy",
+            name: "rudy_1241",
+            provider_id: "123456789",
+            sub: "123456789",
+          },
           created_at: "",
           last_sign_in_at: "",
           updated_at: "",
@@ -54,6 +62,31 @@ describe("identityFromUser", () => {
       email: "rudy@example.com",
       avatarUrl: "https://cdn.discordapp.com/avatars/1/abc.png",
     });
+  });
+
+  it("ignores user_metadata for Discord accounts (a user can rewrite it to impersonate the owner)", () => {
+    const identity = identityFromUser({
+      id: "u3",
+      email: "mallory@example.com",
+      app_metadata: { provider: "discord", providers: ["discord"] },
+      user_metadata: { name: "the_owner", full_name: "Rudy", avatar_url: "https://evil.example/owner.png", provider_id: "1" },
+      identities: [
+        {
+          id: "987654321",
+          identity_id: "i3",
+          user_id: "u3",
+          provider: "discord",
+          identity_data: { name: "mallory", full_name: "Mallory", provider_id: "987654321", avatar_url: "https://cdn.discordapp.com/avatars/9/m.png" },
+          created_at: "",
+          last_sign_in_at: "",
+          updated_at: "",
+        },
+      ],
+    });
+    expect(identity.discordUsername).toBe("mallory");
+    expect(identity.discordId).toBe("987654321");
+    expect(identity.displayName).toBe("Mallory");
+    expect(identity.avatarUrl).toBe("https://cdn.discordapp.com/avatars/9/m.png");
   });
 
   it("reads an e-mail sign-in and derives a name", () => {
