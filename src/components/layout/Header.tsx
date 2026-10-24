@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import type { SiteLanguage } from "@/lib/i18n/languages";
 import { localePath } from "@/lib/i18n/paths";
+import { AdminEntry } from "./AdminEntry";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { DesktopNav } from "./NavLinks";
 import { TextSizeControl } from "./TextSizeControl";
@@ -13,12 +14,15 @@ export function Header({
   dict,
   kingdomName,
   kingdomNumber,
+  adminHref,
 }: {
   locale: string;
   languages: SiteLanguage[];
   dict: Dictionary;
   kingdomName: string;
   kingdomNumber: number;
+  /** Link to the council's admin area. */
+  adminHref: string;
 }) {
   return (
     <header id="site-header" className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
@@ -49,6 +53,11 @@ export function Header({
             }}
           />
           <ThemeToggle label={dict["theme.toggle"]} />
+          <AdminEntry
+            variant="header"
+            href={adminHref}
+            labels={{ signIn: dict["admin.signInLink"], note: dict["admin.signInNote"], panel: dict["admin.panelLink"] }}
+          />
         </div>
       </div>
     </header>

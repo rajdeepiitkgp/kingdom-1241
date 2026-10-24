@@ -8,13 +8,12 @@ import "../globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { PersistentUiState } from "@/components/layout/PersistentUiState";
+import { UiInit } from "@/components/layout/UiInit";
 import { BottomNav } from "@/components/layout/NavLinks";
-import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { getLanguages, getSettings } from "@/lib/data";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getLanguageInfo } from "@/lib/i18n/languages";
 import { pick } from "@/lib/i18n/localized";
-import { TEXT_SCALE_INIT_SCRIPT } from "@/lib/text-scale";
 
 export async function generateStaticParams() {
   const languages = await getLanguages();
@@ -84,32 +83,34 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Applies the saved text size before the first paint (no flash); see src/lib/text-scale.ts. */}
-        <script dangerouslySetInnerHTML={{ __html: TEXT_SCALE_INIT_SCRIPT }} />
+        {/* Applies the saved theme and text size before the first paint (no flash); see UiInit. */}
+        <UiInit />
       </head>
-      <body className="flex min-h-full flex-col pb-24 md:pb-0">
-        <ThemeProvider>
-          <PersistentUiState locale={currentLocale} />
-          <Header
+      {/* suppressHydrationWarning: browser extensions (Grammarly, ...) add attributes to <body>
+          before React hydrates; the mismatch is harmless and only concerns this element. */}
+      <body className="flex min-h-full flex-col pb-24 md:pb-0" suppressHydrationWarning>
+        <PersistentUiState locale={currentLocale} />
+        <Header
             locale={currentLocale}
             languages={languages.filter((l) => l.enabled)}
             dict={dict}
             kingdomName={kingdomName}
             kingdomNumber={settings.kingdomNumber}
+            adminHref={`/${currentLocale}/admin`}
           />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">
             {/* Route changes crossfade through the <ViewTransition> in template.tsx; language
                 switches through withNavigationTransition() in the language switcher. */}
             {children}
           </main>
-          <Footer
+        <Footer
             dict={dict}
             discordUrl={settings.discordInviteUrl}
             joinLabel={dict["home.joinDiscord"]}
             createdBy={settings.createdBy}
+            adminHref={`/${currentLocale}/admin`}
           />
-          <BottomNav locale={currentLocale} dict={dict} />
-        </ThemeProvider>
+        <BottomNav locale={currentLocale} dict={dict} />
       </body>
     </html>
   );

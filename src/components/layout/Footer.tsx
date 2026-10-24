@@ -1,15 +1,19 @@
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
+import { AdminEntry } from "./AdminEntry";
 
 export function Footer({
   dict,
   discordUrl,
   joinLabel,
   createdBy,
+  adminHref,
 }: {
   dict: Dictionary;
   discordUrl: string | null;
   joinLabel: string;
   createdBy: string | null;
+  /** Link to the council's admin area (login required). */
+  adminHref: string;
 }) {
   return (
     <footer className="mx-auto mt-16 max-w-6xl px-4 pb-8 text-center text-sm text-ink-muted">
@@ -26,6 +30,11 @@ export function Footer({
             {joinLabel}
           </a>
         )}
+        <AdminEntry
+          variant="footer"
+          href={adminHref}
+          labels={{ signIn: dict["admin.signInLink"], note: dict["admin.signInNote"], panel: dict["admin.panelLink"] }}
+        />
       </div>
     </footer>
   );
