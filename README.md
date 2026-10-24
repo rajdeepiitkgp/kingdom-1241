@@ -27,11 +27,15 @@ npm run dev
 ```
 src/
   app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /tools
+  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, users; English only
+  app/auth/callback       finishes the Discord sign-in (code → session cookies)
   app/api/translate       Supabase webhook → Gemini → writes translations back, refreshes cache
   app/api/revalidate      manual cache refresh
-  proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id
-  components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools
+  proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id; refreshes the admin session
+  components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar)
+  lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
+  lib/admin/              uncached admin loaders, Server Actions (plan editor, users), FormData parsers, audit log
   lib/data/               cached loaders ('use cache' + tags), Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password lock (signed cookie), Server Actions, formation helpers
@@ -43,11 +47,13 @@ public/heroes/            128px hero portraits (from kingshotdata.com)
 supabase/
   migrations/0001_init.sql  schema, RLS, storage bucket
   migrations/0002_kvk.sql   heroes + battle plan tables (service-role only)
+  migrations/0003_admin_auth.sql  profiles, roles, pre-authorisations, audit log
   webhooks.sql              one-shot SQL to wire every table to /api/translate
   config.toml               Supabase CLI config (used by the Deploy database workflow)
 scripts/
   seed.ts                 npm run db:seed
   translate.ts            npm run translate
+  dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
 .github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations), Maintenance
 ```
 
@@ -76,7 +82,8 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 | `npm run dev` / `npm run build` / `npm start` | Next.js |
 | `npm run lint` / `npm run typecheck` / `npm run test` | ESLint, TypeScript, Vitest (tests in `tests/`) |
 | `npm run db:seed` | Insert seed content into Supabase (idempotent) |
-| `npm run translate` | Translate missing/outdated content with Gemini |
+| `npm run translate` | Translate missing/outdated content with the configured provider |
+| `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
 
 ## License
 

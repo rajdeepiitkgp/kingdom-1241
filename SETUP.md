@@ -1,6 +1,6 @@
 # Setup guide — Kingdom 1241 website
 
-Everything runs on free tiers — **GitHub** (code + CI), **Vercel** (hosting), **Supabase** (database + image storage) — plus an AI translation provider: **Anthropic** (Claude, recommended; about a dollar a month for this site) or **Google Gemini** (free tier). Discord login is a phase-2 feature; its keys are described at the end so the Supabase side is ready.
+Everything runs on free tiers — **GitHub** (code + CI), **Vercel** (hosting), **Supabase** (database + image storage) — plus an AI translation provider: **Anthropic** (Claude, recommended; about a dollar a month for this site) or **Google Gemini** (free tier). Admin sign-in (Discord through Supabase Auth) is described in § 8.
 
 Nothing secret is ever committed. Keys live in `.env.local` on your machine, in the Vercel project settings and in the GitHub repository secrets.
 
@@ -139,15 +139,51 @@ That creates one trigger per content table. Each change POSTs to `/api/translate
 
 Without webhooks the site still works: run `npm run translate` (or the Maintenance workflow) after editing, and the cache refreshes itself every 5 minutes.
 
-## 8. Discord OAuth (ready for phase 2)
+## 8. Admin area — Discord sign-in and roles
 
-Admins and moderators will sign in with Discord through Supabase Auth.
+Council members edit the site at `/<lang>/admin` (link at the bottom of every page). Sign-in is done with Discord through Supabase Auth; the site never sees anyone's Discord password.
+
+### 8.1 Discord application (once)
 
 1. <https://discord.com/developers/applications> → **New Application** (e.g. "Kingdom 1241 site").
-2. **OAuth2** → copy **Client ID** → `DISCORD_CLIENT_ID`, and **Reset Secret** → `DISCORD_CLIENT_SECRET`.
+2. **OAuth2** → copy **Client ID** → `DISCORD_CLIENT_ID`, and **Reset Secret** → `DISCORD_CLIENT_SECRET`. Put both in `.env.local`; they only configure Supabase, the site itself never reads them.
 3. Under **Redirects** add `https://<your-project-ref>.supabase.co/auth/v1/callback`.
 4. Supabase Dashboard → **Authentication → Sign In / Providers → Discord** → enable, paste the Client ID and Secret, save.
-5. Add `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` to Vercel (*Sensitive*) and to `.env.local`. Phase 1 doesn't read them yet.
+5. The site URL, the allowed redirect URLs (localhost, production, Vercel previews) and "e-mail sign-ups off" are declared in `supabase/config.toml` under `[auth]`. `npx supabase config diff` shows what differs from the project; `npx supabase config push` applies it (needs `npx supabase login` once). The Discord provider itself is deliberately *not* declared there (its secret would have to live in an environment variable the CLI can read): the diff keeps listing it as "remote only", which is fine, because a push leaves undeclared properties unchanged. Keep "Allow new users to sign up" on in the dashboard; it is the global switch for every provider, and a new account gets no admin rights until promoted.
+
+### 8.2 The owner and the first administrator
+
+Set `SITE_OWNER` to your Discord username (the handle, not the display name) in `.env.local` and in Vercel (§ 5). Locally it may be a comma-separated list, e.g. `rudeus4098,dev-admin@kingdom1241.local`, so the dev e-mail account stays an owner next to your Discord account; production holds one value. Whoever signs in with that Discord account is the **owner**: always an administrator, impossible to demote, and the only person who can appoint or remove other administrators. Changing the owner means changing that variable, nothing in the site can do it.
+
+Nobody gets any access just by signing in: a new account is a **member** until the owner or an administrator raises it under **Admin → Users**, either for someone who has already signed in (role dropdown) or ahead of time by Discord username (pre-authorisation). **Administrators** appoint and remove moderators and can delete plans; **moderators** edit content and the battle plan.
+
+**In-game names.** After signing in, everyone sets their own in-game name and home alliance (also on the "no access" screen); the site then shows them as "[ULU] Rudy", like the game does. Type the name without the tag and pick the alliance from the kingdom's list, or type "[ULU] Rudy" and the tag is split off. The user list shows it next to the Discord handle and every audit entry carries it. Roles still belong to the Discord account: check that the handle matches the person you expect before promoting someone, because the in-game name is typed by the person themselves.
+
+**Finding the sign-in.** The key icon in the site header (tablet and desktop) and the "Admin sign-in" line in the footer lead to the login page; both say that it is for the council only and that players need no account. Once you are signed in they turn into an "Admin panel" shortcut (wrench icon), and inside the admin area they disappear: the admin bar there shows who you are and has the only "Sign out" button.
+
+### 8.3 Working on the admin area without Discord (local development)
+
+Add to `.env.local`:
+
+```
+ADMIN_DEV_LOGIN=1
+DEV_ADMIN_EMAIL=dev-admin@kingdom1241.local
+DEV_ADMIN_PASSWORD=<12 or more random characters>
+```
+
+Set `SITE_OWNER=dev-admin@kingdom1241.local` as well, run `npm run dev:admin` (creates the account in Supabase Auth), start the site and use the e-mail form on `/en/admin/login`; the account is then the owner. The form only exists in development builds; never set `ADMIN_DEV_LOGIN` in Vercel. Delete the account under Supabase → Authentication → Users when it is no longer needed.
+
+### 8.4 What happens on sign-in
+
+`/auth/callback` exchanges the Discord code for a session (HttpOnly cookies), creates or refreshes the person's row in `profiles` and applies any matching pre-authorisation. Every admin write is a Server Action that re-checks the role, writes with the service role and records who did what in `audit_log` (the "Recent changes" list on the admin overview).
+
+### 8.5 Correcting a translation
+
+The battle-plan editor has a language dropdown ("Editing texts in"; it starts on the site language you are browsing in). English is the source: saving an English text re-translates that text into every other language (only that text: changing the title does not re-translate the intro, and editing one instruction touches nothing else), and until the machine is done that text is locked in the other languages (the page refreshes itself). Pick another language to correct its text; a correction applies to that language only and is kept until the English text changes again, so nothing can bounce between languages.
+
+### 8.6 Ordering and live battle times
+
+Instructions, coordinators and formations are ordered with the ▲ ▼ arrows next to each row (new rows go to the end); nobody types order numbers. In the plan intro, write `{{when}}`, `{{date}}`, `{{time}}` or `{{utc}}` instead of "tomorrow" or a clock time: each player sees the battle time from `battle_at` in their own language and time zone ("tomorrow", "Sunday, November 8", "15:00", "14:00 UTC"), updated live, so the text never goes stale. The translation pipeline keeps these placeholders as they are.
 
 ## 9. KvK battle plan (password-locked page)
 
@@ -157,7 +193,7 @@ Kingdom 1241 alternates two events every two weeks — the **internal castle bat
 
 **Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
 
-**Instructions** (`kvk_rules`): one row per bullet; `kind` is `do`, `dont` or `info`; `sort_order` orders them.
+**Instructions** (`kvk_rules`): one row per bullet; `kind` is `do`, `dont` or `info`; `sort_order` orders them (the arrows in the editor).
 
 **Coordinators** (`kvk_coordinators`): `team` is which battle alliance they run — `kvk` ([KvK], rallies the castle) or `tmp` ([TMP], counter-rallies); `name` is the in-game name; `alliance_tag` is their home alliance and colours the badge (must match `alliances.tag`); `note` e.g. the languages they speak.
 
@@ -167,12 +203,12 @@ Kingdom 1241 alternates two events every two weeks — the **internal castle bat
 | --- | --- |
 | `label` | The preset name players save in the game: `A`, `B`, … |
 | `side` | `attack`, `defense` or `any` |
-| `role` | `rally_lead`, `rally_join` or `any` |
+| `role` | `rally_lead`, `rally_join` or `any` — shown as "rally lead/join" on the attack side and "garrison lead/join" on the defence side (the kingdom's words; attackers rally, defenders garrison) |
 | `hero_1` … `hero_3` | Hero slugs from the `heroes` table (`amane`, `long-fei`, …). Leave empty for "any hero". |
 | `infantry_pct` / `cavalry_pct` / `archers_pct` | Troop ratio; must add up to 100 |
 | `note` | Optional hint, translated automatically |
 
-Formations tagged with a side or role get filter chips on the page; untagged ones show as "attack or defense".
+Formations tagged with a side or role get filter chips on the page (attack, defence, rally lead/join, garrison lead/join); untagged ones show as "attack or defense".
 
 **Heroes** (`heroes`): one row per hero with `slug`, `name`, `troop_type`, `rarity`, `generation`, `icon_url`. The seed ships 37 heroes with 128px portraits in `public/heroes/`. To add a new hero, insert a row and set `icon_url` to any image URL (e.g. upload the portrait to the `images` storage bucket and use its public URL).
 
