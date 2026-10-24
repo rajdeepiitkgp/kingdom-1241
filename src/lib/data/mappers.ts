@@ -1,4 +1,5 @@
 import type { Localized } from "@/lib/i18n/localized";
+import { isRatingKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/questions";
 import type {
   Alliance,
   Announcement,
@@ -17,6 +18,10 @@ import type {
   KvkPlanWithSecret,
   KvkRule,
   KvkRuleKind,
+  OpenRetrospective,
+  RetroBattle,
+  RetroResponse,
+  Retrospective,
   Rule,
   RuleTopic,
   SiteSettings,
@@ -310,5 +315,68 @@ export function mapKvkPlan(row: Row, rules: Row[], coordinators: Row[], formatio
     rules: rules.filter(ofPlan).map(mapKvkRule).filter((r) => r.published).sort(byOrder),
     coordinators: coordinators.filter(ofPlan).map(mapKvkCoordinator).filter((c) => c.published).sort(byOrder),
     formations: formations.filter(ofPlan).map(mapKvkFormation).filter((f) => f.published).sort(byOrder),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Battle retrospective
+// ---------------------------------------------------------------------------
+
+export function mapRetrospective(row: Row): Retrospective {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    open: Boolean(row.open),
+    title: loc(row.title),
+    intro: loc(row.intro),
+    introSource: loc(row.intro_source),
+    config: parseConfig(row.config),
+    closesAt: row.closes_at ? iso(row.closes_at, "") || null : null,
+    maxResponses: Math.max(1, Math.round(num(row.max_responses, 600))),
+    retentionDays: Math.max(1, Math.round(num(row.retention_days, 30))),
+    createdAt: iso(row.created_at, new Date(0).toISOString()),
+    updatedAt: iso(row.updated_at, new Date(0).toISOString()),
+  };
+}
+
+/** The plan columns the feedback page shows (title, type, date) plus the password for the gate. */
+export function mapRetroBattle(plan: Row): RetroBattle & { password: string } {
+  return {
+    planId: str(plan.id),
+    slug: str(plan.slug),
+    title: loc(plan.title),
+    eventType: oneOf(plan.event_type, EVENT_TYPES, "kvk"),
+    battleAt: plan.battle_at ? iso(plan.battle_at, "") || null : null,
+    password: str(plan.password),
+  };
+}
+
+export function mapOpenRetrospective(row: Row, plan: Row): OpenRetrospective {
+  return { ...mapRetrospective(row), battle: mapRetroBattle(plan) };
+}
+
+function ratings(value: unknown): Partial<Record<RatingKey, number>> {
+  const out: Partial<Record<RatingKey, number>> = {};
+  if (!value || typeof value !== "object") return out;
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (isRatingKey(k) && typeof v === "number" && Number.isInteger(v) && v >= RATING_MIN && v <= RATING_MAX) out[k] = v;
+  }
+  return out;
+}
+
+/** `identity: false` leaves the Governor ID and name out (everyone but the owner). */
+export function mapRetroResponse(row: Row, identity: boolean): RetroResponse {
+  const texts = Object.fromEntries(TEXT_KEYS.map((key) => [key, str(row[key])])) as Record<TextKey, string>;
+  return {
+    id: str(row.id),
+    retrospectiveId: str(row.retrospective_id),
+    governorId: identity ? strOrNull(row.governor_id) : null,
+    gameName: identity ? strOrNull(row.game_name) : null,
+    allianceTag: strOrNull(row.alliance_tag),
+    verified: Boolean(row.verified),
+    ratings: ratings(row.ratings),
+    texts,
+    locale: str(row.locale, "en"),
+    createdAt: iso(row.created_at, new Date(0).toISOString()),
   };
 }

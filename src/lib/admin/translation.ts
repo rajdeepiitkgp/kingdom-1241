@@ -19,6 +19,7 @@ const EDITABLE_TEXT_COLUMNS: Record<string, readonly string[]> = {
   kvk_rules: ["text"],
   kvk_coordinators: ["note"],
   kvk_formations: ["note"],
+  kvk_retrospectives: ["title", "intro"],
 };
 
 export const TEXT_LIMITS: Record<string, number> = { title: 120, intro: 20000, text: 400, note: 200 };

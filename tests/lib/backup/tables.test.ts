@@ -46,6 +46,8 @@ describe("backup tables", () => {
     expect(index("kvk_plans")).toBeLessThan(index("kvk_rules"));
     expect(index("kvk_plans")).toBeLessThan(index("kvk_coordinators"));
     expect(index("kvk_plans")).toBeLessThan(index("kvk_formations"));
+    expect(index("kvk_plans")).toBeLessThan(index("kvk_retrospectives"));
+    expect(index("kvk_retrospectives")).toBeLessThan(index("kvk_retro_responses"));
     expect(index("profiles")).toBeLessThan(index("role_grants"));
     expect(index("profiles")).toBeLessThan(index("audit_log"));
     expect(new Set(BACKUP_TABLES.map((t) => t.table)).size).toBe(BACKUP_TABLES.length);
