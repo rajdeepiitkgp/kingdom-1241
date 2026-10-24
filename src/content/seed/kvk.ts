@@ -64,6 +64,10 @@ Make the formations below, but only with heroes whose Top Expedition Skill (the 
       kind: "dont",
       text: "No buffs other than pets and the Deployment Capacity buff. This saves gems for the whole kingdom.",
     },
+    {
+      kind: "dont",
+      text: "No solo attacks on the castle. This helps us get players into the rallies, refill the garrison, and avoid wasting resources.",
+    },
     { kind: "do", text: "Everyone starts at [KvK]; the coordinators will send people to [TMP] as required." },
     {
       kind: "do",
