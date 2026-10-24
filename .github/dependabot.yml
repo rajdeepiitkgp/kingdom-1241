@@ -1,0 +1,32 @@
+# Weekly dependency updates. Minor and patch releases arrive grouped (one PR
+# for the runtime, one for the tooling); a major release gets its own PR so it
+# can be read against the upgrade notes. CI runs on every one of them.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+      tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # The pinned action commits in .github/workflows/*.yml (the version comment is updated too).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(ci)"

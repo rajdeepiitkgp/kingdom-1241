@@ -1,5 +1,5 @@
 # One-off tasks you would otherwise run from a laptop with .env.local:
-# seed the database, run the Gemini translation pass, or refresh the site cache.
+# seed the database, run the translation pass, or refresh the site cache.
 # Actions → Maintenance → Run workflow → pick a task.
 #
 # Secrets used (SETUP.md § 6): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY,
@@ -43,9 +43,9 @@ jobs:
       KVK_SEED_PASSWORD: ${{ secrets.KVK_SEED_PASSWORD }}
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: inputs.task != 'revalidate'
         with:
           node-version-file: .nvmrc
