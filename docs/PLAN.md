@@ -77,6 +77,8 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 - Vercel deploys `main` to production and every pull request to a preview link.
 - Database changes are SQL files in `supabase/migrations/`, applied to Supabase by a GitHub Action when they reach `main`.
 - Logs are structured (JSON in production) with a request id on every API response, so problems can be traced.
+- Every Monday the Maintenance workflow stores an encrypted backup of all content, roles and the audit log as a 90-day artifact; `npm run backup -- --restore` brings it back, also into a fresh Supabase project (SETUP.md § 10 and the rebuild runbook in § 11).
+- Supabase's webhook triggers and auth configuration are declared in the repository (`supabase/webhooks.sql`, `supabase/config.toml`) and applied with one-click Maintenance tasks, so nothing lives only in a dashboard.
 - Player-submitted data (feedback, later sign-ups) is bounded by design: one row per player and battle, short text limits, a per-battle cap, and a retention period after which the Maintenance workflow prunes it; admins can delete a battle's submissions at any time.
 
 ## Open questions
