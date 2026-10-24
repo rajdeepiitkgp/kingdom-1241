@@ -1,4 +1,5 @@
-import { Ban, Castle, CircleCheck, Info, Swords } from "lucide-react";
+import { ArrowRight, Ban, Castle, CircleCheck, Info, MessageSquareHeart, Swords } from "lucide-react";
+import Link from "next/link";
 import { prepareRichText, RichText } from "@/components/content/RichText";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import type { Alliance, CoordinatorTeam, Hero, KvkPlan, KvkRuleKind } from "@/lib/data/types";
@@ -22,12 +23,15 @@ export function BattlePlan({
   alliances,
   dict,
   locale,
+  feedbackHref = null,
 }: {
   plan: KvkPlan;
   heroes: Hero[];
   alliances: Alliance[];
   dict: Dictionary;
   locale: string;
+  /** Link to the open feedback form, when there is one. */
+  feedbackHref?: string | null;
 }) {
   const intro = pick(plan.intro, locale);
   const updated = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(
@@ -69,6 +73,26 @@ export function BattlePlan({
             <RichText html={intro} className="mt-5" />
           ))}
       </section>
+
+      {/* Battle feedback (retrospective), while a form is open */}
+      {feedbackHref && (
+        <Link
+          href={feedbackHref}
+          className="card group flex items-center gap-4 overflow-hidden border-2 border-gold/60 p-4 transition-shadow hover:shadow-lift md:p-5"
+        >
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
+            <MessageSquareHeart className="size-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-black text-ink">{dict["kvk.feedback.title"]}</span>
+            <span className="block text-sm font-semibold text-ink-muted">{dict["kvk.feedback.body"]}</span>
+          </span>
+          <span className="btn-gold btn-sm hidden shrink-0 sm:inline-flex">
+            {dict["kvk.feedback.open"]} <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+          </span>
+          <ArrowRight className="size-5 shrink-0 text-gold-strong sm:hidden rtl:rotate-180" aria-hidden />
+        </Link>
+      )}
 
       {/* Instructions */}
       {plan.rules.length > 0 && (

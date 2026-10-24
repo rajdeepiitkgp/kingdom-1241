@@ -1,8 +1,11 @@
 import { cookies } from "next/headers";
-import { getActiveKvkPlan, getAlliances, getHeroes } from "@/lib/data";
+import { getActiveKvkPlan, getAlliances, getHeroes, getOpenRetrospective } from "@/lib/data";
 import type { Dictionary } from "@/lib/i18n/dictionary";
+import { localePath } from "@/lib/i18n/paths";
 import { isValidKvkToken, KVK_COOKIE } from "@/lib/kvk/access";
+import { isOpenNow } from "@/lib/retro/retention";
 import { BattlePlan } from "./BattlePlan";
+import { KvkTabs } from "./KvkTabs";
 import { UnlockCard } from "./UnlockCard";
 
 /**
@@ -29,10 +32,17 @@ export async function KvkGate({ dict, locale }: { dict: Dictionary; locale: stri
     return <UnlockCard dict={dict} />;
   }
 
-  const [heroes, alliances] = await Promise.all([getHeroes(), getAlliances()]);
+  const [heroes, alliances, retro] = await Promise.all([getHeroes(), getAlliances(), getOpenRetrospective()]);
   const { password: _password, ...safePlan } = plan;
   void _password;
-  return <BattlePlan plan={safePlan} heroes={heroes} alliances={alliances} dict={dict} locale={locale} />;
+  // The feedback form may belong to the previous battle; it is linked whenever one is open.
+  const feedbackHref = retro && isOpenNow(retro, new Date()) ? localePath(locale, "/kvk/feedback") : null;
+  return (
+    <div className="space-y-5">
+      {feedbackHref && <KvkTabs locale={locale} dict={dict} current="plan" />}
+      <BattlePlan plan={safePlan} heroes={heroes} alliances={alliances} dict={dict} locale={locale} feedbackHref={feedbackHref} />
+    </div>
+  );
 }
 
 export function KvkGateSkeleton() {
