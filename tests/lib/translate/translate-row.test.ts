@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { sourceHash } from "@/lib/translate/hash";
+import { columnHashes, encodeColumnHashes, sourceHash } from "@/lib/translate/hash";
 
 // Mock Gemini: pretend-translate by prefixing the locale.
 const fakeTranslate = async (fields: Record<string, string>, locale: string) =>
@@ -24,6 +24,11 @@ function fakeSupabase(rows: Record<string, Record<string, unknown>>) {
           return { error: null };
         },
       }),
+      select: () => ({
+        eq: (_key: string, id: string) => ({
+          maybeSingle: async () => ({ data: rows[id] ? { ...rows[id] } : null, error: null }),
+        }),
+      }),
     }),
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,13 +52,61 @@ describe("translateRows", () => {
     expect(first[0].translated.sort()).toEqual(["de", "pl"]);
     expect(translateFields).toHaveBeenCalledTimes(2); // one request per language, both fields batched
     expect(rows.a.name).toEqual({ en: "Bear Hunt", de: "[de] Bear Hunt", pl: "[pl] Bear Hunt" });
-    expect(rows.a.source_hash).toBe(sourceHash({ name: "Bear Hunt", summary: "Rally the bear." }));
+    expect(rows.a.source_hash).toBe(encodeColumnHashes(columnHashes({ name: "Bear Hunt", summary: "Rally the bear." })));
 
     // Simulates the webhook firing again because of our own UPDATE.
     const second = await translateRows(client, "events", [rows.a], ["de", "pl"]);
     expect(second[0].skipped).toBe(true);
     expect(second[0].reason).toBe("up to date");
     expect(updates).toHaveLength(1);
+  });
+
+  it("never writes back English that changed while it was translating", async () => {
+    const rows = { a: { id: "a", name: { en: "Old" }, summary: { en: "" }, source_hash: null } };
+    const { client, updates } = fakeSupabase(rows);
+    // A concurrent edit lands while the model is working.
+    translateFields.mockImplementation(async (fields, locale) => {
+      rows.a.name = { en: "New" };
+      return fakeTranslate(fields, locale);
+    });
+
+    const result = await translateRows(client, "events", [rows.a], ["de"]);
+    expect(result[0].skipped).toBe(true);
+    expect(result[0].reason).toMatch(/superseded/);
+    expect(updates).toHaveLength(0);
+    expect(rows.a.name).toEqual({ en: "New" });
+  });
+
+  it("merges fresh translations into the current row instead of replacing it", async () => {
+    const rows = { a: { id: "a", name: { en: "Bear Hunt", ko: "hand-edited" }, summary: { en: "" }, source_hash: null } };
+    const { client } = fakeSupabase(rows);
+    await translateRows(client, "events", [rows.a], ["de"]);
+    expect(rows.a.name).toEqual({ en: "Bear Hunt", ko: "hand-edited", de: "[de] Bear Hunt" });
+  });
+
+  it("re-translates only the column whose English changed", async () => {
+    const stored = encodeColumnHashes(columnHashes({ title: "Old title", intro: "<p>Intro</p>" }));
+    const rows = {
+      p: { id: "p", title: { en: "New title" }, intro: { en: "<p>Intro</p>", de: "<p>[de] Intro</p>" }, source_hash: stored },
+    };
+    const { client } = fakeSupabase(rows);
+
+    const result = await translateRows(client, "kvk_plans", [rows.p], ["de"]);
+    expect(result[0].translated).toEqual(["de"]);
+    expect(translateFields).toHaveBeenCalledTimes(1);
+    expect(Object.keys(translateFields.mock.calls[0][0])).toHaveLength(1); // the title only, not the intro
+    expect(rows.p.title).toEqual({ en: "New title", de: "[de] New title" });
+    expect(rows.p.intro).toEqual({ en: "<p>Intro</p>", de: "<p>[de] Intro</p>" });
+    expect(rows.p.source_hash).toBe(encodeColumnHashes(columnHashes({ title: "New title", intro: "<p>Intro</p>" })));
+  });
+
+  it("keeps a row with a matching legacy whole-row hash untouched", async () => {
+    const legacy = sourceHash({ title: "T", intro: "<p>I</p>" });
+    const rows = { p: { id: "p", title: { en: "T", de: "T-de" }, intro: { en: "<p>I</p>", de: "<p>I-de</p>" }, source_hash: legacy } };
+    const { client, updates } = fakeSupabase(rows);
+    const result = await translateRows(client, "kvk_plans", [rows.p], ["de"]);
+    expect(result[0].reason).toBe("up to date");
+    expect(updates).toHaveLength(0);
   });
 
   it("re-translates everything when the English text changes", async () => {
