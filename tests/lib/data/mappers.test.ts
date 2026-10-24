@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapHero, mapKvkFormation, mapKvkPlan, mapSettings, settingsToRows } from "@/lib/data/mappers";
+import { mapAlliance, mapAnnouncement, mapEvent, mapGiftCode, mapGuide, mapHero, mapKvkFormation, mapKvkPlan, mapRule, mapRuleTopic, mapSettings, settingsToRows } from "@/lib/data/mappers";
 import { SEED_SETTINGS } from "@/content/seed/settings";
 
 describe("settingsToRows", () => {
@@ -71,5 +71,41 @@ describe("mapKvkPlan", () => {
     expect(mapped.password).toBe("");
     expect(mapped.minHeroStars).toBe(4);
     expect(mapped.minSkillLevel).toBe(5);
+  });
+});
+
+describe("content mappers", () => {
+  it("mapAnnouncement normalises dates and treats a missing published flag as published", () => {
+    const a = mapAnnouncement({ id: "a1", title: { en: "Hi" }, body: "<p>Plain string body</p>", pinned: 1, published_at: "2026-10-01T10:00:00+02:00", expires_at: "not a date" });
+    expect(a).toMatchObject({ id: "a1", pinned: true, published: true, publishedAt: "2026-10-01T08:00:00.000Z", expiresAt: null });
+    expect(a.body).toEqual({ en: "<p>Plain string body</p>" });
+    expect(mapAnnouncement({ id: "a2", published: false, expires_at: "2026-12-01T00:00:00Z" })).toMatchObject({ published: false, expiresAt: "2026-12-01T00:00:00.000Z", publishedAt: "1970-01-01T00:00:00.000Z" });
+  });
+
+  it("mapEvent keeps a sane event out of a half-filled row", () => {
+    const e = mapEvent({ id: "e1", slug: "bear", name: { en: "Bear Hunt" }, category: "dragons", duration_minutes: "0", repeat_every_days: "2", guide_slug: "", starts_at: "2026-10-24T12:00:00Z" });
+    expect(e).toMatchObject({ category: "alliance", icon: "📅", color: "sky", durationMinutes: 1, repeatEveryDays: 2, guideSlug: null, published: true, startsAt: "2026-10-24T12:00:00.000Z" });
+    expect(mapEvent({ id: "e2", category: "solo", duration_minutes: 90, guide_slug: "kvk" })).toMatchObject({ category: "solo", durationMinutes: 90, repeatEveryDays: null, guideSlug: "kvk" });
+  });
+
+  it("mapRuleTopic attaches its own rules in order", () => {
+    const rules = [
+      { id: "r2", topic_id: "t1", title: { en: "Second" }, body: { en: "<p>2</p>" }, sort_order: 2 },
+      { id: "r1", topic_id: "t1", title: { en: "First" }, body: { en: "<p>1</p>" }, sort_order: 1 },
+      { id: "rx", topic_id: "t2", title: { en: "Other" }, body: { en: "<p>x</p>" }, sort_order: 0 },
+    ].map(mapRule);
+    const topic = mapRuleTopic({ id: "t1", slug: "general", title: { en: "General" } }, rules);
+    expect(topic).toMatchObject({ slug: "general", icon: "📜", sortOrder: 0, published: true });
+    expect(topic.rules.map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(rules[0]).toMatchObject({ topicId: "t1", sortOrder: 2, published: true });
+  });
+
+  it("mapGuide, mapAlliance and mapGiftCode fill defaults for optional columns", () => {
+    expect(mapGuide({ id: "g1", slug: "kvk", title: { en: "KvK" }, body: { en: "<p>b</p>" }, cover_image_url: "" })).toMatchObject({ icon: "📖", coverImageUrl: null, sortOrder: 0, published: true, updatedAt: "1970-01-01T00:00:00.000Z" });
+    const alliance = mapAlliance({ id: "al1", tag: "ULU", name: "Ulu", power: "123", members: null, languages: "EN / DE" });
+    expect(alliance).toMatchObject({ tag: "ULU", color: "#3b82f6", leader: null, power: 123, members: null, maxMembers: 100, languages: "EN / DE", discordUrl: null });
+    expect(alliance.description).toEqual({});
+    expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({ code: "KS2026", active: false, expiresAt: null, addedAt: "2026-10-01T00:00:00.000Z" });
+    expect(mapGiftCode({ id: "c2", code: "X", expires_at: "2026-11-01T00:00:00Z" })).toMatchObject({ active: true, expiresAt: "2026-11-01T00:00:00.000Z" });
   });
 });
