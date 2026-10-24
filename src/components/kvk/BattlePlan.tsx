@@ -1,12 +1,14 @@
 import { Ban, Castle, CircleCheck, Info, Swords } from "lucide-react";
-import { RichText } from "@/components/content/RichText";
+import { prepareRichText, RichText } from "@/components/content/RichText";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import type { Alliance, CoordinatorTeam, Hero, KvkPlan, KvkRuleKind } from "@/lib/data/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
+import { hasBattleTokens } from "@/lib/kvk/battle-tokens";
 import { BattleCountdown } from "./BattleCountdown";
 import { FormationBoard } from "./FormationBoard";
 import { HeroAvatar } from "./HeroAvatar";
+import { LiveIntro } from "./LiveIntro";
 import { LockButton } from "./LockButton";
 
 /**
@@ -59,7 +61,13 @@ export function BattlePlan({
         </div>
         <p className="relative mt-2 text-xs font-semibold text-ink-faint">{dict["kvk.cycle"]}</p>
         {plan.battleAt && <BattleCountdown battleAt={plan.battleAt} dict={dict} locale={locale} />}
-        {intro && <RichText html={intro} className="mt-5" />}
+        {/* {{when}} / {{date}} / {{time}} / {{utc}} in the intro are filled in per visitor (see battle-tokens.ts). */}
+        {intro &&
+          (hasBattleTokens(intro) ? (
+            <LiveIntro html={prepareRichText(intro)} battleAt={plan.battleAt} locale={locale} className="mt-5" />
+          ) : (
+            <RichText html={intro} className="mt-5" />
+          ))}
       </section>
 
       {/* Instructions */}

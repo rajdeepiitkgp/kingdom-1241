@@ -203,7 +203,12 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Rally lead",
     translations: { de: "Rally-Leiter", pl: "Lider rajdu", ko: "집결 대장", ar: "قائد الحشد" },
-    note: "The player who starts a rally.",
+    note: "The player who starts a rally (attack). Others 'rally join'.",
+  },
+  {
+    term: "Garrison lead",
+    translations: { de: "Garnison-Leiter", pl: "Lider garnizonu", ko: "주둔 대장", ar: "قائد الحامية" },
+    note: "The defending counterpart of a rally lead: the player whose garrison others join ('garrison join'). Never 'rally' on the defence side.",
   },
   {
     term: "Coordinator",
