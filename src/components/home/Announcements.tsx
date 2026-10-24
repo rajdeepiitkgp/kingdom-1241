@@ -21,7 +21,7 @@ export function Announcements({
   }
 
   return (
-    <ul className="grid gap-3">
+    <ul className="grid grid-cols-1 gap-3">
       {visible.map((announcement) => (
         <li key={announcement.id}>
           <article className="card p-5">

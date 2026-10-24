@@ -26,7 +26,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 ## Languages
 
-- Starting with English, German, Korean, Polish and Arabic.
+- Live in ten languages: English, German, Korean, Polish and Arabic (hand-written interface strings), plus Turkish, Italian, Japanese, Chinese (Traditional) and French (machine-translated, correctable by hand).
 - Languages are configurable: admins can add or remove one at any time.
 - Each language sets its own reading direction, so Arabic and other right-to-left languages get a properly mirrored layout.
 - All content is translated by AI when it's added or edited, never when someone views the page. Leaders can correct any translation by hand.
@@ -49,6 +49,8 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 - Light, cute and polished by default, with an optional dark mode.
 - Works well on phones, since most players will use it there.
+- Visitors can shrink or enlarge the text (A− / AA / A+, four steps up to 125%); that choice and the theme are remembered on the device and survive a language switch.
+- Changes of language, theme, text size and page use a short crossfade, switched off for people who prefer reduced motion.
 
 ## Technology
 
@@ -58,7 +60,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 ## Phases
 
-1. Site layout, languages, home, events, rules, guides and tools. — **done (PR "Phase 1")**
+1. Site layout, languages, home, events, rules, guides and tools. — **done (PR "Phase 1")**; text-size control, remembered preferences and crossfades — **done (PR "Text size and transitions")**
 2. Admin panel with Discord login, roles and the content editor (including the battle plan and formations).
 3. KvK: battle plan with formations, coordinators and instructions — **done (PR "KvK battle plan")**; sign-ups, group lists, assignments and KvK history — open.
 4. Alliance pages from MightPulse and the transfer section.

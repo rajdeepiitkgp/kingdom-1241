@@ -20,7 +20,7 @@ export function ServerClock({
   const reset = now ? nextDailyReset(now, resetHourUtc) : null;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="card flex items-center gap-4 px-5 py-4">
         <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary">
           <Clock className="size-6" aria-hidden />
@@ -30,7 +30,7 @@ export function ServerClock({
           <p className="text-3xl/tight font-black text-ink tabular" dir="ltr" suppressHydrationWarning>
             {now ? formatUtcClock(now) : "--:--:--"}
           </p>
-          <p className="truncate text-xs font-semibold text-ink-faint" suppressHydrationWarning>
+          <p className="text-xs font-semibold wrap-break-word text-ink-faint" suppressHydrationWarning>
             {now ? `${formatUtcDate(now, locale)} · ${dict["time.yourTimeZone"]}: ${localTimeZone()}` : " "}
           </p>
         </div>

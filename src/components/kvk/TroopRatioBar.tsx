@@ -39,7 +39,7 @@ export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, numb
             )}
           >
             {/* Icon on a neutral disc: the brown horse emoji disappears on the amber tint otherwise. */}
-            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-card text-[11px] ring-1 ring-line" aria-hidden>
+            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-card text-[0.6875rem] ring-1 ring-line" aria-hidden>
               {TROOP_ICONS[type]}
             </span>
             <span className="min-w-0 flex-1 truncate font-bold text-ink">{labels[type]}</span>

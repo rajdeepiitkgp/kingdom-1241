@@ -70,7 +70,7 @@ export function HeroAvatar({
           <Flag className={size === "lg" ? "size-3" : "size-2.5"} aria-hidden />
           {skillLevel}
         </span>
-        <span className="absolute -inset-s-1 -bottom-1 grid size-5 place-items-center rounded-full bg-card text-[11px] ring-1 ring-line" aria-hidden>
+        <span className="absolute -inset-s-1 -bottom-1 grid size-5 place-items-center rounded-full bg-card text-[0.6875rem] ring-1 ring-line" aria-hidden>
           {TROOP_ICONS[hero.troopType]}
         </span>
       </span>

@@ -103,7 +103,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
         </div>
       </header>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         {/* Inputs */}
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3">
@@ -115,13 +115,13 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
           <fieldset>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <legend className="label mb-0!">{dict["tools.pack.contents"]}</legend>
-              <div className="flex items-center gap-2">
-                <label className="relative">
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <label className="relative min-w-0">
                   <span className="sr-only">{dict["tools.pack.addItem"]}</span>
                   <select
                     value={picker}
                     onChange={(e) => addItem(e.target.value)}
-                    className="h-9 cursor-pointer appearance-none rounded-xl border border-line bg-card ps-8 pe-7 text-sm font-extrabold text-ink shadow-[0_3px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+                    className="h-9 max-w-full min-w-0 cursor-pointer appearance-none truncate rounded-xl border border-line bg-card ps-8 pe-7 text-sm font-extrabold text-ink shadow-[0_3px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
                   >
                     <option value="">{dict["tools.pack.addItem"]}</option>
                     {PACK_CATEGORIES.map((category) => (
@@ -152,8 +152,9 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                 {lines.map((line, index) => {
                   const lineResult = result.lines[index];
                   return (
-                    <li key={line.key} className="grid grid-cols-[minmax(0,1fr)_5rem_6rem_auto] items-end gap-2 rounded-2xl bg-card-soft p-2.5 sm:grid-cols-[minmax(0,1fr)_6rem_7rem_4rem_auto]">
-                      <div className="min-w-0">
+                    <li key={line.key} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-2xl bg-card-soft p-2.5 sm:grid-cols-[minmax(0,1fr)_6rem_7rem_4rem_auto]">
+                      {/* Phones: the name takes the first row, quantity / gems / remove the second. */}
+                      <div className="col-span-3 min-w-0 sm:col-span-1">
                         <label className="label mb-1 text-xs">{dict["tools.pack.item"]}</label>
                         {line.itemId === "custom" ? (
                           <input

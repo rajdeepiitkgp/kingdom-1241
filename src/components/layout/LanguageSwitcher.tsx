@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LOCALE_COOKIE, type SiteLanguage } from "@/lib/i18n/languages";
 import { switchLocaleInPath } from "@/lib/i18n/paths";
+import { withNavigationTransition } from "@/lib/view-transition";
 
 function rememberLocale(locale: string) {
   try {
@@ -14,6 +15,12 @@ function rememberLocale(locale: string) {
   }
 }
 
+/**
+ * Native <select> (so phones open their own picker and the list shows every
+ * language in full) laid transparently over a compact pill. The pill shows
+ * the flag and, from tablet width up, the language name — nothing to truncate
+ * when text is enlarged on a phone.
+ */
 export function LanguageSwitcher({
   locale,
   languages,
@@ -33,9 +40,17 @@ export function LanguageSwitcher({
   const current = languages.find((l) => l.code === locale);
 
   return (
-    <label className="relative inline-flex items-center">
+    <label className="relative inline-flex shrink-0 items-center rounded-full has-focus-visible:ring-4 has-focus-visible:ring-primary/40">
       <span className="sr-only">{label}</span>
-      <Languages className="pointer-events-none absolute inset-s-3 size-4 text-primary" aria-hidden />
+      <span
+        className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-card px-3 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)]"
+        aria-hidden
+      >
+        <Languages className="size-4 text-primary" />
+        <span>{current?.flag ?? "🌐"}</span>
+        <span className="hidden sm:inline">{current?.nativeName ?? locale}</span>
+        <span className="text-xs text-ink-muted">▾</span>
+      </span>
       <select
         value={locale}
         onChange={(event) => {
@@ -43,9 +58,9 @@ export function LanguageSwitcher({
           rememberLocale(next);
           // Read the URL in the handler (not during render) so this component
           // never blocks prerendering of routes with dynamic params.
-          router.push(switchLocaleInPath(window.location.pathname, next));
+          withNavigationTransition(() => router.push(switchLocaleInPath(window.location.pathname, next)));
         }}
-        className="h-10 max-w-38 cursor-pointer appearance-none truncate rounded-full border border-line bg-card ps-9 pe-7 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 sm:max-w-none"
+        className="absolute inset-0 size-full cursor-pointer opacity-0"
         aria-label={label}
       >
         {languages.map((language) => (
@@ -54,10 +69,6 @@ export function LanguageSwitcher({
           </option>
         ))}
       </select>
-      <span className="pointer-events-none absolute inset-e-3 text-xs text-ink-muted" aria-hidden>
-        ▾
-      </span>
-      {current && <span className="sr-only">{current.name}</span>}
     </label>
   );
 }

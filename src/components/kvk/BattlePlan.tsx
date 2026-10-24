@@ -66,12 +66,12 @@ export function BattlePlan({
       {plan.rules.length > 0 && (
         <section>
           <SectionTitle icon="📋" title={dict["kvk.instructions"]} />
-          <ol className="grid gap-2">
+          <ol className="grid grid-cols-1 gap-2">
             {plan.rules.map((rule) => (
               <li key={rule.id} className="card flex items-start gap-3 px-4 py-3">
                 <RuleIcon kind={rule.kind} />
                 <div className="min-w-0 flex-1">
-                  <span className="text-[11px] font-black tracking-wider text-ink-faint uppercase">{dict[`kvk.rule.${rule.kind}`]}</span>
+                  <span className="text-[0.6875rem] font-black tracking-wider text-ink-faint uppercase">{dict[`kvk.rule.${rule.kind}`]}</span>
                   <p className="text-[0.98rem] font-semibold text-ink" dir="auto">
                     {pick(rule.text, locale)}
                   </p>
@@ -87,21 +87,21 @@ export function BattlePlan({
         <section>
           <SectionTitle icon="📣" title={dict["kvk.coordinators"]} />
           <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["kvk.coordinators.hint"]}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {teams.map((team) => {
               const members = plan.coordinators.filter((c) => c.team === team);
               if (members.length === 0) return null;
               return (
                 <div key={team} className="card p-4">
                   <h3 className="text-sm font-black tracking-wider text-ink-muted uppercase">{dict[`kvk.coordinators.${team}`]}</h3>
-                  <ul className="mt-3 grid gap-2">
+                  <ul className="mt-3 grid grid-cols-1 gap-2">
                     {members.map((c) => {
                       const note = pick(c.note, locale);
                       const color = c.allianceTag ? tagColor.get(c.allianceTag) : undefined;
                       return (
                         <li key={c.id} className="flex items-center gap-3 rounded-2xl bg-card-soft px-3 py-2">
                           <span
-                            className="grid size-9 shrink-0 place-items-center rounded-xl text-[11px] font-black text-white shadow-[0_2px_0_0_rgba(0,0,0,0.18)]"
+                            className="grid size-9 shrink-0 place-items-center rounded-xl text-[0.6875rem] font-black text-white shadow-[0_2px_0_0_rgba(0,0,0,0.18)]"
                             style={{ backgroundColor: color ?? "var(--primary)" }}
                             dir="ltr"
                             aria-hidden

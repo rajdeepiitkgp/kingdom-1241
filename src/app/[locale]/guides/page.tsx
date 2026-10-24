@@ -20,7 +20,7 @@ export default async function GuidesPage() {
   return (
     <div>
       <PageHeader icon="📖" title={dict["guides.title"]} subtitle={dict["guides.subtitle"]} />
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {guides.map((guide) => (
           <li key={guide.id}>
             <Link

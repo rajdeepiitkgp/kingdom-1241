@@ -361,6 +361,11 @@ export const UI_STRINGS = {
   // Chrome
   "lang.label": { en: "Language", de: "Sprache", ko: "언어", pl: "Język", ar: "اللغة" },
   "theme.toggle": { en: "Toggle dark mode", de: "Dunkelmodus umschalten", ko: "다크 모드 전환", pl: "Przełącz tryb ciemny", ar: "تبديل الوضع الداكن" },
+  "textSize.label": { en: "Text size", de: "Textgröße", ko: "글자 크기", pl: "Rozmiar tekstu", ar: "حجم النص" },
+  "textSize.smaller": { en: "Smaller text", de: "Kleinerer Text", ko: "글자 작게", pl: "Mniejszy tekst", ar: "تصغير النص" },
+  "textSize.reset": { en: "Default text size", de: "Standard-Textgröße", ko: "기본 글자 크기", pl: "Domyślny rozmiar tekstu", ar: "حجم النص الافتراضي" },
+  "textSize.larger": { en: "Larger text", de: "Größerer Text", ko: "글자 크게", pl: "Większy tekst", ar: "تكبير النص" },
+  "textSize.current": { en: "Text size {percent}%", de: "Textgröße {percent} %", ko: "글자 크기 {percent}%", pl: "Rozmiar tekstu {percent}%", ar: "حجم النص {percent}%" },
   "footer.disclaimer": {
     en: "Fan-made community site for Kingshot Kingdom 1241. Not affiliated with the game's publisher.",
     de: "Von Fans erstellte Community-Seite für Kingshot-Königreich 1241. Nicht mit dem Publisher des Spiels verbunden.",

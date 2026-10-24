@@ -22,7 +22,7 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
 
   return (
     <div>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {alliances.map((alliance, index) => {
           const description = pick(alliance.description, locale);
           const requirements = pick(alliance.requirements, locale);
@@ -40,11 +40,11 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                     {alliance.tag}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-lg font-extrabold text-ink" dir="ltr">
+                    <h3 className="text-lg font-extrabold wrap-break-word text-ink" dir="ltr">
                       [{alliance.tag}] {alliance.name}
                     </h3>
                     {alliance.leader && (
-                      <p className="truncate text-sm text-ink-muted">
+                      <p className="text-sm wrap-break-word text-ink-muted">
                         {dict["alliance.leader"]}: <span className="font-bold text-ink">{alliance.leader}</span>
                       </p>
                     )}

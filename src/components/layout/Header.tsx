@@ -4,6 +4,7 @@ import type { SiteLanguage } from "@/lib/i18n/languages";
 import { localePath } from "@/lib/i18n/paths";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { DesktopNav } from "./NavLinks";
+import { TextSizeControl } from "./TextSizeControl";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Header({
@@ -20,22 +21,33 @@ export function Header({
   kingdomNumber: number;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
+    <header id="site-header" className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
-        <Link href={localePath(locale, "/")} className="flex items-center gap-2.5 font-extrabold" aria-label={kingdomName}>
+        <Link href={localePath(locale, "/")} className="flex shrink-0 items-center gap-2.5 font-extrabold" aria-label={kingdomName}>
           <span className="grid size-10 place-items-center rounded-2xl bg-gold text-xl shadow-[0_3px_0_0_var(--gold-strong)]" aria-hidden>
             👑
           </span>
-          <span className="flex flex-col leading-tight">
-            <span className="max-w-[42vw] truncate text-sm text-ink sm:max-w-none sm:text-base" dir="auto">{kingdomName}</span>
-            <span className="hidden text-[11px] font-bold tracking-widest text-ink-faint uppercase sm:block">Kingshot · #{kingdomNumber}</span>
+          {/* The name is hidden on phones to make room for the language, text-size and theme controls. */}
+          <span className="hidden flex-col leading-tight sm:flex">
+            <span className="text-base text-ink" dir="auto">{kingdomName}</span>
+            <span className="text-[0.6875rem] font-bold tracking-widest text-ink-faint uppercase">Kingshot · #{kingdomNumber}</span>
           </span>
         </Link>
 
         <DesktopNav locale={locale} dict={dict} />
 
-        <div className="flex items-center gap-2">
+        {/* min-w-0 lets the language select shrink first when text is enlarged on a phone. */}
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher locale={locale} languages={languages} label={dict["lang.label"]} />
+          <TextSizeControl
+            labels={{
+              group: dict["textSize.label"],
+              smaller: dict["textSize.smaller"],
+              reset: dict["textSize.reset"],
+              larger: dict["textSize.larger"],
+              current: dict["textSize.current"],
+            }}
+          />
           <ThemeToggle label={dict["theme.toggle"]} />
         </div>
       </div>

@@ -7,12 +7,14 @@ import "@fontsource-variable/noto-sans-arabic";
 import "../globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { PersistentUiState } from "@/components/layout/PersistentUiState";
 import { BottomNav } from "@/components/layout/NavLinks";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { getLanguages, getSettings } from "@/lib/data";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getLanguageInfo } from "@/lib/i18n/languages";
 import { pick } from "@/lib/i18n/localized";
+import { TEXT_SCALE_INIT_SCRIPT } from "@/lib/text-scale";
 
 export async function generateStaticParams() {
   const languages = await getLanguages();
@@ -20,14 +22,22 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [settings, currentLocale] = await Promise.all([getSettings(), rootLocale()]);
+  const [settings, currentLocale] = await Promise.all([
+    getSettings(),
+    rootLocale(),
+  ]);
   const name = pick(settings.kingdomName, currentLocale);
   return {
     title: { default: name, template: `%s · ${name}` },
     description: pick(settings.tagline, currentLocale),
     applicationName: name,
     // The whole site is hidden from search engines (see also app/robots.ts).
-    robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: { index: false, follow: false },
+    },
     icons: { icon: "/icon.svg" },
   };
 }
@@ -50,9 +60,14 @@ const FONT_CLASS: Record<string, string> = {
   chinese: "font-chinese",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/[locale]">) {
+export default async function RootLayout({
+  children,
+}: LayoutProps<"/[locale]">) {
   const currentLocale = await rootLocale();
-  const [languages, settings] = await Promise.all([getLanguages(), getSettings()]);
+  const [languages, settings] = await Promise.all([
+    getLanguages(),
+    getSettings(),
+  ]);
 
   const language = languages.find((l) => l.code === currentLocale && l.enabled);
   if (!language) notFound();
@@ -68,8 +83,13 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
       className={`${FONT_CLASS[info.font] ?? ""} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Applies the saved text size before the first paint (no flash); see src/lib/text-scale.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: TEXT_SCALE_INIT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col pb-24 md:pb-0">
         <ThemeProvider>
+          <PersistentUiState locale={currentLocale} />
           <Header
             locale={currentLocale}
             languages={languages.filter((l) => l.enabled)}
@@ -77,8 +97,17 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
             kingdomName={kingdomName}
             kingdomNumber={settings.kingdomNumber}
           />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">{children}</main>
-          <Footer dict={dict} discordUrl={settings.discordInviteUrl} joinLabel={dict["home.joinDiscord"]} createdBy={settings.createdBy} />
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">
+            {/* Route changes crossfade through the <ViewTransition> in template.tsx; language
+                switches through withNavigationTransition() in the language switcher. */}
+            {children}
+          </main>
+          <Footer
+            dict={dict}
+            discordUrl={settings.discordInviteUrl}
+            joinLabel={dict["home.joinDiscord"]}
+            createdBy={settings.createdBy}
+          />
           <BottomNav locale={currentLocale} dict={dict} />
         </ThemeProvider>
       </body>

@@ -3,6 +3,8 @@
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
+import { withViewTransition } from "@/lib/view-transition";
 
 const subscribeNoop = () => () => {};
 const isClient = () => true;
@@ -19,8 +21,13 @@ export function ThemeToggle({ label }: { label: string }) {
       type="button"
       aria-label={label}
       title={label}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="btn-ghost btn-sm size-10 rounded-full p-0!"
+      onClick={() => {
+        const next = isDark ? "light" : "dark";
+        // flushSync commits the new theme (state + <html> class) inside the transition
+        // callback, so the crossfade's new frame already shows it.
+        withViewTransition(() => flushSync(() => setTheme(next)));
+      }}
+      className="btn-ghost btn-sm size-10 shrink-0 rounded-full p-0!"
     >
       {isDark ? <Sun className="size-5 text-gold" aria-hidden /> : <Moon className="size-5 text-primary" aria-hidden />}
     </button>

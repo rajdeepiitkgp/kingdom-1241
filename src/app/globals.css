@@ -108,9 +108,23 @@
 /* ---------------------------------------------------------------------------
  * Base
  * ------------------------------------------------------------------------- */
+/* No `scroll-behavior: smooth` here: Next.js 16 no longer suppresses it during
+   navigations, so a tab change would animate the scroll back to the top
+   instead of jumping under the crossfade. In-page scrolls that should be
+   smooth pass `behavior: "smooth"` themselves (see RulesTabs). */
 html {
-  scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Text size preference (A− / A+ in the header). Steps of the browser's own
+   default size, so a larger system font setting still counts. See src/lib/text-scale.ts. */
+html[data-text-scale="s"] { font-size: 87.5%; }
+html[data-text-scale="l"] { font-size: 112.5%; }
+html[data-text-scale="xl"] { font-size: 125%; }
+
+/* Browsers give <fieldset> min-inline-size: min-content, which breaks narrow layouts at large text sizes. */
+fieldset {
+  min-inline-size: 0;
 }
 
 body {
@@ -201,7 +215,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-2xl border border-line bg-card-soft px-4 py-3 text-base font-semibold text-ink tabular
+    @apply w-full min-w-0 rounded-2xl border border-line bg-card-soft px-4 py-3 text-base font-semibold text-ink tabular
       placeholder:text-ink-faint
       focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/25;
   }
@@ -241,6 +255,34 @@ body {
   .prose-game .table-wrap { @apply overflow-x-auto; }
 }
 
+/* View transitions: a short crossfade for route changes (the "page" class comes from the
+   <ViewTransition> in app/[locale]/template.tsx), language switches, text-size and theme
+   changes. */
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-group(.page),
+::view-transition-old(.page),
+::view-transition-new(.page),
+::view-transition-group(.chrome),
+::view-transition-old(.chrome),
+::view-transition-new(.chrome) {
+  animation-duration: 200ms;
+  animation-timing-function: ease-in-out;
+}
+
+/* The sticky header and the phone bottom bar get their own snapshots, stacked above the
+   page groups, so old page content fades out underneath them instead of over them. */
+#site-header,
+#bottom-nav {
+  view-transition-name: var(--chrome-name);
+  view-transition-class: chrome;
+}
+#site-header { --chrome-name: site-header; }
+#bottom-nav { --chrome-name: bottom-nav; }
+::view-transition-group(.chrome) {
+  z-index: 1;
+}
+
 /* Hide scrollbars on horizontally scrolling tab strips. */
 @utility no-scrollbar {
   -ms-overflow-style: none;
@@ -252,6 +294,10 @@ body {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
   .btn { transition: none; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
