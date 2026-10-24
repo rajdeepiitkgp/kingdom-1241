@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
+import { AnalyseButton } from "@/components/admin/AnalyseButton";
 import { DeleteForm } from "@/components/admin/DeleteForm";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -18,6 +19,8 @@ import { requireEditor } from "@/lib/auth/server";
 import type { RetroResponse } from "@/lib/data/types";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
+import { retroAiConfigured, retroAiLabel } from "@/lib/retro/ai";
+import { hasText } from "@/lib/retro/analysis";
 import { RATING_MAX, RATING_MIN, shownRatings, shownTexts } from "@/lib/retro/questions";
 import { formatAverage, overallAverage, percent, summarizeByAlliance, summarizeRatings } from "@/lib/retro/summary";
 
@@ -110,6 +113,13 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         )}
       </div>
 
+      <AdminSection
+        title="AI summary"
+        hint="Translates the written answers to English once, then reads every response and summarises the mood, the recurring themes and what to do. Runs only when you click: each run costs tokens."
+      >
+        <AiSummary retro={retro} responses={responses} locale={locale} labelOf={labelOf} />
+      </AdminSection>
+
       <AdminSection title="Summary" hint="Averages on the 0–5 scale and how the answers spread. The CSV has every row for your own charts.">
         {responses.length === 0 ? (
           <EmptyRow>No responses yet.</EmptyRow>
@@ -186,7 +196,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         )}
       </AdminSection>
 
-      <AdminSection title={`Responses (${responses.length})`} hint="Newest first. Texts are shown as written, in the player's language; the chip shows the page language they used.">
+      <AdminSection title={`Responses (${responses.length})`} hint="Newest first. Once the AI step has run, texts are shown in English with the original underneath; the chip shows the page language the player used.">
         {responses.length === 0 ? (
           <EmptyRow>Nothing yet. Share the battle plan link: the feedback card is at its top while the form is open.</EmptyRow>
         ) : (
@@ -264,19 +274,142 @@ function ResponseCard({
       </p>
       {written.length > 0 && (
         <dl className="mt-3 space-y-2">
-          {written.map((key) => (
-            <div key={key}>
-              <dt className="text-xs font-bold tracking-wider text-ink-faint uppercase">{textLabel(key)}</dt>
-              <dd className="mt-0.5 text-sm font-semibold wrap-break-word whitespace-pre-wrap text-ink" dir="auto">
-                {r.texts[key]}
-              </dd>
-            </div>
-          ))}
+          {written.map((key) => {
+            const original = r.texts[key];
+            const english = r.textsEn?.[key]?.trim() ?? "";
+            const translated = english !== "" && english !== original.trim();
+            return (
+              <div key={key}>
+                <dt className="text-xs font-bold tracking-wider text-ink-faint uppercase">{textLabel(key)}</dt>
+                <dd className="mt-0.5 text-sm font-semibold wrap-break-word whitespace-pre-wrap text-ink" dir={translated ? "ltr" : "auto"}>
+                  {translated ? english : original}
+                </dd>
+                {translated && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs font-bold text-ink-faint">Original ({r.locale})</summary>
+                    <p className="mt-1 text-sm font-semibold wrap-break-word whitespace-pre-wrap text-ink-muted" dir="auto">
+                      {original}
+                    </p>
+                  </details>
+                )}
+              </div>
+            );
+          })}
         </dl>
       )}
       <div className="mt-2 flex justify-end">
         <DeleteForm action={deleteResponse} hidden={{ locale, planId, id: r.id }} confirmText="Delete this response? This cannot be undone." />
       </div>
     </li>
+  );
+}
+
+const SENTIMENT_CLASS = { positive: "bg-success", neutral: "bg-ink-faint/40", negative: "bg-danger" } as const;
+
+function AiSummary({
+  retro,
+  responses,
+  locale,
+  labelOf,
+}: {
+  retro: NonNullable<Awaited<ReturnType<typeof getRetrospectiveByPlan>>>;
+  responses: RetroResponse[];
+  locale: string;
+  labelOf: (key: string) => string;
+}) {
+  const analysis = retro.analysis;
+  const withText = responses.filter(hasText).length;
+  const untranslated = responses.filter((r) => hasText(r) && !r.textsEn).length;
+  const newSince = analysis && retro.analysisCount !== null ? Math.max(0, responses.length - retro.analysisCount) : 0;
+  const disabledReason = !retroAiConfigured()
+    ? "Turned off: no ANTHROPIC_API_KEY or GEMINI_API_KEY is set."
+    : responses.length === 0
+      ? "Nothing to analyse yet."
+      : null;
+  const hint =
+    untranslated > 0
+      ? `${untranslated} response${untranslated === 1 ? "" : "s"} still to translate, then one summary over all ${responses.length}. Provider: ${retroAiLabel()}.`
+      : `One summary over all ${responses.length} responses (${withText} with text). Provider: ${retroAiLabel()}.`;
+  const textKeys = shownTexts(retro.config).map((t) => t.key);
+
+  return (
+    <div className="space-y-5">
+      {analysis ? (
+        <>
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+            <div className="shrink-0">
+              <p className="text-xs font-bold tracking-wider text-ink-faint uppercase">Mood</p>
+              <p className="text-4xl font-black text-ink tabular">
+                {formatAverage(analysis.mood)} <span className="text-base text-ink-faint">/ 5</span>
+              </p>
+            </div>
+            <p className="min-w-0 flex-1 basis-72 text-base font-semibold wrap-break-word text-ink">{analysis.summary}</p>
+          </div>
+
+          {textKeys.some((key) => analysis.sentiment[key]) && (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {textKeys.map((key) => {
+                const s = analysis.sentiment[key];
+                if (!s) return null;
+                const empty = s.positive + s.neutral + s.negative === 0;
+                return (
+                  <li key={key} className="min-w-0 rounded-2xl bg-card-soft p-3">
+                    <p className="text-xs font-bold wrap-break-word text-ink-muted">{labelOf(key)}</p>
+                    <div className="mt-2 flex h-2.5 w-full overflow-hidden rounded-full bg-card" role="img" aria-label={`positive ${s.positive}%, neutral ${s.neutral}%, negative ${s.negative}%`}>
+                      {(["positive", "neutral", "negative"] as const).map((part) => (s[part] > 0 ? <span key={part} className={SENTIMENT_CLASS[part]} style={{ width: `${s[part]}%` }} /> : null))}
+                    </div>
+                    <p className="mt-1 text-[0.6875rem] font-bold text-ink-faint tabular" dir="ltr">
+                      {empty ? "no written answers" : `${s.positive}% positive · ${s.neutral}% neutral · ${s.negative}% negative`}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {analysis.themes.length > 0 && (
+            <div>
+              <p className="label">Recurring themes</p>
+              <ul className="divide-y divide-line">
+                {analysis.themes.map((theme, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+                    <span className="chip bg-card-soft text-ink-muted">{labelOf(theme.prompt)}</span>
+                    <span className="font-extrabold text-ink">{theme.title}</span>
+                    <span className="text-xs font-bold text-ink-faint tabular">× {theme.count}</span>
+                    {theme.quote && (
+                      <q className="basis-full text-sm font-semibold wrap-break-word text-ink-muted" dir="auto">
+                        {theme.quote}
+                      </q>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {analysis.actions.length > 0 && (
+            <div>
+              <p className="label">Suggested actions</p>
+              <ol className="list-decimal space-y-1 ps-5 text-sm font-semibold text-ink">
+                {analysis.actions.map((action, i) => (
+                  <li key={i} className="wrap-break-word">
+                    {action}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          <p className="text-xs font-semibold text-ink-faint">
+            Analysed {retro.analysisCount ?? "?"} responses{retro.analysisAt && ` on ${utcLabel(retro.analysisAt)} UTC`} · {analysis.model} ·{" "}
+            {analysis.usage.inputTokens.toLocaleString("en")} tokens in, {analysis.usage.outputTokens.toLocaleString("en")} out
+            {newSince > 0 && <span className="chip ms-2 bg-gold-soft text-gold-ink">{newSince} new response{newSince === 1 ? "" : "s"} since</span>}
+          </p>
+        </>
+      ) : (
+        <EmptyRow>No summary yet. Click the button to translate the written answers and get the mood, the themes and three suggested actions.</EmptyRow>
+      )}
+      <AnalyseButton planId={retro.planId} locale={locale} label={analysis ? "Update analysis" : "Translate and analyse"} hint={hint} disabledReason={disabledReason} />
+    </div>
   );
 }
