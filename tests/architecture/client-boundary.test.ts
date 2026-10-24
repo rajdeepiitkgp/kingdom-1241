@@ -29,6 +29,8 @@ const SERVER_ONLY = [
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
   "lib/translate/provider.ts",
+  "lib/backup/crypto.ts",
+  "lib/backup/tables.ts",
   "content/seed/index.ts",
 ];
 const SERVER_ONLY_PACKAGES = ["sanitize-html", "marked", "@supabase/supabase-js", "@supabase/ssr", "@anthropic-ai/sdk", "@google/genai", "server-only"];
