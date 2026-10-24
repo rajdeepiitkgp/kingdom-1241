@@ -1,5 +1,7 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SEED_LANGUAGES } from "@/content/seed/languages";
+import { loginPath } from "@/lib/auth/paths";
 import { LOCALE_COOKIE } from "@/lib/i18n/languages";
 import { negotiateLocale } from "@/lib/i18n/negotiate";
 import { createLogger, requestId } from "@/lib/log";
@@ -64,7 +66,12 @@ export async function proxy(request: NextRequest) {
 
   const first = segments[0];
   if (first && locales.some((l) => l === first)) {
-    const response = NextResponse.next({ request: { headers: forwarded } });
+    // Admin pages read the session on the server, and Server Components can't
+    // write cookies, so expired tokens are refreshed here. Public pages skip it.
+    const response =
+      segments[1] === "admin"
+        ? await withFreshSession(request, reqId, pathname)
+        : NextResponse.next({ request: { headers: forwarded } });
     response.headers.set("x-request-id", reqId);
     return response;
   }
@@ -90,9 +97,57 @@ export async function proxy(request: NextRequest) {
   return NextResponse.redirect(url, 307);
 }
 
+/**
+ * Admin requests: lets @supabase/ssr refresh the session (it reads the request
+ * cookies and, after a token refresh, writes the new ones to both the forwarded
+ * request and the response), sends signed-out visitors to the login page before
+ * any admin page renders (Next renders pages in parallel with their layouts, so
+ * a layout alone can't keep page data out of the response), and forwards the
+ * current path (`x-pathname`) so the gate can return the visitor after login.
+ */
+async function withFreshSession(request: NextRequest, reqId: string, pathname: string): Promise<NextResponse> {
+  const next = () => {
+    const headers = new Headers(request.headers);
+    headers.set("x-request-id", reqId);
+    headers.set("x-pathname", pathname);
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = next();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return response;
+
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (toSet) => {
+        for (const { name, value } of toSet) request.cookies.set(name, value);
+        response = next();
+        for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
+      },
+    },
+  });
+  let signedIn = false;
+  try {
+    const { data } = await supabase.auth.getUser();
+    signedIn = Boolean(data.user);
+  } catch (error) {
+    log.warn("Could not refresh the admin session", { reqId, error });
+  }
+
+  const [locale, , third] = pathname.split("/").filter(Boolean);
+  if (!signedIn && third !== "login") {
+    const url = request.nextUrl.clone();
+    url.pathname = loginPath(locale);
+    url.search = `?next=${encodeURIComponent(pathname)}`;
+    return NextResponse.redirect(url, 307);
+  }
+  return response;
+}
+
 export const config = {
   matcher: [
-    // Everything except Next internals, API routes, metadata files and static assets.
-    "/((?!api|_next/static|_next/image|favicon\\.ico|robots\\.txt|icon\\.|apple-icon\\.|.*\\.[a-zA-Z0-9]+$).*)",
+    // Everything except Next internals, API + auth routes, metadata files and static assets.
+    "/((?!api|auth|_next/static|_next/image|favicon\\.ico|robots\\.txt|icon\\.|apple-icon\\.|.*\\.[a-zA-Z0-9]+$).*)",
   ],
 };
