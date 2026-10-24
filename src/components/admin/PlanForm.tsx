@@ -38,7 +38,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           name="battleAt"
           label="Battle starts (UTC)"
           defaultValue={toUtcInputValue(plan?.battleAt)}
-          hint="Enter the UTC time; players see it in their own time zone."
+          hint="Enter the UTC time, in the future; players see it in their own time zone."
           error={errors.battleAt}
         />
         <Field label="Minimum hero stars" htmlFor="minHeroStars" error={errors.minHeroStars}>

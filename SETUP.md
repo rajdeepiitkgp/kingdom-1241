@@ -191,7 +191,7 @@ Kingdom 1241 alternates two events every two weeks — the **internal castle bat
 
 **Change the password:** Table Editor → `kvk_plans` → edit `password`. Everyone is logged out immediately (the cookie is derived from the password) — share the new one on Discord.
 
-**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
+**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down; the editor only accepts a future time when you change it, and a duplicated plan starts without one), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
 
 **Instructions** (`kvk_rules`): one row per bullet; `kind` is `do`, `dont` or `info`; `sort_order` orders them (the arrows in the editor).
 

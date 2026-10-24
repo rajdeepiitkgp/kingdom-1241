@@ -63,20 +63,22 @@ async function expirePublicPlan(locale: string, planId: string) {
 export async function savePlan(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
-  const parsed = parsePlanForm(formData);
-  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
-
-  const input = parsed.value;
   const locale = localeField(formData);
   const id = idField(formData, "id");
   const admin = createAdminClient();
 
-  let existing: { title: Localized; intro: Localized; intro_source: Localized | null } | null = null;
+  type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null };
+  let existing: ExistingPlan | null = null;
   if (id) {
-    const { data } = await admin.from("kvk_plans").select("title, intro, intro_source").eq("id", id).maybeSingle();
+    const { data } = await admin.from("kvk_plans").select("title, intro, intro_source, battle_at").eq("id", id).maybeSingle();
     if (!data) return { status: "error", message: "This plan no longer exists." };
-    existing = data as { title: Localized; intro: Localized; intro_source: Localized | null };
+    existing = data as ExistingPlan;
   }
+
+  // A changed battle time must lie ahead; an old plan keeps its past time untouched.
+  const parsed = parsePlanForm(formData, { now: new Date(), previousBattleAt: existing?.battle_at ?? null });
+  if (!parsed.ok) return { status: "error", errors: parsed.errors, message: "Please fix the highlighted fields." };
+  const input = parsed.value;
 
   // A changed English intro drops the other languages (HTML and Markdown sources alike);
   // the pipeline refills the HTML, and sources are re-derived from it when edited.
@@ -163,7 +165,8 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
   void _oldId; void _c; void _u; void _h;
   const copy = await admin
     .from("kvk_plans")
-    .insert({ ...rest, slug: `${String(plan.slug)}-copy-${Date.now().toString(36)}`.slice(0, 80), title: { en: copyTitle }, active: false, published: false })
+    // The copy starts without a battle time: the next battle's date is always new.
+    .insert({ ...rest, slug: `${String(plan.slug)}-copy-${Date.now().toString(36)}`.slice(0, 80), title: { en: copyTitle }, battle_at: null, active: false, published: false })
     .select("id")
     .single();
   if (copy.error) {
