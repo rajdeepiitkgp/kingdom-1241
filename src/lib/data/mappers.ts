@@ -1,5 +1,6 @@
 import type { Localized } from "@/lib/i18n/localized";
-import { isRatingKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/questions";
+import { readStoredAnalysis } from "@/lib/retro/analysis";
+import { isRatingKey, isTextKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/questions";
 import type {
   Alliance,
   Announcement,
@@ -334,6 +335,9 @@ export function mapRetrospective(row: Row): Retrospective {
     closesAt: row.closes_at ? iso(row.closes_at, "") || null : null,
     maxResponses: Math.max(1, Math.round(num(row.max_responses, 600))),
     retentionDays: Math.max(1, Math.round(num(row.retention_days, 30))),
+    analysis: readStoredAnalysis(row.analysis),
+    analysisAt: row.analysis_at ? iso(row.analysis_at, "") || null : null,
+    analysisCount: numOrNull(row.analysis_count),
     createdAt: iso(row.created_at, new Date(0).toISOString()),
     updatedAt: iso(row.updated_at, new Date(0).toISOString()),
   };
@@ -364,6 +368,13 @@ function ratings(value: unknown): Partial<Record<RatingKey, number>> {
   return out;
 }
 
+function englishTexts(value: unknown): Partial<Record<TextKey, string>> | null {
+  if (!value || typeof value !== "object") return null;
+  const out: Partial<Record<TextKey, string>> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) if (isTextKey(k) && typeof v === "string") out[k] = v;
+  return out;
+}
+
 /** `identity: false` leaves the Governor ID and name out (everyone but the owner). */
 export function mapRetroResponse(row: Row, identity: boolean): RetroResponse {
   const texts = Object.fromEntries(TEXT_KEYS.map((key) => [key, str(row[key])])) as Record<TextKey, string>;
@@ -376,6 +387,8 @@ export function mapRetroResponse(row: Row, identity: boolean): RetroResponse {
     verified: Boolean(row.verified),
     ratings: ratings(row.ratings),
     texts,
+    textsEn: englishTexts(row.texts_en),
+    translatedAt: row.translated_at ? iso(row.translated_at, "") || null : null,
     locale: str(row.locale, "en"),
     createdAt: iso(row.created_at, new Date(0).toISOString()),
   };

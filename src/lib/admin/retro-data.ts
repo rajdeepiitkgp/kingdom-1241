@@ -110,7 +110,7 @@ export async function listResponses(retroId: string, options: { identity: boolea
   const access = await allowed("responses");
   if (!access) return [];
   const identity = options.identity && access.isOwner;
-  const columns = identity ? "*" : "id, retrospective_id, alliance_tag, verified, ratings, went_well, went_wrong, suggestions, locale, created_at";
+  const columns = identity ? "*" : "id, retrospective_id, alliance_tag, verified, ratings, went_well, went_wrong, suggestions, texts_en, translated_at, locale, created_at";
   const { data, error } = await createAdminClient()
     .from("kvk_retro_responses")
     .select(columns)

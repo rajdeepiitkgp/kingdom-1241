@@ -1,4 +1,5 @@
 import type { Localized } from "@/lib/i18n/localized";
+import type { RetroAnalysis } from "@/lib/retro/analysis";
 import type { RatingKey, RetroConfig, TextKey } from "@/lib/retro/questions";
 
 /**
@@ -240,6 +241,11 @@ export interface Retrospective {
   closesAt: string | null;
   maxResponses: number;
   retentionDays: number;
+  /** The stored AI summary, when one was run. */
+  analysis: RetroAnalysis | null;
+  analysisAt: string | null;
+  /** How many responses the stored summary saw. */
+  analysisCount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -268,6 +274,9 @@ export interface RetroResponse {
   verified: boolean;
   ratings: Partial<Record<RatingKey, number>>;
   texts: Record<TextKey, string>;
+  /** The texts translated to English by the AI step (identical to the original when it was English); null until then. */
+  textsEn: Partial<Record<TextKey, string>> | null;
+  translatedAt: string | null;
   /** Page language the player wrote on (a hint about the text's language). */
   locale: string;
   createdAt: string;

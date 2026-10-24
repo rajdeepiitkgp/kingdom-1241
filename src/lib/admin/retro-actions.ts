@@ -6,12 +6,19 @@ import { adminPath } from "@/lib/auth/paths";
 import { checkAccess } from "@/lib/auth/server";
 import { CACHE_TAGS } from "@/lib/data";
 import { markdownToHtml } from "@/lib/html";
-import type { Localized } from "@/lib/i18n/localized";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { type Localized, pick } from "@/lib/i18n/localized";
+import { elapsedMs } from "@/lib/log";
+import { retroAiConfigured } from "@/lib/retro/ai";
+import { translateAndAnalyse } from "@/lib/retro/analyse";
+import type { AnalysisContext } from "@/lib/retro/analysis";
+import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
 import { localeField, localizedUpdate, uuidField } from "./forms";
+import { getRetrospectiveByPlan, listResponses } from "./retro-data";
 import { parseRetroSettingsForm } from "./retro-forms";
 
 /**
@@ -129,4 +136,61 @@ export async function deleteAllResponses(formData: FormData): Promise<void> {
   }
   await audit(access.user, "retro.delete_all", "kvk_retro_responses", retroId, { planId, deleted: count ?? 0, summary: `${count ?? 0} responses deleted` });
   redirect(resultsPath(locale, planId, "cleared=1"));
+}
+
+/**
+ * "Translate and analyse": translates the texts of every response that has no
+ * English version yet (stored per response, never redone), then produces and
+ * stores one AI summary over all responses. Moderators and admins; every run
+ * is audited with its token usage. Identity never goes to the model: the
+ * responses are loaded without it.
+ */
+export async function analyseRetrospective(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const locale = localeField(formData);
+  const planId = uuidField(formData, "planId");
+  if (!planId) return PLAN_GONE;
+  if (!retroAiConfigured()) return { status: "error", message: "The AI step is turned off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY) in Vercel." };
+  const retro = await getRetrospectiveByPlan(planId);
+  if (!retro) return { status: "error", message: "This feedback form no longer exists." };
+  const responses = await listResponses(retro.id, { identity: false });
+  if (responses.length === 0) return { status: "error", message: "No responses to analyse yet." };
+
+  const en = await getDictionary("en");
+  const context: AnalysisContext = {
+    title: pick(retro.plan.title, "en") || retro.plan.slug,
+    eventType: retro.plan.eventType,
+    battleAt: retro.plan.battleAt,
+    ratingLabels: Object.fromEntries(RATING_QUESTIONS.map((q) => [q.key, en[q.labelKey]])),
+    textLabels: Object.fromEntries(TEXT_PROMPTS.map((t) => [t.key, en[t.labelKey]])),
+  };
+  const started = performance.now();
+  try {
+    const result = await translateAndAnalyse(createAdminClient(), { id: retro.id, config: retro.config, context }, responses, { log });
+    await audit(access.user, "retro.analyse", "kvk_retrospectives", retro.id, {
+      slug: retro.plan.slug,
+      analysed: result.analysed,
+      translated: result.translated,
+      translationFailures: result.translationFailures,
+      omittedTexts: result.omittedTexts,
+      model: result.analysis.model,
+      requests: result.usage.requests,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      elapsedMs: elapsedMs(started),
+      summary: `${result.analysed} responses analysed, ${result.translated} translated`,
+    });
+    revalidatePath(resultsPath(locale, planId));
+    const failures = result.translationFailures > 0 ? `; ${result.translationFailures} could not be translated and were read as written` : "";
+    return {
+      status: "saved",
+      message: `Analysed ${result.analysed} responses (${result.translated} newly translated${failures}). Tokens: ${result.usage.inputTokens.toLocaleString("en")} in, ${result.usage.outputTokens.toLocaleString("en")} out.`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log.error("Translate and analyse failed", { retro: retro.id, error: message, elapsedMs: elapsedMs(started) });
+    return { status: "error", message: `The analysis failed: ${message} Translations already stored are kept; try again in a moment.` };
+  }
 }
