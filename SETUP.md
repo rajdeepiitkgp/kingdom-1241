@@ -104,7 +104,7 @@ Three workflows live in `.github/workflows/`:
 | Workflow | Runs when | Does |
 | --- | --- | --- |
 | **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build |
-| **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually | `supabase link` + `supabase db push` — applies new migration files to the production database |
+| **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually; a PR that touches them gets a dry run | `supabase link` + `supabase db push` — applies new migration files to the production database (`--dry-run` on the PR only lists them) |
 | **Maintenance** | manually (Actions → Maintenance → Run workflow) | `seed`, `translate`, `translate-dry-run` or `revalidate` without a laptop |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
@@ -126,7 +126,9 @@ Three workflows live in `.github/workflows/`:
 
 **c. Protect `main`** — **Settings → Branches → Add branch ruleset** (or *Add rule*) for `main`: *Require a pull request before merging* and *Require status checks to pass* → pick **Lint, typecheck, test, build**. With that, a green CI is the gate for every production deploy.
 
-**d. Adding a migration later** — add `supabase/migrations/0003_<name>.sql`, open a PR, merge. CI checks the code, Deploy database applies the SQL, Vercel deploys the app. Never edit a migration that has already run; add a new file.
+**d. Adding a migration later** — add `supabase/migrations/000N_<name>.sql`, open a PR (the Deploy database workflow shows what it would apply), merge. CI checks the code, Deploy database applies the SQL, Vercel deploys the app. The two deploys run side by side, so a migration must be additive and work with the previous code (CLAUDE.md § Data and security). Never edit a migration that has already run; add a new file.
+
+**e. Versions** — the actions in the workflows are pinned to a commit and the Supabase CLI to a version (`SUPABASE_CLI_VERSION` in `deploy-database.yml`). Dependabot opens a weekly PR for new action releases and npm updates (`.github/dependabot.yml`); merge them when CI is green. Bump the CLI version by hand now and then, after running `npx supabase@<version> db push --linked --dry-run` locally once.
 
 ## 7. Supabase → site webhooks (automatic translation)
 

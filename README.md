@@ -35,14 +35,14 @@ src/
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar)
   lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
-  lib/admin/              uncached admin loaders, Server Actions (plan editor, users), FormData parsers, audit log
-  lib/data/               cached loaders ('use cache' + tags), Supabase ↔ app type mappers
+  lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile), FormData parsers, shared action replies, audit log
+  lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password lock (signed cookie), Server Actions, formation helpers
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/tools/              pure calculator logic (rally refill, pack value)
-tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts)
+tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
 public/heroes/            128px hero portraits (from kingshotdata.com)
 supabase/
   migrations/0001_init.sql  schema, RLS, storage bucket
@@ -54,7 +54,7 @@ scripts/
   seed.ts                 npm run db:seed
   translate.ts            npm run translate
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
-.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations), Maintenance
+.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance; dependabot.yml for updates
 ```
 
 ### Languages and translation
@@ -69,7 +69,7 @@ scripts/
 
 ### Logging
 
-Server code logs through `createLogger(scope)` (`src/lib/log.ts`): coloured lines in development, JSON lines in production that Vercel's log viewer parses. Route handlers and the unlock action tag every line with a `reqId`, which is also returned as the `x-request-id` header.
+Server code logs through `createLogger(scope)` (`src/lib/log.ts`): coloured lines in development, JSON lines in production that Vercel's log viewer parses. Route handlers, the unlock action and the admin actions tag every line with a `reqId`, which is also returned as the `x-request-id` header.
 
 ### Caching
 
