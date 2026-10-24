@@ -7,7 +7,7 @@
 export type Theme = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "theme";
-export const DEFAULT_THEME: Theme = "light";
+const DEFAULT_THEME: Theme = "light";
 /** Fired on `window` whenever the theme is applied, so controls can re-read it. */
 export const THEME_CHANGE_EVENT = "kd1241:theme";
 

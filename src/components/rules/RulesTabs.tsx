@@ -2,10 +2,17 @@
 
 import clsx from "clsx";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { RichText } from "@/components/content/RichText";
-import type { RuleTopic } from "@/lib/data/types";
+import { SanitizedHtml } from "@/components/content/SanitizedHtml";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { pick } from "@/lib/i18n/localized";
+
+/** One topic in the visitor's language, with its rule bodies already sanitised on the server (see rules/page.tsx). */
+export interface RulesTabTopic {
+  id: string;
+  slug: string;
+  icon: string;
+  title: string;
+  rules: Array<{ id: string; title: string; html: string }>;
+}
 
 function subscribeHash(onChange: () => void) {
   window.addEventListener("hashchange", onChange);
@@ -14,7 +21,7 @@ function subscribeHash(onChange: () => void) {
 const readHash = () => decodeURIComponent(window.location.hash.replace(/^#/, ""));
 const readServerHash = () => "";
 
-export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict: Dictionary; locale: string }) {
+export function RulesTabs({ topics, dict }: { topics: RulesTabTopic[]; dict: Dictionary }) {
   // Deep links: /rules#kvk opens the KvK tab. A click overrides the hash.
   const hashSlug = useSyncExternalStore(subscribeHash, readHash, readServerHash);
   const [clickedSlug, setClickedSlug] = useState<string | null>(null);
@@ -75,7 +82,7 @@ export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict:
               )}
             >
               <span aria-hidden>{topic.icon}</span>
-              {pick(topic.title, locale)}
+              <span dir="auto">{topic.title}</span>
             </button>
           );
         })}
@@ -87,7 +94,7 @@ export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict:
         aria-labelledby={`tab-${active.slug}`}
         className="mt-3"
       >
-        <h2 className="sr-only">{pick(active.title, locale)}</h2>
+        <h2 className="sr-only">{active.title}</h2>
         {active.rules.length === 0 ? (
           <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["rules.noRules"]}</p>
         ) : (
@@ -98,8 +105,8 @@ export function RulesTabs({ topics, dict, locale }: { topics: RuleTopic[]; dict:
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-extrabold text-ink" dir="auto">{pick(rule.title, locale)}</h3>
-                  <RichText html={pick(rule.body, locale)} className="mt-1.5 text-[0.98rem]" />
+                  <h3 className="text-lg font-extrabold text-ink" dir="auto">{rule.title}</h3>
+                  <SanitizedHtml html={rule.html} className="mt-1.5 text-[0.98rem]" />
                 </div>
               </li>
             ))}

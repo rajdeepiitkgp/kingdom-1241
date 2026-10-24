@@ -17,8 +17,7 @@ import { DAY, formatUtcTime } from "@/lib/time";
  * Pure and unit-tested; `LiveIntro` is the component.
  */
 
-export const BATTLE_TOKENS = ["when", "date", "time", "utc"] as const;
-export type BattleToken = (typeof BATTLE_TOKENS)[number];
+export type BattleToken = "when" | "date" | "time" | "utc";
 
 const TOKEN = /\{\{\s*(when|date|time|utc)\s*\}\}/gi;
 

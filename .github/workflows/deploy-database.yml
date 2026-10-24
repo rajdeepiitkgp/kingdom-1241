@@ -1,5 +1,12 @@
 # Applies supabase/migrations/*.sql to the production Supabase project with the
-# Supabase CLI whenever a migration lands on main (or on demand).
+# Supabase CLI whenever a migration lands on main (or on demand), and shows what
+# a pull request *would* apply (`db push --dry-run`) so a broken migration is
+# caught before it is merged.
+#
+# The Vercel deploy of the same commit runs in parallel and nothing orders the
+# two, so every migration must be additive and work with the previous code
+# (CLAUDE.md § Data and security). If this job fails after a merge, the site is
+# already live on the old schema: fix forward with a new migration.
 #
 # Needs three repository secrets (SETUP.md § 6):
 #   SUPABASE_ACCESS_TOKEN  personal access token (supabase.com/dashboard/account/tokens)
@@ -13,18 +20,30 @@ on:
     paths:
       - "supabase/migrations/**"
       - ".github/workflows/deploy-database.yml"
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/deploy-database.yml"
   workflow_dispatch:
 
 concurrency:
-  group: deploy-database
+  # One production run at a time; pull-request dry runs don't queue behind it.
+  group: deploy-database-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
+env:
+  # Pinned on purpose: a CLI release must not change how migrations are applied under us.
+  # Bump it together with a local `npx supabase@<version>` test (SETUP.md § 6e).
+  SUPABASE_CLI_VERSION: 2.122.0
+
 jobs:
   migrate:
-    name: Apply migrations
+    name: ${{ github.event_name == 'pull_request' && 'Dry run' || 'Apply migrations' }}
+    # Pull requests from forks have no secrets; the dry run only makes sense for branches of this repository.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -32,14 +51,19 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
 
       - name: Link project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
+      - name: Show pending migrations (pull request)
+        if: github.event_name == 'pull_request'
+        run: supabase db push --linked --dry-run
+
       - name: Push migrations
+        if: github.event_name != 'pull_request'
         run: supabase db push --linked

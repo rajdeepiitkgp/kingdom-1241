@@ -2,12 +2,15 @@
 
 import clsx from "clsx";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { moveRow } from "@/lib/admin/kvk-actions";
 
 /**
  * ▲ position ▼ next to an instruction, coordinator or formation. Each arrow
- * submits the row one step in that direction; the editor re-renders in place.
+ * submits the row one step in that direction; the editor re-renders in place,
+ * and a failure is shown under the arrows instead of being swallowed.
  */
 export function MoveButtons({
   locale,
@@ -30,8 +33,9 @@ export function MoveButtons({
   label: string;
   className?: string;
 }) {
+  const [state, action] = useActionState<ActionState, FormData>(moveRow, IDLE_STATE);
   return (
-    <form action={moveRow} className={clsx("flex shrink-0 flex-col items-center gap-0.5", className)}>
+    <form action={action} className={clsx("flex shrink-0 flex-col items-center gap-0.5", className)}>
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       <input type="hidden" name="table" value={table} />
@@ -41,6 +45,11 @@ export function MoveButtons({
         {position + 1}
       </span>
       <Arrow direction="down" disabled={position >= count - 1} title={`Move ${label} down`} />
+      {state.status === "error" && state.message && (
+        <p role="alert" className="max-w-24 text-center text-[0.6875rem]/tight font-bold text-danger">
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }

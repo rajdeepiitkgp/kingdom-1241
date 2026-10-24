@@ -7,40 +7,34 @@ import { adminPath } from "@/lib/auth/paths";
 import { isOwnerIdentity } from "@/lib/auth/owner";
 import { GRANTABLE_ROLES, grantProblem, grantsFor, hasRole, parseRole, removeAccountProblem, roleChangeProblem, ROLES } from "@/lib/auth/roles";
 import { checkAccess, type AccessDenial, type CurrentUser } from "@/lib/auth/server";
-import { createLogger } from "@/lib/log";
+import type { Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { textField } from "./forms";
+import { localeField, textField, uuidField } from "./forms";
 
 /** Server Actions of the Users page (admins only). */
 
-const log = createLogger("admin");
-const UUID = /^[0-9a-f-]{36}$/i;
+const ADMINS_ONLY = "Only administrators can manage users.";
+const UNKNOWN_ACCOUNT: ActionState = { status: "error", message: "Unknown account." };
 
-function denied(reason: AccessDenial): ActionState {
-  return {
-    status: "error",
-    message: reason === "signed_out" ? "Your session has ended. Sign in again." : "Only administrators can manage users.",
-  };
-}
-
-function localeField(formData: FormData): string {
-  const value = textField(formData, "locale");
-  return /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(value) ? value : "en";
+function adminsOnly(reason: AccessDenial): ActionState {
+  return denied(reason, ADMINS_ONLY);
 }
 
 export async function setRole(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("admin");
-  if ("denied" in access) return denied(access.denied);
-  const id = textField(formData, "id");
-  if (!UUID.test(id)) return { status: "error", message: "Unknown account." };
+  if ("denied" in access) return adminsOnly(access.denied);
+  const log = await actionLogger();
+  const id = uuidField(formData, "id");
+  if (!id) return UNKNOWN_ACCOUNT;
   const role = textField(formData, "role");
   if (!(ROLES as readonly string[]).includes(role)) return { status: "error", message: "Unknown role." };
 
   const admin = createAdminClient();
   const { data: target } = await admin.from("profiles").select("role, discord_id, discord_username, email").eq("id", id).maybeSingle();
-  if (!target) return { status: "error", message: "Unknown account." };
+  if (!target) return UNKNOWN_ACCOUNT;
   const problem = roleChangeProblem({
     actorIsOwner: access.user.isOwner,
     actorIsTarget: id === access.user.id,
@@ -51,31 +45,28 @@ export async function setRole(_previous: ActionState, formData: FormData): Promi
   if (problem) return { status: "error", message: problem };
 
   const { error } = await admin.from("profiles").update({ role }).eq("id", id);
-  if (error) {
-    log.error("Changing a role failed", { id, error: error.message });
-    return { status: "error", message: "Saving failed. Try again in a moment." };
-  }
+  if (error) return failed(log, "Changing a role", error);
   await audit(access.user, "profile.role", "profiles", id, { role });
   // A demotion must stick: pre-authorisations re-apply on every sign-in, so matching ones go too.
   const from = parseRole(target.role);
   const to = parseRole(role);
-  const revoked = to !== from && hasRole(from, to) ? await revokeGrantsFor(access.user, { discordUsername: target.discord_username ?? null, email: target.email ?? null }) : 0;
+  const revoked =
+    to !== from && hasRole(from, to) ? await revokeGrantsFor(log, access.user, { discordUsername: target.discord_username ?? null, email: target.email ?? null }) : 0;
   revalidatePath(adminPath(localeField(formData), "/users"));
   return { status: "saved", message: revoked > 0 ? `Role updated; ${revoked} matching pre-authorisation${revoked === 1 ? "" : "s"} removed.` : "Role updated." };
 }
 
 export async function addGrant(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("admin");
-  if ("denied" in access) return denied(access.denied);
+  if ("denied" in access) return adminsOnly(access.denied);
+  const log = await actionLogger();
   const role = parseRole(textField(formData, "role"), "moderator");
   if (!(GRANTABLE_ROLES as readonly string[]).includes(role)) return { status: "error", message: "Pick administrator or moderator." };
   const problem = grantProblem({ actorIsOwner: access.user.isOwner, role });
   if (problem) return { status: "error", message: problem };
   const discordUsername = normalizeHandle(textField(formData, "discordUsername"));
   const email = normalizeEmail(textField(formData, "email"));
-  if (!discordUsername && !email) {
-    return { status: "error", errors: { discordUsername: "Enter a Discord username or an e-mail." }, message: "Please fix the highlighted fields." };
-  }
+  if (!discordUsername && !email) return invalid({ discordUsername: "Enter a Discord username or an e-mail." });
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -85,8 +76,7 @@ export async function addGrant(_previous: ActionState, formData: FormData): Prom
     .single();
   if (error) {
     if (error.code === "23505") return { status: "error", message: "That person already has a pre-authorisation." };
-    log.error("Adding a grant failed", { error: error.message });
-    return { status: "error", message: "Saving failed. Try again in a moment." };
+    return failed(log, "Adding a grant", error);
   }
 
   // Someone who already signed in as a member gets the role straight away.
@@ -107,8 +97,9 @@ export async function deleteGrant(formData: FormData): Promise<void> {
   const locale = localeField(formData);
   const access = await checkAccess("admin");
   if ("denied" in access) redirect(adminPath(locale, "/users"));
-  const id = textField(formData, "id");
-  if (UUID.test(id)) {
+  const id = uuidField(formData, "id");
+  if (id) {
+    const log = await actionLogger();
     const { error } = await createAdminClient().from("role_grants").delete().eq("id", id);
     if (error) log.error("Deleting a grant failed", { id, error: error.message });
     else await audit(access.user, "grant.delete", "role_grants", id);
@@ -127,8 +118,9 @@ export async function removeAccount(formData: FormData): Promise<void> {
   const usersPage = adminPath(locale, "/users");
   const access = await checkAccess("admin");
   if ("denied" in access) redirect(usersPage);
-  const id = textField(formData, "id");
-  if (!UUID.test(id)) redirect(usersPage);
+  const id = uuidField(formData, "id");
+  if (!id) redirect(usersPage);
+  const log = await actionLogger();
 
   const admin = createAdminClient();
   const { data: target } = await admin.from("profiles").select("role, discord_id, discord_username, email, game_name").eq("id", id).maybeSingle();
@@ -149,7 +141,7 @@ export async function removeAccount(formData: FormData): Promise<void> {
     log.error("Removing an account failed", { id, error: error.message });
     redirect(`${usersPage}?error=remove`);
   }
-  await revokeGrantsFor(access.user, { discordUsername: target.discord_username ?? null, email: target.email ?? null });
+  await revokeGrantsFor(log, access.user, { discordUsername: target.discord_username ?? null, email: target.email ?? null });
   await audit(access.user, "profile.remove", "profiles", id, {
     discordUsername: target.discord_username ?? null,
     email: target.email ?? null,
@@ -160,7 +152,7 @@ export async function removeAccount(formData: FormData): Promise<void> {
 }
 
 /** Deletes the pre-authorisations that would re-apply to this identity on its next sign-in; returns how many. */
-async function revokeGrantsFor(actor: CurrentUser, identity: { discordUsername: string | null; email: string | null }): Promise<number> {
+async function revokeGrantsFor(log: Logger, actor: CurrentUser, identity: { discordUsername: string | null; email: string | null }): Promise<number> {
   const admin = createAdminClient();
   const { data, error } = await admin.from("role_grants").select("id, discord_username, email");
   if (error) {

@@ -18,7 +18,7 @@ export const FORMATION_LABELS: readonly string[] = [..."ABCDEFGHIJKL"];
 
 export const EVENT_TYPES: readonly KvkEventType[] = ["castle_battle", "kvk"];
 export const SIDES: readonly FormationSide[] = ["attack", "defense", "any"];
-export const FORMATION_ROLES: readonly FormationRole[] = ["rally_lead", "rally_join", "any"];
+const FORMATION_ROLES: readonly FormationRole[] = ["rally_lead", "rally_join", "any"];
 export const RULE_KINDS: readonly KvkRuleKind[] = ["do", "dont", "info"];
 export const TEAMS: readonly CoordinatorTeam[] = ["kvk", "tmp"];
 
@@ -198,7 +198,7 @@ export function nextFreeLabel(used: readonly string[]): string | null {
   return FORMATION_LABELS.find((l) => !taken.has(l)) ?? null;
 }
 
-export const MOVE_DIRECTIONS = ["up", "down"] as const;
+const MOVE_DIRECTIONS = ["up", "down"] as const;
 export type MoveDirection = (typeof MOVE_DIRECTIONS)[number];
 
 export function isMoveDirection(value: string): value is MoveDirection {

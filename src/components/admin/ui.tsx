@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import type { ActionState } from "@/lib/admin/action-state";
 
 /** Small presentational pieces shared by the admin forms (server-safe). */
@@ -19,14 +19,22 @@ export function Field({
   className?: string;
   children: ReactNode;
 }) {
+  // A single control child gets the error announced with it (aria-invalid + aria-describedby).
+  const errorId = error && htmlFor ? `${htmlFor}-error` : undefined;
+  const control =
+    errorId && Children.count(children) === 1 && isValidElement(children)
+      ? cloneElement(children as ReactElement<Record<string, unknown>>, { "aria-invalid": true, "aria-describedby": errorId })
+      : children;
   return (
     <div className={clsx("flex min-w-0 flex-col gap-1", className)}>
       <label htmlFor={htmlFor} className="label">
         {label}
       </label>
-      {children}
+      {control}
       {error ? (
-        <p className="text-xs font-bold text-danger">{error}</p>
+        <p id={errorId} className="text-xs font-bold text-danger">
+          {error}
+        </p>
       ) : (
         hint && <p className="text-xs text-ink-faint">{hint}</p>
       )}

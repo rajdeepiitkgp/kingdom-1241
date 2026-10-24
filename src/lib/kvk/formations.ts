@@ -23,14 +23,14 @@ export function roleLabelKey(side: FormationSide, role: FormationRole): RoleLabe
 /** Chips above the board. `all` is always first; the others only appear when used. */
 export type FormationFilter = "all" | Exclude<FormationSide, "any"> | Exclude<RoleLabelKey, "lead" | "join">;
 
-export const FILTER_ORDER: FormationFilter[] = ["all", "attack", "defense", "rally_lead", "rally_join", "garrison_lead", "garrison_join"];
+const FILTER_ORDER: FormationFilter[] = ["all", "attack", "defense", "rally_lead", "rally_join", "garrison_lead", "garrison_join"];
 
 export function isValidRatio(f: Pick<KvkFormation, "infantry" | "cavalry" | "archers">): boolean {
   const parts = [f.infantry, f.cavalry, f.archers];
   return parts.every((p) => Number.isInteger(p) && p >= 0 && p <= 100) && f.infantry + f.cavalry + f.archers === 100;
 }
 
-export function matchesFilter(f: KvkFormation, filter: FormationFilter): boolean {
+function matchesFilter(f: KvkFormation, filter: FormationFilter): boolean {
   switch (filter) {
     case "all":
       return true;

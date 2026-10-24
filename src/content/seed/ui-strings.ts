@@ -27,6 +27,7 @@ export const UI_STRINGS = {
   "common.readMore": { en: "Read more", de: "Mehr lesen", ko: "더 보기", pl: "Czytaj więcej", ar: "اقرأ المزيد" },
   "common.back": { en: "Back", de: "Zurück", ko: "뒤로", pl: "Wstecz", ar: "رجوع" },
   "common.days": { en: "days", de: "Tage", ko: "일", pl: "dni", ar: "أيام" },
+  "common.daysShort": { en: "d", de: "T", ko: "일", pl: "d", ar: "ي" },
   "common.hours": { en: "hrs", de: "Std.", ko: "시간", pl: "godz.", ar: "ساعات" },
   "common.minutes": { en: "min", de: "Min.", ko: "분", pl: "min", ar: "دقائق" },
   "common.seconds": { en: "sec", de: "Sek.", ko: "초", pl: "s", ar: "ثوانٍ" },

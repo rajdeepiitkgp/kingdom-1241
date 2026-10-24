@@ -2,6 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { localeField } from "@/lib/admin/forms";
 import { createLogger, requestId } from "@/lib/log";
 import { devLoginEnabled } from "./dev-login";
 import { adminPath, loginPath, safeNextPath } from "./paths";
@@ -22,14 +23,9 @@ async function requestOrigin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-function localeOf(formData: FormData): string {
-  const value = String(formData.get("locale") ?? "");
-  return /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(value) ? value : "en";
-}
-
 /** Starts the Discord OAuth flow; Supabase sends the visitor back to /auth/callback. */
 export async function signInWithDiscord(formData: FormData): Promise<void> {
-  const locale = localeOf(formData);
+  const locale = localeField(formData);
   const next = safeNextPath(String(formData.get("next") ?? ""), adminPath(locale));
   const supabase = await createSessionClient();
   if (!supabase) redirect(`${loginPath(locale)}?error=config`);
@@ -55,7 +51,7 @@ export interface DevLoginState {
 /** Local development only (see dev-login.ts). */
 export async function signInWithPassword(_previous: DevLoginState, formData: FormData): Promise<DevLoginState> {
   if (!devLoginEnabled()) return { error: "The e-mail login only exists in local development." };
-  const locale = localeOf(formData);
+  const locale = localeField(formData);
   const next = safeNextPath(String(formData.get("next") ?? ""), adminPath(locale));
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -73,7 +69,7 @@ export async function signInWithPassword(_previous: DevLoginState, formData: For
 }
 
 export async function signOut(formData: FormData): Promise<void> {
-  const locale = localeOf(formData);
+  const locale = localeField(formData);
   const supabase = await createSessionClient();
   if (supabase) {
     const { error } = await supabase.auth.signOut();

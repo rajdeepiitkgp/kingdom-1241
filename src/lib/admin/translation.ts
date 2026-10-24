@@ -1,6 +1,7 @@
 import type { Localized } from "@/lib/i18n/localized";
 import { staleColumns } from "@/lib/translate/hash";
 import { getTranslatableTable } from "@/lib/translate/tables";
+import { htmlToEditableText } from "./forms";
 
 /**
  * Per-language editing of translated text (server only: uses the pipeline's hash).
@@ -13,7 +14,7 @@ import { getTranslatableTable } from "@/lib/translate/tables";
  */
 
 /** Localized text columns the admin area edits per language (a subset of the pipeline's tables). */
-export const EDITABLE_TEXT_COLUMNS: Record<string, readonly string[]> = {
+const EDITABLE_TEXT_COLUMNS: Record<string, readonly string[]> = {
   kvk_plans: ["title", "intro"],
   kvk_rules: ["text"],
   kvk_coordinators: ["note"],
@@ -59,4 +60,12 @@ export function withLanguage(current: Localized | null | undefined, lang: string
   if (text) next[lang] = text;
   else delete next[lang];
   return next;
+}
+
+/** Editable Markdown of a plan's intro in `lang`: the stored source, else the stored HTML flattened to text. */
+export function introSourceFor(plan: { intro: Localized; introSources: Localized }, lang: string): string {
+  const stored = plan.introSources[lang];
+  if (typeof stored === "string" && stored.trim()) return stored;
+  const html = plan.intro[lang];
+  return typeof html === "string" ? htmlToEditableText(html) : "";
 }

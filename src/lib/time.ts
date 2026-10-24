@@ -63,10 +63,6 @@ export function formatLocalDateTime(date: Date, locale: string): string {
   }).format(date);
 }
 
-export function formatLocalTime(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
-}
-
 export function formatUtcTime(date: Date): string {
   return `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())} UTC`;
 }

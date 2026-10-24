@@ -79,7 +79,7 @@ function durationLabel(minutes: number, dict: Dictionary): string {
   return `${minutes} ${dict["common.minutes"]}`;
 }
 
-export function EventCard({
+function EventCard({
   occurrence,
   now,
   dict,

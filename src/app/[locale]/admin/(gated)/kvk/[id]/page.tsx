@@ -17,8 +17,8 @@ import { LanguagePicker } from "@/components/admin/LanguagePicker";
 import { MoveButtons } from "@/components/admin/MoveButtons";
 import { PendingRefresher } from "@/components/admin/PendingRefresher";
 import { TranslationForm } from "@/components/admin/TranslationForm";
-import { getPlanForEditing, introSourceFor, type AdminKvkPlan } from "@/lib/admin/kvk-data";
-import { parseEditLang, TEXT_LIMITS } from "@/lib/admin/translation";
+import { getPlanForEditing, type AdminKvkPlan } from "@/lib/admin/kvk-data";
+import { introSourceFor, parseEditLang, TEXT_LIMITS } from "@/lib/admin/translation";
 import { MAX_FORMATIONS, nextFreeLabel } from "@/lib/admin/kvk-forms";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
@@ -43,6 +43,12 @@ function roleLabel(side: FormationSide, role: FormationRole): string {
 }
 
 type EditorProps = PageProps<"/[locale]/admin/kvk/[id]">;
+
+/** What the delete actions report through `?error=` when they can't return a state (they redirect). */
+const EDITOR_NOTICES: Record<string, string> = {
+  forbidden: "You don't have permission for that.",
+  delete: "Deleting failed. Try again in a moment.",
+};
 
 export default async function AdminPlanEditorPage({ params, searchParams }: EditorProps) {
   const locale = await rootLocale();
@@ -93,6 +99,7 @@ async function PlanEditor({
   const freeLabel = nextFreeLabel(plan.formations.map((f) => f.label));
   const heroBySlug = new Map(heroes.map((h) => [h.slug, h]));
   const editorHref = adminPath(locale, `/kvk/${plan.id}`);
+  const notice = typeof query.error === "string" ? (EDITOR_NOTICES[query.error] ?? "That didn't work. Try again.") : null;
 
   const header = (
     <>
@@ -111,6 +118,11 @@ async function PlanEditor({
         }
       />
       <LanguagePicker languages={enabled} current={lang} href={editorHref} />
+      {notice && (
+        <p role="status" className="rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger">
+          {notice}
+        </p>
+      )}
     </>
   );
 

@@ -42,7 +42,7 @@ export function TroopRatioBar({ ratio, labels }: { ratio: Record<TroopType, numb
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-card text-[0.6875rem] ring-1 ring-line" aria-hidden>
               {TROOP_ICONS[type]}
             </span>
-            <span className="min-w-0 flex-1 truncate font-bold text-ink">{labels[type]}</span>
+            <span className="min-w-0 flex-1 font-bold wrap-break-word text-ink">{labels[type]}</span>
             <span className="shrink-0 font-black text-ink tabular" dir="ltr">
               {ratio[type]}%
             </span>

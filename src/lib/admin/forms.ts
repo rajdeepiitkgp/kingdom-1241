@@ -1,3 +1,4 @@
+import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
 
 /**
@@ -31,6 +32,24 @@ export function intField(fd: FormData, name: string, min: number, max: number): 
 export function boolField(fd: FormData, name: string): boolean {
   const value = fd.get(name);
   return value === "on" || value === "true" || value === "1";
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID.test(value);
+}
+
+/** A row id from a hidden field; `null` unless it is a well-formed UUID (so a tampered form never reaches the database). */
+export function uuidField(fd: FormData, name: string): string | null {
+  const value = textField(fd, name);
+  return isUuid(value) ? value : null;
+}
+
+/** The admin page's locale from its hidden `locale` field, used only to build redirect and revalidation paths. */
+export function localeField(fd: FormData, name = "locale"): string {
+  const value = textField(fd, name);
+  return isLocaleCode(value) ? value : "en";
 }
 
 export function oneOfField<T extends string>(fd: FormData, name: string, allowed: readonly T[], fallback: T): T {

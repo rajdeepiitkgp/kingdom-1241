@@ -74,7 +74,7 @@ export function HeroAvatar({
           {TROOP_ICONS[hero.troopType]}
         </span>
       </span>
-      <figcaption className="w-full truncate text-xs/tight font-extrabold text-ink" dir="auto" title={name}>
+      <figcaption className="line-clamp-2 w-full text-xs/tight font-extrabold wrap-break-word text-ink" dir="auto" title={name}>
         {name}
       </figcaption>
     </figure>
