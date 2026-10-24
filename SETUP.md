@@ -73,6 +73,7 @@ Without any env vars the site still runs with the bundled English seed content (
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |
 | `npm run backup` | Encrypted dump of every content and admin table into `backups/` (needs `BACKUP_PASSPHRASE`). `-- --restore <file> --yes` writes it back, `-- --decrypt <file>` makes a readable copy. § 10. |
+| `npm run prune` | Deletes battle feedback past its retention period and closes those forms (`-- --dry-run` to preview). § 9a. |
 
 ## 5. Vercel — hosting with automatic deploys
 
@@ -91,6 +92,7 @@ Without any env vars the site still runs with the bundled English seed content (
    | `KVK_SESSION_SECRET` | step 3 (*Sensitive*, optional) |
    | `SITE_OWNER` | your Discord user id (§ 8.2): the owner is always an administrator |
    | `ALERT_DISCORD_WEBHOOK_URL` | optional: a Discord webhook that receives council alerts (§ 9) (*Sensitive*) |
+   | `MIGHTPULSE_API_KEY` | optional: verifies Governor IDs on the battle feedback form (§ 9) (*Sensitive*) |
    | `LOG_LEVEL` | optional, `info` (default) or `debug` while investigating a problem |
 
    `SITE_URL` is *not* needed here: only the scripts and the Maintenance workflow use it (step 6).
@@ -109,7 +111,7 @@ Three workflows live in `.github/workflows/`:
 | --- | --- | --- |
 | **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build |
 | **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually; a PR that touches them gets a dry run | `supabase link` + `supabase db push` — applies new migration files to the production database (`--dry-run` on the PR only lists them) |
-| **Maintenance** | manually (Actions → Maintenance → Run workflow), and every Monday on its own for the backup | `seed`, `sync-ui`, `translate`, `translate-dry-run`, `revalidate`, `backup` (§ 10), `webhooks` (§ 7), `config-push` (§ 8.1): everything you would otherwise run from a laptop |
+| **Maintenance** | manually (Actions → Maintenance → Run workflow), every Monday on its own for the backup and daily for the prune | `seed`, `sync-ui`, `translate`, `translate-dry-run`, `revalidate`, `backup` (§ 10), `prune` / `prune-dry-run` (§ 9, battle feedback), `webhooks` (§ 7), `config-push` (§ 8.1): everything you would otherwise run from a laptop |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
@@ -225,9 +227,21 @@ Formations tagged with a side or role get filter chips on the page (attack, defe
 
 **Next event (castle battle → KvK → castle battle …):** insert a new `kvk_plans` row (new `slug`, `event_type`, password), add its rules/coordinators/formations, then set `active = false` on the old row and `active = true` on the new one (only one plan can be active). Keeping old rows gives you a history for later.
 
+### 9a. Battle feedback (retrospective)
+
+After a battle the council can open a short feedback form for that plan: Admin → battle plan → **Player feedback** → tick *Open* and save. Players reach it from the card at the top of the battle plan or at `/kvk/feedback`, behind the same password as the plan (the cookie of the active plan is accepted too, so the previous battle can collect feedback while the next plan is already live). One form is open at a time; opening one closes the others.
+
+**What players fill in:** their Governor ID (one answer per id; a second one is refused), their in-game name and alliance, star ratings from 0 to 5 for the questions you chose, and up to three short texts (500 characters each, any language). The questions come from a fixed catalogue (`src/lib/retro/questions.ts`, translated with the interface strings); per battle you tick which ones are **shown** and which are **required**. Texts are optional by default. The title and intro are yours (English, Markdown), translated by the pipeline like the plan intro and correctable per language in the editor's language dropdown.
+
+**Governor ID check (`MIGHTPULSE_API_KEY`, optional).** With a key from [api.mightpulse.com](https://api.mightpulse.com) (sign in with Discord → create an API key; the standard key allows 60 lookups a minute and 5 000 a day) the form checks the id while the player types, fills in the name and alliance from the game and refuses ids that don't exist or belong to another kingdom. Without the key, or while MightPulse is down or over its budget, nothing is checked and players type name and alliance themselves; no error is shown. The site never sends the key or the player's texts to MightPulse, only the id. Set the variable in Vercel (and `.env.local`).
+
+**Who sees what.** Governor IDs and names are shown to the owner only (`SITE_OWNER`); moderators and administrators see every answer with the alliance, the page language and a *verified* badge, but no identity. The CSV export (Results → **Export CSV**) carries the row id, never the identity, and goes to the audit log. Moderators can delete a single abusive answer; only administrators can delete all answers of a battle (export first, it cannot be undone). Every deletion is an audit entry with the count, never the text.
+
+**Limits and retention.** Each form has a response cap (default 600, the editor allows up to 2 000; the kingdom has about 300 active players, so far more is somebody flooding the form) and a per-address budget of eight submissions an hour; a hidden honeypot field catches the dumbest bots. Answers are kept for `retention_days` after the battle (default 30, from 7 to 365): the Maintenance task `prune` runs every day at 05:41 UTC (`npm run prune`, `prune-dry-run` to preview), deletes what is due, closes those forms and writes a `retro.prune` entry to the change log. The Feedback page shows every battle's deletion date in advance. Tables: `kvk_retrospectives` (settings) and `kvk_retro_responses` (answers), both service-role only; both are part of the weekly backup (a few hundred small rows).
+
 ## 10. Backups
 
-Supabase's free plan keeps no backups of its own, so the site makes one. Every Monday the **Maintenance** workflow runs `npm run backup`, which dumps every content and admin table (languages, settings, interface strings, announcements, events, rules, guides, alliances, gift codes, heroes, the battle plans with their instructions, coordinators and formations, profiles, pre-authorisations and the audit log; not the wrong-password counters) into one JSON file, encrypts it with `BACKUP_PASSPHRASE` and keeps it as a workflow artifact for 90 days. Translations are part of the rows, so they come back too. The list of tables is `BACKUP_TABLES` in `src/lib/backup/tables.ts`; a test fails when a migration adds a table that is in neither that list nor `NOT_BACKED_UP`.
+Supabase's free plan keeps no backups of its own, so the site makes one. Every Monday the **Maintenance** workflow runs `npm run backup`, which dumps every content and admin table (languages, settings, interface strings, announcements, events, rules, guides, alliances, gift codes, heroes, the battle plans with their instructions, coordinators and formations, the feedback forms and their answers, profiles, pre-authorisations and the audit log; not the wrong-password counters) into one JSON file, encrypts it with `BACKUP_PASSPHRASE` and keeps it as a workflow artifact for 90 days. Translations are part of the rows, so they come back too. The list of tables is `BACKUP_TABLES` in `src/lib/backup/tables.ts`; a test fails when a migration adds a table that is in neither that list nor `NOT_BACKED_UP`.
 
 **One-time setup:** `openssl rand -hex 32` → GitHub secret `BACKUP_PASSPHRASE` (§ 6a) and your `.env.local`. Keep a copy outside GitHub (a password manager): the file cannot be read without it, and a backup should survive the loss of the repository as well. The repository is public and anyone with a GitHub account can download an artifact, which is why the file is encrypted before it leaves the runner; never upload a plain dump.
 
@@ -276,6 +290,8 @@ If only Vercel is gone, steps 6 and 9 (the environment variables and nothing els
 **Add a language.** Insert a row in `languages` (e.g. `fr`, enabled, sort order) — if the code isn't in `src/lib/i18n/languages.ts` yet, add it there (name, direction, font) and deploy. Then run `npm run translate` (or the Maintenance workflow) once to backfill existing content.
 
 **Fix a translation by hand.** Edit the language's value in the JSON. It stays until the English text of that row changes, which re-translates every language.
+
+**After a battle.** Admin → the plan → *Player feedback* → tick *Open*, save; a day or two later read the results under *Feedback*, export the CSV, then untick *Open* (or let the closing time do it). § 9a.
 
 **Restore content.** From the weekly backup, § 10.
 

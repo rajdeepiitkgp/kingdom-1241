@@ -2,7 +2,7 @@
 
 Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in ten languages (English, German, Korean, Polish, Arabic, Turkish, Italian, Japanese, Traditional Chinese, French — more are a table row away). Modelled on 1424.win, hosted for free.
 
-**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks) and the **admin area** (Discord sign-in, roles, battle-plan editor, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
+**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks) the **battle feedback** form players fill in after each battle (star ratings and short texts, Governor ID checked through MightPulse, results and CSV export for the council, deleted automatically after 30 days) and the **admin area** (Discord sign-in, roles, battle-plan editor, feedback results, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
 
 ## Stack
 
@@ -25,8 +25,8 @@ npm run dev
 
 ```
 src/
-  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /tools
-  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, users; English only
+  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/feedback, /tools
+  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results + CSV export, users; English only
   app/auth/callback       finishes the Discord sign-in (code → session cookies)
   app/api/translate       Supabase webhook → translation provider → writes translations back, refreshes cache
   app/api/revalidate      manual cache refresh
@@ -38,6 +38,7 @@ src/
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password lock (signed cookie), Server Actions, formation helpers
+  lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
@@ -53,6 +54,7 @@ scripts/
   translate.ts            npm run translate
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
+  prune.ts                npm run prune (deletes battle feedback past its retention period, SETUP.md § 9a)
 .github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push); dependabot.yml for updates
 ```
 
@@ -84,6 +86,7 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 | `npm run translate` | Translate missing/outdated content with the configured provider |
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
 | `npm run backup` | Encrypted dump of all content and admin tables; `-- --restore <file> --yes` writes it back (SETUP.md § 10) |
+| `npm run prune` | Delete battle feedback past its retention period (`-- --dry-run` to preview; SETUP.md § 9a) |
 
 ## License
 
