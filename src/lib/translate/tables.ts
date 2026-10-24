@@ -74,7 +74,7 @@ export function getTranslatableTable(table: string): TranslatableTable | null {
 }
 
 /** `site_settings` rows whose value is a Localized object. */
-export const TRANSLATABLE_SETTING_KEYS = ["kingdom_name", "tagline", "transfer_contact"];
+const TRANSLATABLE_SETTING_KEYS = ["kingdom_name", "tagline", "transfer_contact"];
 
 /** Rows of a table that the pipeline should translate (filters site_settings). */
 export function isTranslatableRow(table: string, row: Record<string, unknown>): boolean {

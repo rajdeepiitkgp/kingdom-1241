@@ -7,6 +7,7 @@ import { loginPath } from "@/lib/auth/paths";
 import { LOCALE_COOKIE } from "@/lib/i18n/languages";
 import { negotiateLocale } from "@/lib/i18n/negotiate";
 import { createLogger, requestId } from "@/lib/log";
+import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 
 const log = createLogger("proxy");
 
@@ -30,8 +31,8 @@ async function getEnabledLocales(): Promise<string[]> {
   if (cachedLocales && now - cachedLocales.fetchedAt < LIST_TTL_MS) return cachedLocales.codes;
 
   const fallback = SEED_LANGUAGES.filter((l) => l.enabled).map((l) => l.code);
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = supabaseUrl();
+  const key = supabaseAnonKey();
   if (!url || !key) {
     cachedLocales = { codes: fallback, fetchedAt: now };
     return fallback;
@@ -115,8 +116,8 @@ async function withFreshSession(request: NextRequest, reqId: string, pathname: s
     return NextResponse.next({ request: { headers } });
   };
   let response = next();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = supabaseUrl();
+  const key = supabaseAnonKey();
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {

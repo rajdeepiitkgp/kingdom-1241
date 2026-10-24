@@ -5,6 +5,7 @@ import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured, isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
+import { CACHE_TAGS } from "./cache-tags";
 import {
   mapAlliance,
   mapAnnouncement,
@@ -43,54 +44,7 @@ import type {
  * the loaders return the bundled seed content so the site still works.
  */
 
-export const CACHE_TAGS = {
-  all: "content",
-  languages: "content:languages",
-  settings: "content:site_settings",
-  uiStrings: "content:ui_strings",
-  announcements: "content:announcements",
-  events: "content:events",
-  rules: "content:rules",
-  guides: "content:guides",
-  alliances: "content:alliances",
-  giftCodes: "content:gift_codes",
-  heroes: "content:heroes",
-  kvk: "content:kvk",
-} as const;
-
-/** Map a table name (as used by Supabase webhooks) to its cache tag. */
-export function cacheTagForTable(table: string): string | null {
-  switch (table) {
-    case "languages":
-      return CACHE_TAGS.languages;
-    case "site_settings":
-      return CACHE_TAGS.settings;
-    case "ui_strings":
-      return CACHE_TAGS.uiStrings;
-    case "announcements":
-      return CACHE_TAGS.announcements;
-    case "events":
-      return CACHE_TAGS.events;
-    case "rule_topics":
-    case "rules":
-      return CACHE_TAGS.rules;
-    case "guides":
-      return CACHE_TAGS.guides;
-    case "alliances":
-      return CACHE_TAGS.alliances;
-    case "gift_codes":
-      return CACHE_TAGS.giftCodes;
-    case "heroes":
-      return CACHE_TAGS.heroes;
-    case "kvk_plans":
-    case "kvk_rules":
-    case "kvk_coordinators":
-    case "kvk_formations":
-      return CACHE_TAGS.kvk;
-    default:
-      return null;
-  }
-}
+export { CACHE_TAGS, cacheTagForTable } from "./cache-tags";
 
 /** Drop rows whose `expiresAt` is in the past (evaluated when the cache entry is built). */
 function dropExpired<T extends { expiresAt: string | null }>(rows: T[]): T[] {
@@ -100,8 +54,9 @@ function dropExpired<T extends { expiresAt: string | null }>(rows: T[]): T[] {
 
 const log = createLogger("data");
 
+/** Degraded, not broken: the page still renders (from the seed), so this is a warning. */
 function logFallback(what: string, error: unknown) {
-  log.error("Failed to load from Supabase, using seed content instead", { what, error });
+  log.warn("Failed to load from Supabase, using seed content instead", { what, error });
 }
 
 // ---------------------------------------------------------------------------
