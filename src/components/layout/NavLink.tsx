@@ -26,17 +26,22 @@ export function ActiveNavLink(props: NavLinkProps) {
 /** Pure presentational link — rendered by the server as the Suspense fallback too. */
 export function NavLinkView({ href, icon, label, variant, active }: NavLinkProps & { active: boolean }) {
   if (variant === "desktop") {
+    // The label is visible only while the nav (a container, see DesktopNav) is
+    // wide enough for the longest language; the title names the icon-only pill.
+    // break-keep: Japanese and Chinese labels have no spaces, so without it the
+    // browser would fold them one character per line as soon as the row is tight.
     return (
       <Link
         href={href}
+        title={label}
         aria-current={active ? "page" : undefined}
         className={clsx(
-          "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold transition-colors",
+          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-2 text-sm font-extrabold break-keep transition-colors",
           active ? "bg-primary text-primary-ink shadow-[0_3px_0_0_var(--primary-strong)]" : "text-ink-muted hover:bg-primary-soft hover:text-ink",
         )}
       >
         <NavIcon icon={icon} className="size-4" />
-        {label}
+        <span className="sr-only @min-[39rem]:not-sr-only">{label}</span>
       </Link>
     );
   }

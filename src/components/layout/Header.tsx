@@ -26,7 +26,8 @@ export function Header({
 }) {
   return (
     <header id="site-header" className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
+      {/* max-w-7xl, wider than the content column: the labelled nav needs the room (see DesktopNav). */}
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
         <Link href={localePath(locale, "/")} className="flex shrink-0 items-center gap-2.5 font-extrabold" aria-label={kingdomName}>
           <span className="grid size-10 place-items-center rounded-2xl bg-gold text-xl shadow-[0_3px_0_0_var(--gold-strong)]" aria-hidden>
             👑
@@ -40,8 +41,8 @@ export function Header({
 
         <DesktopNav locale={locale} dict={dict} />
 
-        {/* min-w-0 lets the language select shrink first when text is enlarged on a phone. */}
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+        {/* min-w-0 lets the language select shrink first when text is enlarged on a phone; from lg the nav gives way instead. */}
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 lg:shrink-0">
           <LanguageSwitcher locale={locale} languages={languages} label={dict["lang.label"]} />
           <TextSizeControl
             labels={{
