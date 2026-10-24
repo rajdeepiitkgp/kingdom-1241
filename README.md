@@ -2,8 +2,7 @@
 
 Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in ten languages (English, German, Korean, Polish, Arabic, Turkish, Italian, Japanese, Traditional Chinese, French — more are a table row away). Modelled on 1424.win, hosted for free.
 
-**Live today:** site layout, languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, and the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks).
-Later phases add the admin panel with Discord login, KvK sign-ups and history, alliance pages from MightPulse, transfers and minister bookings.
+**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks) and the **admin area** (Discord sign-in, roles, battle-plan editor, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
 
 ## Stack
 
@@ -29,7 +28,7 @@ src/
   app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /tools
   app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, users; English only
   app/auth/callback       finishes the Discord sign-in (code → session cookies)
-  app/api/translate       Supabase webhook → Gemini → writes translations back, refreshes cache
+  app/api/translate       Supabase webhook → translation provider → writes translations back, refreshes cache
   app/api/revalidate      manual cache refresh
   proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id; refreshes the admin session
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms)
@@ -41,20 +40,20 @@ src/
   lib/kvk/                password lock (signed cookie), Server Actions, formation helpers
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
+  lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
 tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
 public/heroes/            128px hero portraits (from kingshotdata.com)
 supabase/
-  migrations/0001_init.sql  schema, RLS, storage bucket
-  migrations/0002_kvk.sql   heroes + battle plan tables (service-role only)
-  migrations/0003_admin_auth.sql  profiles, roles, pre-authorisations, audit log
-  webhooks.sql              one-shot SQL to wire every table to /api/translate
-  config.toml               Supabase CLI config (used by the Deploy database workflow)
+  migrations/000N_*.sql     schema, one additive file per change (init, kvk, admin auth, game names, alliance tag, unlock throttle, …)
+  webhooks.sql              wires every content table to /api/translate (Maintenance → webhooks runs it)
+  config.toml               Supabase auth settings declared in code (Maintenance → config-push applies them)
 scripts/
   seed.ts                 npm run db:seed
   translate.ts            npm run translate
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
-.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance; dependabot.yml for updates
+  backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
+.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push); dependabot.yml for updates
 ```
 
 ### Languages and translation
@@ -84,6 +83,7 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 | `npm run db:seed` | Insert seed content into Supabase (idempotent) |
 | `npm run translate` | Translate missing/outdated content with the configured provider |
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
+| `npm run backup` | Encrypted dump of all content and admin tables; `-- --restore <file> --yes` writes it back (SETUP.md § 10) |
 
 ## License
 

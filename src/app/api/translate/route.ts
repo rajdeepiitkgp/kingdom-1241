@@ -14,7 +14,7 @@ import { getEnabledLocalesForTranslation, translateRow, translateRows, type Tran
  *
  * Called by Supabase Database Webhooks whenever a content row is inserted or
  * updated (see SETUP.md). Translates the row's English text into every
- * enabled language with Gemini — and only then. Pages never call this.
+ * enabled language with the configured provider — and only then. Pages never call this.
  *
  * Accepted bodies:
  *   - Supabase webhook payload: { type, table, schema, record, old_record }

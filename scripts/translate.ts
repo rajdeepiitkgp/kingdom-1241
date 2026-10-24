@@ -1,5 +1,5 @@
 /**
- * Translate content in Supabase with Gemini.
+ * Translate content in Supabase with the configured provider (Anthropic Claude or Gemini).
  *
  *   npm run translate                         # everything that is missing or outdated
  *   npm run translate -- --table guides       # one table only

@@ -1,16 +1,19 @@
 -- Database Webhooks → translation pipeline
 --
 -- Creates one trigger per content table that POSTs every insert/update/delete
--- to the site's /api/translate route. The route translates the row with Gemini
--- (only when English text changed) and refreshes the page cache.
+-- to the site's /api/translate route. The route translates the row with the
+-- configured provider (only when English text changed) and refreshes the page cache.
 --
 -- Before running:
 --   1. Deploy the site and note its URL (e.g. https://kingdom-1241.vercel.app).
---   2. Set the same TRANSLATE_WEBHOOK_SECRET in Vercel and below.
+--   2. Set the same TRANSLATE_WEBHOOK_SECRET in Vercel and in the GitHub secrets.
 --   3. Enable Database Webhooks once: Dashboard → Database → Webhooks → "Enable webhooks"
 --      (this installs the `supabase_functions` schema used below).
--- Then paste this file into the SQL editor, replace the two placeholders, run it.
--- Re-running it is safe (triggers are replaced).
+-- Then run it: Actions → Maintenance → `webhooks` fills in the two placeholders
+-- from the SITE_URL and TRANSLATE_WEBHOOK_SECRET secrets and runs the file
+-- (SETUP.md § 7); or paste it into the SQL editor and replace them by hand.
+-- Re-running it is safe (triggers are replaced). A new content table goes
+-- into the list below (tests/lib/translate/tables.test.ts checks it).
 
 do $$
 declare

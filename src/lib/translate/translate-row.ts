@@ -18,7 +18,7 @@ import { getTranslatableTable, isTranslatableRow, type TranslatableTable } from 
  * module performs (which fires the webhook again) is a no-op on the second round.
  *
  * Request economy: rows that need the same language are batched into one
- * Gemini request (up to a character budget), which keeps the free tier happy.
+ * provider request (up to a character budget), which keeps costs and quotas low.
  */
 
 export interface TranslateOptions {
@@ -26,7 +26,7 @@ export interface TranslateOptions {
   force?: boolean;
   /** Only these locales (default: all enabled, except English). */
   onlyLocales?: string[];
-  /** Report what would happen without calling Gemini or writing. */
+  /** Report what would happen without calling the provider or writing. */
   dryRun?: boolean;
   log?: (message: string) => void;
 }
@@ -42,7 +42,7 @@ export interface TranslateRowResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-/** Characters of English source per Gemini request. */
+/** Characters of English source per provider request. */
 const BATCH_CHAR_BUDGET = 9000;
 const BATCH_MAX_ROWS = 40;
 

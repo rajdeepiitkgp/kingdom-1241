@@ -32,7 +32,7 @@ Supabase content (announcements, rules, the KvK plan…) is edited in the Supaba
    The publishable key is safe to expose; Row Level Security only lets it read published content. The secret key bypasses security and must only ever be set on the server (Vercel, GitHub secrets, your `.env.local`).
 3. Create the tables. Either:
    - **Automatic (recommended):** finish step 6 and run the **Deploy database** workflow once. It applies every file in `supabase/migrations/` in order and remembers which ones ran.
-   - **Manual:** **SQL Editor → New query**, paste [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), **Run**; then the same with [`0002_kvk.sql`](supabase/migrations/0002_kvk.sql). (The files are idempotent, so running them again later via CI is harmless.)
+   - **Manual:** **SQL Editor → New query**, paste each file of [`supabase/migrations/`](supabase/migrations/) in name order (`0001_init.sql`, `0002_kvk.sql`, … up to the newest), **Run** after each. The files are idempotent, so the CI run later is harmless; if it then complains that something "already exists", see Troubleshooting.
 
 ## 2. Translation provider — Anthropic (recommended) or Gemini
 
@@ -60,7 +60,7 @@ openssl rand -hex 32    # run twice
 cp .env.example .env.local      # fill in the values from steps 1–3
 npm install
 npm run db:seed                  # boilerplate content, heroes and a placeholder KvK plan → Supabase (safe to re-run)
-npm run translate                # fill in German/Korean/Polish/Arabic with Gemini
+npm run translate                # fill in the other languages with the configured provider
 npm run dev                      # http://localhost:3000
 ```
 
@@ -72,6 +72,7 @@ Without any env vars the site still runs with the bundled English seed content (
 | `npm run translate` | Translates everything missing or outdated. `-- --table guides`, `-- --locale de`, `-- --force`, `-- --dry-run`. |
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |
+| `npm run backup` | Encrypted dump of every content and admin table into `backups/` (needs `BACKUP_PASSPHRASE`). `-- --restore <file> --yes` writes it back, `-- --decrypt <file>` makes a readable copy. § 10. |
 
 ## 5. Vercel — hosting with automatic deploys
 
@@ -88,10 +89,13 @@ Without any env vars the site still runs with the bundled English seed content (
    | `TRANSLATION_PROVIDER` | optional: `anthropic`, `gemini` or `off` |
    | `TRANSLATE_WEBHOOK_SECRET` | step 3 (*Sensitive*) |
    | `KVK_SESSION_SECRET` | step 3 (*Sensitive*, optional) |
-   | `SITE_URL` | your site URL, e.g. `https://kingdom-1241.vercel.app` (fill in after the first deploy) |
+   | `SITE_OWNER` | your Discord user id (§ 8.2): the owner is always an administrator |
+   | `ALERT_DISCORD_WEBHOOK_URL` | optional: a Discord webhook that receives council alerts (§ 9) (*Sensitive*) |
    | `LOG_LEVEL` | optional, `info` (default) or `debug` while investigating a problem |
 
-3. **Deploy**. Note the URL (`https://<project>.vercel.app`), set it as `SITE_URL`, redeploy. A custom domain can be added under **Settings → Domains** at any time.
+   `SITE_URL` is *not* needed here: only the scripts and the Maintenance workflow use it (step 6).
+
+3. **Deploy**. Note the URL (`https://<project>.vercel.app`): it goes into the GitHub secret `SITE_URL` (step 6), the webhook installer (step 7) and `supabase/config.toml` (step 8.1). A custom domain can be added under **Settings → Domains** at any time.
 
 From now on Vercel deploys **every push to `main` to production** and **every pull request to a preview URL** (the link appears on the PR). Vercel's build doesn't wait for GitHub Actions, so protect `main` (step 6c) — then only code that passed CI can reach `main`.
 
@@ -105,15 +109,15 @@ Three workflows live in `.github/workflows/`:
 | --- | --- | --- |
 | **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build |
 | **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually; a PR that touches them gets a dry run | `supabase link` + `supabase db push` — applies new migration files to the production database (`--dry-run` on the PR only lists them) |
-| **Maintenance** | manually (Actions → Maintenance → Run workflow) | `seed`, `translate`, `translate-dry-run` or `revalidate` without a laptop |
+| **Maintenance** | manually (Actions → Maintenance → Run workflow), and every Monday on its own for the backup | `seed`, `sync-ui`, `translate`, `translate-dry-run`, `revalidate`, `backup` (§ 10), `webhooks` (§ 7), `config-push` (§ 8.1): everything you would otherwise run from a laptop |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
 | Secret | Used by | Value |
 | --- | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | Deploy database | personal access token (step 1) |
-| `SUPABASE_PROJECT_ID` | Deploy database | project ref (step 1) |
-| `SUPABASE_DB_PASSWORD` | Deploy database | database password (step 1) |
+| `SUPABASE_ACCESS_TOKEN` | Deploy database, Maintenance (`webhooks`, `config-push`) | personal access token (step 1) |
+| `SUPABASE_PROJECT_ID` | Deploy database, Maintenance (`webhooks`, `config-push`) | project ref (step 1) |
+| `SUPABASE_DB_PASSWORD` | Deploy database, Maintenance (`webhooks`, `config-push`) | database password (step 1) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Maintenance | step 1 |
 | `SUPABASE_SECRET_KEY` | Maintenance | step 1 |
 | `ANTHROPIC_API_KEY` | Maintenance | step 2, option A |
@@ -121,21 +125,24 @@ Three workflows live in `.github/workflows/`:
 | `SITE_URL` | Maintenance | step 5 |
 | `TRANSLATE_WEBHOOK_SECRET` | Maintenance | step 3 |
 | `KVK_SEED_PASSWORD` | Maintenance (optional) | step 3 |
+| `BACKUP_PASSPHRASE` | Maintenance (`backup`) | `openssl rand -hex 32`; keep a copy outside GitHub (§ 10) |
 
-**b. First run** — Actions → **Deploy database** → **Run workflow** (creates the tables), then Actions → **Maintenance** → task `seed`, then task `translate`.
+**Variables** (same page, tab *Variables*; all optional, same meaning as in step 2): `TRANSLATION_PROVIDER` (`anthropic`, `gemini` or `off`), `ANTHROPIC_MODEL`, `GEMINI_MODEL`.
+
+**b. First run** — Actions → **Deploy database** → **Run workflow** (creates the tables), then Actions → **Maintenance** → task `seed`, then task `translate`. The complete order, including webhooks, sign-in and a restore, is the runbook in § 11.
 
 **c. Protect `main`** — **Settings → Branches → Add branch ruleset** (or *Add rule*) for `main`: *Require a pull request before merging* and *Require status checks to pass* → pick **Lint, typecheck, test, build**. With that, a green CI is the gate for every production deploy.
 
 **d. Adding a migration later** — add `supabase/migrations/000N_<name>.sql`, open a PR (the Deploy database workflow shows what it would apply), merge. CI checks the code, Deploy database applies the SQL, Vercel deploys the app. The two deploys run side by side, so a migration must be additive and work with the previous code (CLAUDE.md § Data and security). Never edit a migration that has already run; add a new file.
 
-**e. Versions** — the actions in the workflows are pinned to a commit and the Supabase CLI to a version (`SUPABASE_CLI_VERSION` in `deploy-database.yml`). Dependabot opens a weekly PR for new action releases and npm updates (`.github/dependabot.yml`); merge them when CI is green. Bump the CLI version by hand now and then, after running `npx supabase@<version> db push --linked --dry-run` locally once.
+**e. Versions** — the actions in the workflows are pinned to a commit and the Supabase CLI to a version (`SUPABASE_CLI_VERSION` in `deploy-database.yml` and `maintenance.yml`; keep the two equal). Dependabot opens a weekly PR for new action releases and npm updates (`.github/dependabot.yml`); merge them when CI is green. Bump the CLI version by hand now and then, after running `npx supabase@<version> db push --linked --dry-run` locally once.
 
 ## 7. Supabase → site webhooks (automatic translation)
 
 Translation runs when a row is inserted or edited in Supabase — never when a page is viewed. Supabase tells the site about changes through Database Webhooks:
 
 1. Dashboard → **Database → Webhooks** → **Enable webhooks** (one-time).
-2. **SQL Editor**, paste [`supabase/webhooks.sql`](supabase/webhooks.sql), replace `YOUR-SITE.vercel.app` and `YOUR_TRANSLATE_WEBHOOK_SECRET` with your values, **Run**. Re-run it whenever a new content table is added (the file lists them).
+2. Actions → **Maintenance** → task **`webhooks`**: it fills the two placeholders of [`supabase/webhooks.sql`](supabase/webhooks.sql) from the `SITE_URL` and `TRANSLATE_WEBHOOK_SECRET` secrets and runs the file through the Supabase CLI. (By hand instead: **SQL Editor**, paste the file, replace `YOUR-SITE.vercel.app` and `YOUR_TRANSLATE_WEBHOOK_SECRET`, **Run**.) Re-run it whenever a content table is added or the secret changes; it replaces the triggers in place.
 
 That creates one trigger per content table. Each change POSTs to `/api/translate`, which answers immediately, translates the row in the background (only if its English text changed — so its own write doesn't cause a loop) and refreshes the page cache. You can watch the calls under **Database → Webhooks** and in the Vercel function logs (search for the `reqId` printed in the response).
 
@@ -151,7 +158,7 @@ Council members edit the site at `/<lang>/admin` (link at the bottom of every pa
 2. **OAuth2** → copy **Client ID** → `DISCORD_CLIENT_ID`, and **Reset Secret** → `DISCORD_CLIENT_SECRET`. Put both in `.env.local`; they only configure Supabase, the site itself never reads them.
 3. Under **Redirects** add `https://<your-project-ref>.supabase.co/auth/v1/callback`.
 4. Supabase Dashboard → **Authentication → Sign In / Providers → Discord** → enable, paste the Client ID and Secret, save.
-5. The site URL, the allowed redirect URLs (localhost, production, Vercel previews) and "e-mail sign-ups off" are declared in `supabase/config.toml` under `[auth]`. `npx supabase config diff` shows what differs from the project; `npx supabase config push` applies it (needs `npx supabase login` once). The Discord provider itself is deliberately *not* declared there (its secret would have to live in an environment variable the CLI can read): the diff keeps listing it as "remote only", which is fine, because a push leaves undeclared properties unchanged. Keep "Allow new users to sign up" on in the dashboard; it is the global switch for every provider, and a new account gets no admin rights until promoted.
+5. The site URL, the allowed redirect URLs (localhost, production, Vercel previews) and "e-mail sign-ups off" are declared in `supabase/config.toml` under `[auth]`. `npx supabase config diff` shows what differs from the project; `npx supabase config push` applies it (needs `npx supabase login` once), and Actions → **Maintenance** → task **`config-push`** does the same from GitHub. The Discord provider itself is deliberately *not* declared there (its secret would have to live in an environment variable the CLI can read): the diff keeps listing it as "remote only", which is fine, because a push leaves undeclared properties unchanged. Keep "Allow new users to sign up" on in the dashboard; it is the global switch for every provider, and a new account gets no admin rights until promoted.
 
 ### 8.2 The owner and the first administrator
 
@@ -218,6 +225,46 @@ Formations tagged with a side or role get filter chips on the page (attack, defe
 
 **Next event (castle battle → KvK → castle battle …):** insert a new `kvk_plans` row (new `slug`, `event_type`, password), add its rules/coordinators/formations, then set `active = false` on the old row and `active = true` on the new one (only one plan can be active). Keeping old rows gives you a history for later.
 
+## 10. Backups
+
+Supabase's free plan keeps no backups of its own, so the site makes one. Every Monday the **Maintenance** workflow runs `npm run backup`, which dumps every content and admin table (languages, settings, interface strings, announcements, events, rules, guides, alliances, gift codes, heroes, the battle plans with their instructions, coordinators and formations, profiles, pre-authorisations and the audit log; not the wrong-password counters) into one JSON file, encrypts it with `BACKUP_PASSPHRASE` and keeps it as a workflow artifact for 90 days. Translations are part of the rows, so they come back too. The list of tables is `BACKUP_TABLES` in `src/lib/backup/tables.ts`; a test fails when a migration adds a table that is in neither that list nor `NOT_BACKED_UP`.
+
+**One-time setup:** `openssl rand -hex 32` → GitHub secret `BACKUP_PASSPHRASE` (§ 6a) and your `.env.local`. Keep a copy outside GitHub (a password manager): the file cannot be read without it, and a backup should survive the loss of the repository as well. The repository is public and anyone with a GitHub account can download an artifact, which is why the file is encrypted before it leaves the runner; never upload a plain dump.
+
+**Check it:** Actions → Maintenance → the latest `backup` run → *Artifacts*; the log lists the row counts per table. Run the task by hand before a risky change (a bulk edit, a password change). It is free.
+
+**Restore** (on your machine, with `.env.local` pointing at the project to restore into):
+
+```bash
+# download the artifact zip from the run page and unzip it, then:
+npm run backup -- --restore kingdom-1241-2026-10-26T041722Z.json.enc        # shows what the file holds, writes nothing
+npm run backup -- --restore kingdom-1241-2026-10-26T041722Z.json.enc --yes  # writes it back
+npm run backup -- --restore <file> --yes --tables guides,rules              # only some tables
+```
+
+A restore writes rows by primary key and never deletes, so content added after the backup stays and a wrongly edited row goes back to its backed-up state. Into a fresh project (§ 11) everything is restored except the accounts themselves: Supabase Auth users are not content, they are recreated when people sign in, and the backed-up administrators and moderators become pre-authorisations so each gets their role back at their first sign-in. The audit log is appended only into an empty table. Afterwards run Maintenance → `revalidate` (or wait five minutes) so the pages show the restored rows.
+
+`npm run backup -- --decrypt <file>` writes a readable JSON copy next to the file. It contains the battle-plan password; delete it when done.
+
+**Schedules pause.** GitHub stops the scheduled workflows of a public repository after 60 days without a commit and shows a banner with an *Enable* button on the workflow page; a merged PR starts them again as well. Dependabot's weekly PRs usually keep the repository active, but check the backup list after a quiet autumn.
+
+## 11. Rebuild from zero
+
+If the Supabase project, the Vercel project or both are gone, this order gets the site back. Each step points at the section with the details.
+
+1. **What you need** — a clone of the repository (`main`) and, from your password manager: `BACKUP_PASSPHRASE`, `SITE_OWNER` (your Discord user id) and, ideally, the old `TRANSLATE_WEBHOOK_SECRET` and `KVK_SESSION_SECRET`. New secrets work too: players unlock the battle plan once more, nothing else changes.
+2. **Supabase project** (§ 1) — create it, save the database password, collect the project ref, URL, publishable and secret keys, create an access token.
+3. **GitHub secrets** (§ 6a) — set them all. Put the same values into `.env.local`.
+4. **Tables** — Actions → **Deploy database** → *Run workflow* applies every migration to the empty project.
+5. **Content** — with a backup: `npm run backup -- --restore <newest file> --yes` (§ 10). Without one: Maintenance → `seed` gives you the placeholder content, then edit it as in the beginning.
+6. **Vercel** (§ 5) — import the repository, set the environment variables (with `SITE_OWNER` and, if you had one, `ALERT_DISCORD_WEBHOOK_URL`), deploy. If the production URL changed, update the `SITE_URL` secret and `site_url` / `additional_redirect_urls` in `supabase/config.toml` (a small PR).
+7. **Translation** (§ 2) — Maintenance → `sync-ui` (interface strings added to the code since the backup), then `translate` for whatever the backup lacked.
+8. **Webhooks** (§ 7) — Dashboard → Database → Webhooks → *Enable webhooks* once, then Maintenance → `webhooks`.
+9. **Discord sign-in** (§ 8.1) — the Discord application is not part of the project and survives; add the new project's callback URL (`https://<new-ref>.supabase.co/auth/v1/callback`) under its *Redirects*, enable the Discord provider in the Supabase dashboard with the client id and secret, then Maintenance → `config-push` for the site URL and redirect list. Sign in: you are the owner through `SITE_OWNER`; everyone else gets their role back on their first sign-in through the restored pre-authorisations.
+10. **Protect `main`** (§ 6c), then check: Home shows the restored announcements, `/kvk` unlocks with the old password, the admin overview lists the restored audit log, and a test edit in the table editor is translated within a minute.
+
+If only Vercel is gone, steps 6 and 9 (the environment variables and nothing else) are enough. If only Supabase is gone, skip step 6 but redeploy after changing Vercel's Supabase variables.
+
 ---
 
 ## Everyday tasks
@@ -229,6 +276,8 @@ Formations tagged with a side or role get filter chips on the page (attack, defe
 **Add a language.** Insert a row in `languages` (e.g. `fr`, enabled, sort order) — if the code isn't in `src/lib/i18n/languages.ts` yet, add it there (name, direction, font) and deploy. Then run `npm run translate` (or the Maintenance workflow) once to backfill existing content.
 
 **Fix a translation by hand.** Edit the language's value in the JSON. It stays until the English text of that row changes, which re-translates every language.
+
+**Restore content.** From the weekly backup, § 10.
 
 **Refresh the cache now.** Content is cached for up to 5 minutes. To refresh immediately: Maintenance workflow → `revalidate`, or
 
@@ -250,4 +299,7 @@ Vercel → your project → **Logs**. In production every server log line is JSO
 - **A language shows English text.** The row has no translation for it yet (fallback is intentional). Run `npm run translate`.
 - **`npm run db:seed` fails with "Supabase admin client needs…".** `.env.local` is missing `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SECRET_KEY`.
 - **Deploy database fails at `supabase link`.** Check `SUPABASE_ACCESS_TOKEN` (not expired), `SUPABASE_PROJECT_ID` (the ref, not the URL) and `SUPABASE_DB_PASSWORD`. Fails at `db push` with "already exists"? The migration was applied by hand before; the files are idempotent, so re-run — if it still fails, run `supabase migration repair --status applied <version>` locally once (see the Supabase CLI docs).
+- **The weekly backup stopped running.** GitHub pauses the schedules of a public repository after 60 days without a commit (banner on Actions → Maintenance, button *Enable*). Any merged PR re-enables them.
+- **`npm run backup` fails with "Set BACKUP_PASSPHRASE".** The passphrase (16+ characters) is missing from `.env.local` or the GitHub secrets (§ 10).
+- **Maintenance `webhooks` or `config-push` fails at `supabase link`.** Same causes as the Deploy database failure above: they use the same three secrets.
 - **CI fails but it works on my machine.** CI uses the Node version in `.nvmrc` (24, the same major Vercel runs; `engines` in package.json pins it for Vercel) and `npm ci` (exact lockfile). Run `nvm use && npm ci && npm run lint && npm run typecheck && npm run test && npm run build` locally.
