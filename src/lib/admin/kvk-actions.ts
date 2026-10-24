@@ -426,7 +426,7 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
 
   const current = (row[column] ?? {}) as Localized;
   const update: Record<string, unknown> =
-    table === "kvk_plans" && column === "intro"
+    column === "intro" && (table === "kvk_plans" || table === "kvk_retrospectives")
       ? {
           intro: withLanguage(current, lang, value ? markdownToHtml(value) : ""),
           intro_source: withLanguage((row.intro_source ?? {}) as Localized, lang, value),
@@ -438,5 +438,6 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
 
   await audit(access.user, "translation.update", table, id, { column, lang, planId });
   expirePlanCaches(locale, planId);
+  if (table === "kvk_retrospectives") updateTag(CACHE_TAGS.retro);
   return { status: "saved", message: "Saved for this language only." };
 }

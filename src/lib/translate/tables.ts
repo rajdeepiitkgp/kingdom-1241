@@ -65,6 +65,14 @@ export const TRANSLATABLE_TABLES: TranslatableTable[] = [
   { table: "kvk_rules", primaryKey: "id", columns: [{ name: "text", html: false }] },
   { table: "kvk_coordinators", primaryKey: "id", columns: [{ name: "note", html: false }] },
   { table: "kvk_formations", primaryKey: "id", columns: [{ name: "note", html: false }] },
+  {
+    table: "kvk_retrospectives",
+    primaryKey: "id",
+    columns: [
+      { name: "title", html: false },
+      { name: "intro", html: true },
+    ],
+  },
   // site_settings is key/value; only the keys in TRANSLATABLE_SETTING_KEYS have a Localized value.
   { table: "site_settings", primaryKey: "key", columns: [{ name: "value", html: false }] },
 ];

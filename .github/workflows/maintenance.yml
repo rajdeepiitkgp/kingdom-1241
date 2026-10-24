@@ -1,6 +1,6 @@
-# Tasks you would otherwise run from a laptop with .env.local, and the weekly
-# content backup. Actions → Maintenance → Run workflow → pick a task; the
-# schedule below runs `backup` on its own.
+# Tasks you would otherwise run from a laptop with .env.local, the weekly
+# content backup and the daily feedback prune. Actions → Maintenance → Run
+# workflow → pick a task; the schedules below run `backup` and `prune` on their own.
 #
 # Secrets (SETUP.md § 6): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY,
 # ANTHROPIC_API_KEY (or GEMINI_API_KEY), SITE_URL, TRANSLATE_WEBHOOK_SECRET,
@@ -28,25 +28,29 @@ on:
           - translate-dry-run
           - revalidate
           - backup
+          - prune
+          - prune-dry-run
           - webhooks
           - config-push
   schedule:
     # Weekly content backup, Monday 04:17 UTC. GitHub stops the schedules of a
     # public repository after 60 days without a commit (SETUP.md § 10).
     - cron: "17 4 * * 1"
+    # Daily prune of battle feedback past its retention period (SETUP.md § 9).
+    - cron: "41 5 * * *"
 
 permissions:
   contents: read
 
 env:
-  # A scheduled run has no input: it is the backup.
-  TASK: ${{ inputs.task || 'backup' }}
+  # A scheduled run has no input: the daily schedule is the prune, the Monday one the backup.
+  TASK: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune' || 'backup') }}
   # Pinned like deploy-database.yml; bump both together.
   SUPABASE_CLI_VERSION: 2.122.0
 
 jobs:
   run:
-    name: ${{ inputs.task || 'backup' }}
+    name: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune' || 'backup') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -95,6 +99,16 @@ jobs:
       - name: Translate (dry run)
         if: env.TASK == 'translate-dry-run'
         run: npm run translate -- --dry-run
+
+      # Battle feedback past its retention period (kvk_retrospectives.retention_days
+      # after the battle) is deleted and the form closed; one audit_log entry per battle.
+      - name: Prune expired feedback
+        if: env.TASK == 'prune'
+        run: npm run prune
+
+      - name: Prune expired feedback (dry run)
+        if: env.TASK == 'prune-dry-run'
+        run: npm run prune -- --dry-run
 
       # The file is encrypted with BACKUP_PASSPHRASE before it leaves the runner:
       # this is a public repository and anyone with a GitHub account can download

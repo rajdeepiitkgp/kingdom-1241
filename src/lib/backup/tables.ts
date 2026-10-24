@@ -3,7 +3,10 @@
  *
  * Tables are listed in dependency order so a restore into an empty project
  * satisfies every foreign key: topics before rules, heroes and plans before
- * formations, profiles before the grants and the log that point at them.
+ * formations, retrospectives before their responses, profiles before the
+ * grants and the log that point at them. The feedback responses are small
+ * (a few hundred rows of at most 1.5 KB each per battle) and are pruned after
+ * the retention period, so the weekly file stays well under a megabyte.
  *
  * Restore modes:
  *   upsert           rows are written by primary key; rows added since the
@@ -40,6 +43,8 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { table: "kvk_rules", primaryKey: "id", restore: "upsert" },
   { table: "kvk_coordinators", primaryKey: "id", restore: "upsert" },
   { table: "kvk_formations", primaryKey: "id", restore: "upsert" },
+  { table: "kvk_retrospectives", primaryKey: "id", restore: "upsert" },
+  { table: "kvk_retro_responses", primaryKey: "id", restore: "upsert" },
   { table: "profiles", primaryKey: "id", restore: "upsert" },
   { table: "role_grants", primaryKey: "id", restore: "insert-missing" },
   { table: "audit_log", primaryKey: "id", restore: "append-if-empty" },

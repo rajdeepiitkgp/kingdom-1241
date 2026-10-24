@@ -17,6 +17,7 @@ export const CACHE_TAGS = {
   giftCodes: "content:gift_codes",
   heroes: "content:heroes",
   kvk: "content:kvk",
+  retro: "content:kvk_retro",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
@@ -50,6 +51,8 @@ export function cacheTagForTable(table: string): CacheTag | null {
     case "kvk_coordinators":
     case "kvk_formations":
       return CACHE_TAGS.kvk;
+    case "kvk_retrospectives":
+      return CACHE_TAGS.retro;
     default:
       return null;
   }

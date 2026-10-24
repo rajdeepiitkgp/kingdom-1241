@@ -14,6 +14,7 @@ import {
   mapGuide,
   mapHero,
   mapKvkPlan,
+  mapOpenRetrospective,
   mapRule,
   mapRuleTopic,
   mapSettings,
@@ -27,6 +28,7 @@ import type {
   Guide,
   Hero,
   KvkPlanWithSecret,
+  OpenRetrospective,
   RuleTopic,
   SiteSettings,
   UiString,
@@ -326,6 +328,37 @@ export async function getActiveKvkPlan(): Promise<KvkPlanWithSecret | null> {
     return mapKvkPlan(plan, rules.data ?? [], coordinators.data ?? [], formations.data ?? []);
   } catch (error) {
     log.error("Failed to load the KvK battle plan from Supabase", { error });
+    return null;
+  }
+}
+
+/**
+ * The feedback form that is accepting answers (at most one), with the plan it
+ * belongs to. Like the plan it carries the plan password for the gate and must
+ * never reach a component as is. The closing time is checked by the caller
+ * (request time); `null` on any problem, so the page says "no form open".
+ */
+export async function getOpenRetrospective(): Promise<OpenRetrospective | null> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.kvk, CACHE_TAGS.retro);
+
+  if (!isSupabaseConfigured() || !isSupabaseAdminConfigured()) return null;
+  try {
+    const supabase = createAdminClient();
+    const { data: retro, error } = await supabase.from("kvk_retrospectives").select("*").eq("open", true).limit(1).maybeSingle();
+    if (error) throw error;
+    if (!retro) return null;
+    const { data: plan, error: planError } = await supabase
+      .from("kvk_plans")
+      .select("id, slug, title, event_type, battle_at, password")
+      .eq("id", retro.plan_id)
+      .maybeSingle();
+    if (planError) throw planError;
+    if (!plan) return null;
+    return mapOpenRetrospective(retro, plan);
+  } catch (error) {
+    log.error("Failed to load the open retrospective from Supabase", { error });
     return null;
   }
 }

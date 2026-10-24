@@ -8,6 +8,7 @@ import { CoordinatorForm } from "@/components/admin/CoordinatorForm";
 import { DeleteForm } from "@/components/admin/DeleteForm";
 import { FormationForm } from "@/components/admin/FormationForm";
 import { PlanForm } from "@/components/admin/PlanForm";
+import { RetroSettingsForm } from "@/components/admin/RetroSettingsForm";
 import { RuleForm } from "@/components/admin/RuleForm";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { HeroAvatar } from "@/components/kvk/HeroAvatar";
@@ -18,14 +19,18 @@ import { MoveButtons } from "@/components/admin/MoveButtons";
 import { PendingRefresher } from "@/components/admin/PendingRefresher";
 import { TranslationForm } from "@/components/admin/TranslationForm";
 import { getPlanForEditing, type AdminKvkPlan } from "@/lib/admin/kvk-data";
+import { type AdminRetrospective, getRetrospectiveByPlan } from "@/lib/admin/retro-data";
+import { utcLabel } from "@/lib/admin/format";
 import { introSourceFor, parseEditLang, TEXT_LIMITS } from "@/lib/admin/translation";
 import { MAX_FORMATIONS, nextFreeLabel } from "@/lib/admin/kvk-forms";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances, getHeroes, getLanguages } from "@/lib/data";
 import type { FormationRole, FormationSide } from "@/lib/data/types";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick, type Localized } from "@/lib/i18n/localized";
 import { ratioLabel } from "@/lib/kvk/formations";
+import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
 
 export const metadata: Metadata = { title: "Edit battle plan" };
 
@@ -92,7 +97,14 @@ async function PlanEditor({
     );
   }
 
-  const [plan, heroes, alliances, languages] = await Promise.all([getPlanForEditing(id), getHeroes(), getAlliances(), getLanguages()]);
+  const [plan, heroes, alliances, languages, retro, en] = await Promise.all([
+    getPlanForEditing(id),
+    getHeroes(),
+    getAlliances(),
+    getLanguages(),
+    getRetrospectiveByPlan(id),
+    getDictionary("en"),
+  ]);
   if (!plan) notFound();
   const enabled = languages.filter((l) => l.enabled);
   const lang = parseEditLang(typeof query.lang === "string" ? query.lang : locale, enabled.map((l) => l.code));
@@ -132,7 +144,7 @@ async function PlanEditor({
       <div className="space-y-6">
         {header}
         {/* Keyed by language: the forms are uncontrolled, so a client-side switch must remount them with that language's text. */}
-        <TranslationMode key={lang} plan={plan} locale={locale} lang={lang} langLabel={language.nativeName} />
+        <TranslationMode key={lang} plan={plan} retro={retro} locale={locale} lang={lang} langLabel={language.nativeName} />
       </div>
     );
   }
@@ -270,6 +282,26 @@ async function PlanEditor({
           )}
         </div>
       </AdminSection>
+
+      <AdminSection
+        id="feedback"
+        title="Player feedback (retrospective)"
+        hint="A short form players fill in after the battle, behind the same password as the plan: star ratings and a few optional lines. Open it after the battle, read the results under “Feedback”."
+      >
+        {retro && (
+          <p className={`mb-4 rounded-xl px-3 py-2 text-sm font-bold ${retro.open ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`}>
+            {retro.open ? "The feedback form is open: players see it on the battle plan and at /kvk/feedback." : "The feedback form is closed."}{" "}
+            {retro.responseCount} response{retro.responseCount === 1 ? "" : "s"} so far, deleted automatically on {utcLabel(retro.pruneAt)} UTC.
+          </p>
+        )}
+        <RetroSettingsForm
+          retro={retro}
+          planId={plan.id}
+          planTitle={pick(plan.title, "en") || plan.slug}
+          locale={locale}
+          labels={Object.fromEntries([...RATING_QUESTIONS, ...TEXT_PROMPTS].map((q) => [q.key, en[q.labelKey]]))}
+        />
+      </AdminSection>
     </div>
   );
 }
@@ -279,10 +311,22 @@ async function PlanEditor({
  * next to its English source. Rows whose machine translation is still running
  * are locked and the page refreshes itself until they are done.
  */
-function TranslationMode({ plan, locale, lang, langLabel }: { plan: AdminKvkPlan; locale: string; lang: string; langLabel: string }) {
+function TranslationMode({
+  plan,
+  retro,
+  locale,
+  lang,
+  langLabel,
+}: {
+  plan: AdminKvkPlan;
+  retro: AdminRetrospective | null;
+  locale: string;
+  lang: string;
+  langLabel: string;
+}) {
   const common = { locale, planId: plan.id, lang, langLabel };
   const text = (value: Localized | undefined, code: string) => (typeof value?.[code] === "string" ? value[code] : "");
-  const anyPending = plan.pendingColumns.length > 0 || Object.keys(plan.pendingRows).length > 0;
+  const anyPending = plan.pendingColumns.length > 0 || Object.keys(plan.pendingRows).length > 0 || (retro?.pendingColumns.length ?? 0) > 0;
   const rowPending = (id: string, column: string) => (plan.pendingRows[id] ?? []).includes(column);
   const coordinators = plan.coordinators.filter((c) => text(c.note, "en").trim());
   const formations = plan.formations.filter((f) => text(f.note, "en").trim());
@@ -325,6 +369,15 @@ function TranslationMode({ plan, locale, lang, langLabel }: { plan: AdminKvkPlan
           </div>
         )}
       </AdminSection>
+
+      {retro && (
+        <AdminSection title="Feedback form texts" hint="The title and introduction players see above the feedback questions. The questions themselves are translated with the interface strings.">
+          <div className="space-y-3">
+            <TranslationForm {...common} table="kvk_retrospectives" id={retro.id} column="title" label="Feedback title" english={text(retro.title, "en")} value={text(retro.title, lang)} pending={retro.pendingColumns.includes("title")} maxLength={TEXT_LIMITS.title} />
+            <TranslationForm {...common} table="kvk_retrospectives" id={retro.id} column="intro" label="Feedback introduction (Markdown)" english={text(retro.introSource, "en")} value={introSourceFor({ intro: retro.intro, introSources: retro.introSource }, lang)} pending={retro.pendingColumns.includes("intro")} multiline maxLength={TEXT_LIMITS.intro} />
+          </div>
+        </AdminSection>
+      )}
 
       <AdminSection title="Formation notes" hint="Only formations with an English note.">
         {formations.length === 0 ? (

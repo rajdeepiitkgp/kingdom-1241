@@ -82,7 +82,7 @@ export function DateTimeField({
             id={id}
             name={name}
             type="datetime-local"
-            step={300}
+            step={60}
             min={min}
             defaultValue={defaultValue}
             onChange={(event) => setValue(event.target.value)}

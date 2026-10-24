@@ -11,6 +11,7 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
   const links = [
     { href: adminPath(locale), label: "Overview" },
     { href: adminPath(locale, "/kvk"), label: "Battle plans" },
+    { href: adminPath(locale, "/feedback"), label: "Feedback" },
     ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users" }] : []),
   ];
   return (

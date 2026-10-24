@@ -1,4 +1,5 @@
 import type { Localized } from "@/lib/i18n/localized";
+import type { RatingKey, RetroConfig, TextKey } from "@/lib/retro/questions";
 
 /**
  * Content types shared by the database layer, the seed data and the pages.
@@ -218,4 +219,56 @@ export interface KvkPlan {
 /** The plan plus its shared password — server only, never passed to components. */
 export interface KvkPlanWithSecret extends KvkPlan {
   password: string;
+}
+
+// ---------------------------------------------------------------------------
+// Battle retrospective (feedback form per battle plan)
+// ---------------------------------------------------------------------------
+
+export interface Retrospective {
+  id: string;
+  planId: string;
+  /** Accepting answers (at most one retrospective is open at a time). */
+  open: boolean;
+  title: Localized;
+  /** Sanitised HTML. */
+  intro: Localized;
+  /** Markdown source per language. */
+  introSource: Localized;
+  config: RetroConfig;
+  /** Optional moment the form closes by itself (ISO, UTC). */
+  closesAt: string | null;
+  maxResponses: number;
+  retentionDays: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The plan a retrospective belongs to, as the public page needs it. The password stays on the server (see RetroGate). */
+export interface RetroBattle {
+  planId: string;
+  slug: string;
+  title: Localized;
+  eventType: KvkEventType;
+  battleAt: string | null;
+}
+
+export interface OpenRetrospective extends Retrospective {
+  battle: RetroBattle & { password: string };
+}
+
+/** One player's answers. Identity fields are null unless the reader is the owner (see listResponses). */
+export interface RetroResponse {
+  id: string;
+  retrospectiveId: string;
+  governorId: string | null;
+  gameName: string | null;
+  allianceTag: string | null;
+  /** Governor ID confirmed through MightPulse at submission. */
+  verified: boolean;
+  ratings: Partial<Record<RatingKey, number>>;
+  texts: Record<TextKey, string>;
+  /** Page language the player wrote on (a hint about the text's language). */
+  locale: string;
+  createdAt: string;
 }
