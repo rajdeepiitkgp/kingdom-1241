@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { normalizeEmail, normalizeHandle } from "@/lib/auth/identity";
 import { adminPath } from "@/lib/auth/paths";
 import { isOwnerIdentity } from "@/lib/auth/owner";
-import { GRANTABLE_ROLES, grantProblem, hasRole, parseRole, roleChangeProblem, ROLES } from "@/lib/auth/roles";
+import { GRANTABLE_ROLES, grantProblem, hasRole, parseRole, removeAccountProblem, roleChangeProblem, ROLES } from "@/lib/auth/roles";
 import { checkAccess, type AccessDenial } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -110,4 +110,46 @@ export async function deleteGrant(formData: FormData): Promise<void> {
     else await audit(access.user, "grant.delete", "role_grants", id);
   }
   redirect(adminPath(locale, "/users"));
+}
+
+/**
+ * Removes an account: the Supabase Auth user and, through the cascade, its
+ * profile. The person can sign in again later, but arrives as a member with no
+ * access. The owner can't be removed, nobody removes themselves, and only the
+ * owner removes administrators.
+ */
+export async function removeAccount(formData: FormData): Promise<void> {
+  const locale = localeField(formData);
+  const usersPage = adminPath(locale, "/users");
+  const access = await checkAccess("admin");
+  if ("denied" in access) redirect(usersPage);
+  const id = textField(formData, "id");
+  if (!UUID.test(id)) redirect(usersPage);
+
+  const admin = createAdminClient();
+  const { data: target } = await admin.from("profiles").select("role, discord_username, email, game_name").eq("id", id).maybeSingle();
+  if (!target) redirect(usersPage);
+  const problem = removeAccountProblem({
+    actorIsOwner: access.user.isOwner,
+    actorIsTarget: id === access.user.id,
+    targetIsOwner: isOwnerIdentity({ discordUsername: target.discord_username ?? null, email: target.email ?? null }),
+    targetRole: parseRole(target.role),
+  });
+  if (problem) {
+    log.warn("Account removal refused", { id, problem });
+    redirect(`${usersPage}?error=remove`);
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (error) {
+    log.error("Removing an account failed", { id, error: error.message });
+    redirect(`${usersPage}?error=remove`);
+  }
+  await audit(access.user, "profile.remove", "profiles", id, {
+    discordUsername: target.discord_username ?? null,
+    email: target.email ?? null,
+    gameName: target.game_name ?? null,
+  });
+  revalidatePath(usersPage);
+  redirect(usersPage);
 }

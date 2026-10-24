@@ -8,7 +8,7 @@ import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { GrantForm, RoleForm } from "@/components/admin/UsersForms";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { utcLabel } from "@/lib/admin/format";
-import { deleteGrant } from "@/lib/admin/users-actions";
+import { deleteGrant, removeAccount } from "@/lib/admin/users-actions";
 import { listGrants, listProfiles } from "@/lib/admin/users-data";
 import { canManageUsers, ROLE_LABELS } from "@/lib/auth/roles";
 import { requireEditor } from "@/lib/auth/server";
@@ -67,6 +67,14 @@ async function Users({ locale }: { locale: string }) {
                     </p>
                   </div>
                   <RoleForm locale={locale} id={profile.id} role={profile.role} canGrantAdmin={user.isOwner} locked={locked} />
+                  {!locked && (
+                    <DeleteForm
+                      action={removeAccount}
+                      hidden={{ locale, id: profile.id }}
+                      confirmText={`Remove the account of ${formatGameName(profile.gameName, profile.allianceTag) ?? profile.displayName}? They can sign in again later, but with no access.`}
+                      label="Remove"
+                    />
+                  )}
                 </li>
               );
             })}

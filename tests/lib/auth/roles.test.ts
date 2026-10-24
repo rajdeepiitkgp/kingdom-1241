@@ -41,3 +41,15 @@ describe("owner rules", () => {
     expect(grantProblem({ actorIsOwner: true, role: "admin" })).toBeNull();
   });
 });
+
+describe("removeAccountProblem", () => {
+  it("protects the owner, the actor and administrators (unless the owner acts)", async () => {
+    const { removeAccountProblem } = await import("@/lib/auth/roles");
+    const base = { actorIsOwner: false, actorIsTarget: false, targetIsOwner: false, targetRole: "moderator" as const };
+    expect(removeAccountProblem(base)).toBeNull();
+    expect(removeAccountProblem({ ...base, targetIsOwner: true })).toMatch(/owner/);
+    expect(removeAccountProblem({ ...base, actorIsTarget: true })).toMatch(/own account/);
+    expect(removeAccountProblem({ ...base, targetRole: "admin" })).toMatch(/Only the owner/);
+    expect(removeAccountProblem({ ...base, targetRole: "admin", actorIsOwner: true })).toBeNull();
+  });
+});

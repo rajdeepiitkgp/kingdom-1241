@@ -57,6 +57,14 @@ export function roleChangeProblem(change: {
   return null;
 }
 
+/** Why removing an account (sign-in and profile) is not allowed, or null when it is. */
+export function removeAccountProblem(removal: { actorIsOwner: boolean; actorIsTarget: boolean; targetIsOwner: boolean; targetRole: Role }): string | null {
+  if (removal.targetIsOwner) return "The owner's account can't be removed.";
+  if (removal.actorIsTarget) return "You can't remove your own account; ask another administrator.";
+  if (removal.targetRole === "admin" && !removal.actorIsOwner) return "Only the owner can remove an administrator.";
+  return null;
+}
+
 /** Why a pre-authorisation can't be created, or null when it can. */
 export function grantProblem(grant: { actorIsOwner: boolean; role: Role }): string | null {
   if (grant.role === "admin" && !grant.actorIsOwner) return "Only the owner can pre-authorise administrators.";
