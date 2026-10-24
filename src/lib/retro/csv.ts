@@ -6,7 +6,8 @@ import { type RatingKey, type RetroConfig, shownRatings, shownTexts, type TextKe
  * quoted when needed. Cells that a spreadsheet would read as a formula get a
  * leading apostrophe so a player can't smuggle `=HYPERLINK(...)` into the
  * council's sheet. Identity is never part of the file: the row id is the
- * only identifier.
+ * only identifier. Each text column is followed by its English translation
+ * (empty until the AI step has run).
  */
 
 export function csvCell(value: unknown): string {
@@ -28,13 +29,15 @@ export interface CsvResponse {
   locale: string;
   ratings: Partial<Record<RatingKey, number>>;
   texts: Record<TextKey, string>;
+  /** English translations from the AI step, when present. */
+  textsEn?: Partial<Record<TextKey, string>> | null;
 }
 
 /** One row per response; rating and text columns follow the retrospective's config. */
 export function responsesCsv(responses: readonly CsvResponse[], config: RetroConfig): string {
   const ratings = shownRatings(config).map((q) => q.key);
   const texts = shownTexts(config).map((t) => t.key);
-  const header = ["id", "submitted_utc", "alliance", "verified", "language", ...ratings.map((k) => `rating_${k}`), ...texts];
+  const header = ["id", "submitted_utc", "alliance", "verified", "language", ...ratings.map((k) => `rating_${k}`), ...texts.flatMap((k) => [k, `${k}_en`])];
   const rows = responses.map((r) => [
     r.id,
     r.createdAt,
@@ -42,7 +45,7 @@ export function responsesCsv(responses: readonly CsvResponse[], config: RetroCon
     r.verified ? "yes" : "no",
     r.locale,
     ...ratings.map((k) => (typeof r.ratings[k] === "number" ? r.ratings[k] : "")),
-    ...texts.map((k) => r.texts[k] ?? ""),
+    ...texts.flatMap((k) => [r.texts[k] ?? "", r.textsEn?.[k] ?? ""]),
   ]);
   return toCsv([header, ...rows]);
 }

@@ -30,6 +30,8 @@ const SERVER_ONLY = [
   "lib/retro/mightpulse.ts",
   "lib/retro/governor.ts",
   "lib/retro/prune.ts",
+  "lib/retro/ai.ts",
+  "lib/retro/analyse.ts",
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
   "lib/translate/provider.ts",

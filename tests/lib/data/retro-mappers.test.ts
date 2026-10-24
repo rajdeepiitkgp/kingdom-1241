@@ -26,6 +26,11 @@ describe("retrospective mappers", () => {
     expect(retro.maxResponses).toBe(300);
     expect(retro.retentionDays).toBe(14);
     expect(mapRetrospective({ ...row, closes_at: null, config: null }).closesAt).toBeNull();
+    expect(retro.analysis).toBeNull();
+    const analysed = mapRetrospective({ ...row, analysis: { mood: 4, summary: "Fine", sentiment: {}, themes: [], actions: ["Do"], model: "m", usage: {} }, analysis_at: "2026-10-26T00:00:00+00:00", analysis_count: 12 });
+    expect(analysed.analysis?.summary).toBe("Fine");
+    expect(analysed.analysisAt).toBe("2026-10-26T00:00:00.000Z");
+    expect(analysed.analysisCount).toBe(12);
   });
 
   it("attaches the battle with its password for the gate", () => {
@@ -53,6 +58,8 @@ describe("retrospective mappers", () => {
     expect(forOwner.gameName).toBe("Rudy");
     expect(forOwner.ratings).toEqual({ overall: 5 });
     expect(forOwner.texts).toEqual({ went_well: "yes", went_wrong: "", suggestions: "more" });
+    expect(forOwner.textsEn).toBeNull();
+    expect(mapRetroResponse({ ...response, texts_en: { went_well: "yes", bogus: "x" }, translated_at: "2026-10-26T00:00:00+00:00" }, false).textsEn).toEqual({ went_well: "yes" });
     const forModerator = mapRetroResponse(response, false);
     expect(forModerator.governorId).toBeNull();
     expect(forModerator.gameName).toBeNull();

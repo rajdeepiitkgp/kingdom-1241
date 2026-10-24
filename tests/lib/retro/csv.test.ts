@@ -26,14 +26,15 @@ describe("csv", () => {
           locale: "de",
           ratings: { overall: 4, planning: 0 },
           texts: { went_well: "Good, fast", went_wrong: "", suggestions: "hidden column" },
+          textsEn: { went_well: "Good, fast (en)" },
         },
       ],
       config,
     );
     const lines = csv.split("\r\n");
     expect(lines[0].charCodeAt(0)).toBe(0xfeff);
-    expect(lines[0].slice(1)).toBe("id,submitted_utc,alliance,verified,language,rating_overall,rating_planning,rating_coordination,rating_formations,went_well,went_wrong");
-    expect(lines[1]).toBe('r1,2026-10-25T10:00:00.000Z,NAM,yes,de,4,0,,,"Good, fast",');
+    expect(lines[0].slice(1)).toBe("id,submitted_utc,alliance,verified,language,rating_overall,rating_planning,rating_coordination,rating_formations,went_well,went_well_en,went_wrong,went_wrong_en");
+    expect(lines[1]).toBe('r1,2026-10-25T10:00:00.000Z,NAM,yes,de,4,0,,,"Good, fast","Good, fast (en)",,');
     expect(csv).not.toContain("hidden column");
     expect(lines.at(-1)).toBe("");
   });
