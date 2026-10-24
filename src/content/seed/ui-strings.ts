@@ -268,6 +268,13 @@ export const UI_STRINGS = {
     pl: "Zbyt wiele błędnych haseł. Spróbuj ponownie za {time}.",
     ar: "كلمات مرور خاطئة كثيرة. حاول مرة أخرى بعد {time}.",
   },
+  "kvk.triesLeftOne": {
+    en: "One more try before a longer wait.",
+    de: "Noch ein Versuch, dann folgt eine längere Wartezeit.",
+    ko: "한 번 더 틀리면 더 오래 기다려야 합니다.",
+    pl: "Jeszcze jedna próba, potem dłuższa przerwa.",
+    ar: "بقيت محاولة واحدة قبل انتظار أطول.",
+  },
   "kvk.triesLeft": {
     en: "{n} more tries before a longer wait.",
     de: "Noch {n} Versuche, dann folgt eine längere Wartezeit.",

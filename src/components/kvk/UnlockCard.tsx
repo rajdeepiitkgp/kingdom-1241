@@ -22,9 +22,14 @@ export function UnlockCard({ dict }: { dict: Dictionary }) {
       : state.status === "unavailable"
         ? dict["kvk.unavailable"]
         : waiting
-          ? format(dict["kvk.throttled"], { time: now ? formatDuration(waitMs, dict) : "…" })
+          ? format(dict["kvk.throttled"], { time: now ? formatDuration(waitMs, dict, true) : "…" })
           : null;
-  const hint = state.status === "wrong" && state.triesLeft !== undefined && state.triesLeft <= 2 ? format(dict["kvk.triesLeft"], { n: state.triesLeft }) : null;
+  const hint =
+    state.status === "wrong" && state.triesLeft !== undefined && state.triesLeft <= 2
+      ? state.triesLeft === 1
+        ? dict["kvk.triesLeftOne"]
+        : format(dict["kvk.triesLeft"], { n: state.triesLeft })
+      : null;
 
   return (
     <form action={formAction} className="card mx-auto max-w-md p-6 text-center md:p-8">
