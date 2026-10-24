@@ -7,7 +7,7 @@ import { pad2, splitDuration } from "@/lib/time";
 export function formatDuration(ms: number, dict: Dictionary, clock = false): string {
   const d = splitDuration(ms);
   if (clock) {
-    if (d.days > 0) return `${d.days}${dict["common.days"].slice(0, 1)} ${pad2(d.hours)}:${pad2(d.minutes)}:${pad2(d.seconds)}`;
+    if (d.days > 0) return `${d.days}${dict["common.daysShort"]} ${pad2(d.hours)}:${pad2(d.minutes)}:${pad2(d.seconds)}`;
     return `${pad2(d.hours)}:${pad2(d.minutes)}:${pad2(d.seconds)}`;
   }
   const parts: string[] = [];

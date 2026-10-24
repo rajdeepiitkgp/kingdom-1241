@@ -117,11 +117,11 @@ export function BattlePlan({
                             {c.allianceTag ?? c.name.slice(0, 1).toUpperCase()}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate font-extrabold text-ink" dir="auto">
+                            <p className="line-clamp-2 font-extrabold wrap-break-word text-ink" dir="auto">
                               {c.name}
                             </p>
                             {note && (
-                              <p className="truncate text-xs font-semibold text-ink-muted" dir="auto">
+                              <p className="line-clamp-2 text-xs font-semibold wrap-break-word text-ink-muted" dir="auto">
                                 {note}
                               </p>
                             )}

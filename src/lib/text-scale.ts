@@ -13,10 +13,10 @@ export const DEFAULT_TEXT_SCALE: TextScale = "m";
 export const TEXT_SCALE_PERCENT: Record<TextScale, number> = { s: 87.5, m: 100, l: 112.5, xl: 125 };
 
 /** localStorage key and the <html data-text-scale> attribute name. */
-export const TEXT_SCALE_STORAGE_KEY = "kd1241_text_scale";
+const TEXT_SCALE_STORAGE_KEY = "kd1241_text_scale";
 export const TEXT_SCALE_ATTRIBUTE = "data-text-scale";
 
-export function isTextScale(value: unknown): value is TextScale {
+function isTextScale(value: unknown): value is TextScale {
   return typeof value === "string" && (TEXT_SCALES as readonly string[]).includes(value);
 }
 

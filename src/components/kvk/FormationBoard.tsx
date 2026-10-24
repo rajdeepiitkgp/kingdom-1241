@@ -150,7 +150,14 @@ export function FormationBoard({
           <p className="text-sm font-extrabold text-ink" aria-live="polite">
             {format(dict["kvk.progress"], { done, total })}
           </p>
-          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+          <div
+            className="mt-1.5 h-2 overflow-hidden rounded-full bg-line"
+            role="progressbar"
+            aria-label={format(dict["kvk.progress"], { done, total })}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={done}
+          >
             <div className="h-full rounded-full bg-success transition-[width] duration-300" style={{ width: `${(done / total) * 100}%` }} />
           </div>
         </div>

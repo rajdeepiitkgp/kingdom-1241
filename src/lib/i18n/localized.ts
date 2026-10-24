@@ -22,12 +22,6 @@ export function pick(value: Localized | null | undefined, locale: string): strin
   return "";
 }
 
-/** True when the locale has its own translation (not a fallback). */
-export function hasTranslation(value: Localized | null | undefined, locale: string): boolean {
-  const text = value?.[locale];
-  return typeof text === "string" && text.trim() !== "";
-}
-
 /** Build a Localized value from an English string. */
 export function en(text: string): Localized {
   return { [DEFAULT_LOCALE]: text };

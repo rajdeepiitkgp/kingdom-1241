@@ -165,7 +165,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                             className="input px-3 py-2 text-sm"
                           />
                         ) : (
-                          <p className="truncate rounded-2xl border border-transparent px-1 py-2 text-sm font-bold text-ink" title={line.name}>
+                          <p className="line-clamp-2 rounded-2xl border border-transparent px-1 py-2 text-sm font-bold wrap-break-word text-ink" title={line.name}>
                             {line.name}
                           </p>
                         )}
