@@ -33,7 +33,7 @@ export function EventList({
     // Skeletons until the client clock is available.
     const count = Math.min(limit ?? events.length, Math.max(events.length, 1), 4);
     return (
-      <ul className={clsx("grid gap-3", !compact && "md:grid-cols-2")}>
+      <ul className={clsx("grid grid-cols-1 gap-3", !compact && "md:grid-cols-2")}>
         {Array.from({ length: count }).map((_, i) => (
           <li key={i} className="card h-28 animate-pulse bg-card-soft" aria-hidden />
         ))}
@@ -56,7 +56,7 @@ export function EventList({
   }
 
   return (
-    <ul className={clsx("grid gap-3", !compact && "md:grid-cols-2")}>
+    <ul className={clsx("grid grid-cols-1 gap-3", !compact && "md:grid-cols-2")}>
       {occurrences.map((occurrence) => (
         <li key={occurrence.event.id}>
           <EventCard occurrence={occurrence} now={now} dict={dict} locale={locale} compact={compact} />
@@ -112,7 +112,7 @@ export function EventCard({
 
         {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{pick(event.summary, locale)}</p>}
 
-        <dl className="mt-3 grid gap-1.5 text-sm">
+        <dl className="mt-3 grid grid-cols-1 gap-1.5 text-sm">
           <div className="flex items-center gap-2 text-ink">
             <CalendarClock className="size-4 shrink-0 text-primary" aria-hidden />
             <dt className="sr-only">{dict["events.next"]}</dt>

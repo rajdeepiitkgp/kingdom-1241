@@ -39,13 +39,13 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
       {active.length === 0 ? (
         <p className="text-sm font-semibold text-ink-muted">{dict["home.noGiftCodes"]}</p>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {active.map((code) => (
             <li
               key={code.id}
-              className="grid grid-flow-dense grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 rounded-2xl bg-card-soft px-4 py-3 sm:grid-cols-[auto_1fr_auto]"
+              className="grid grid-flow-dense grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-2xl bg-card-soft px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
             >
-              <code className="justify-self-start rounded-lg bg-gold-soft px-3 py-1.5 text-base font-black tracking-wider text-gold-ink" dir="ltr">
+              <code className="max-w-full min-w-0 justify-self-start rounded-lg bg-gold-soft px-3 py-1.5 text-sm font-black tracking-wider break-all text-gold-ink sm:text-base" dir="ltr">
                 {code.code}
               </code>
               <div className="col-span-2 min-w-0 text-sm sm:col-span-1">
@@ -57,9 +57,15 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
                     : dict["home.noExpiry"]}
                 </p>
               </div>
-              <button type="button" className="btn-gold btn-sm justify-self-end" onClick={() => copy(code.code)}>
+              <button
+                type="button"
+                className="btn-gold btn-sm justify-self-end"
+                onClick={() => copy(code.code)}
+                aria-label={copied === code.code ? dict["common.copied"] : dict["common.copy"]}
+                title={dict["common.copy"]}
+              >
                 {copied === code.code ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-                {copied === code.code ? dict["common.copied"] : dict["common.copy"]}
+                <span className="hidden sm:inline">{copied === code.code ? dict["common.copied"] : dict["common.copy"]}</span>
               </button>
             </li>
           ))}

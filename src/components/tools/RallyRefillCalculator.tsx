@@ -59,7 +59,7 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
         </div>
       </header>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         {/* Inputs */}
         <div className="space-y-5">
           <NumberField label={dict["tools.refill.capacity"]} value={capacity} onChange={setCapacity} />
@@ -132,7 +132,7 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
             <Stat label={dict["tools.refill.toSend"]} value={nf.format(result.totalToSend)} highlight />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-line">
+          <div className="overflow-x-auto rounded-2xl border border-line">
             <table className="w-full text-sm">
               <thead className="bg-primary-soft text-xs font-extrabold tracking-wide text-ink-muted uppercase">
                 <tr>

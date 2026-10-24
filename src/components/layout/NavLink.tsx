@@ -46,14 +46,14 @@ export function NavLinkView({ href, icon, label, variant, active }: NavLinkProps
       href={href}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "flex min-w-0 flex-col items-center gap-1 px-0.5 pt-2.5 pb-2 text-[11px] leading-none font-extrabold transition-colors",
+        "flex min-w-0 flex-col items-center gap-1 px-0.5 pt-2.5 pb-2 text-[0.6875rem] leading-none font-extrabold transition-colors",
         active ? "text-primary" : "text-ink-faint hover:text-ink-muted",
       )}
     >
-      <span className={clsx("flex h-8 w-14 items-center justify-center rounded-full transition-colors", active && "bg-primary-soft")}>
+      <span className={clsx("flex h-8 w-full max-w-14 items-center justify-center rounded-full transition-colors", active && "bg-primary-soft")}>
         <NavIcon icon={icon} className="size-5" />
       </span>
-      <span className="max-w-full truncate">{label}</span>
+      <span className="line-clamp-2 max-w-full text-center leading-tight wrap-break-word hyphens-auto">{label}</span>
     </Link>
   );
 }

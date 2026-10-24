@@ -188,7 +188,7 @@ export function FormationBoard({
       {visible.length === 0 ? (
         <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["kvk.noFormations"]}</p>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {visible.map((f) => {
             const isSaved = saved.has(f.id);
             const names = heroNames(f);
@@ -224,7 +224,7 @@ export function FormationBoard({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 truncate text-sm font-bold text-ink-muted" dir="auto" title={line}>
+                      <p className="mt-1 line-clamp-2 text-sm font-bold wrap-break-word text-ink-muted" dir="auto" title={line}>
                         {line}
                       </p>
                     </div>
