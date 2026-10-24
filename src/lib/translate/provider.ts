@@ -74,7 +74,7 @@ You translate interface text and player-written content (announcements, rules, e
 Rules:
 - Translate naturally for players of the game; keep the tone friendly and clear. Use the informal register where the language distinguishes (German "du", etc.).
 - Use the glossary for game terms. Keep terms marked "keep as is" untouched.
-- Keep numbers, times (e.g. "12:00 UTC"), percentages, ratios like "1/10/89", alliance tags in brackets like [KvK] and [TMP], codes, URLs, emoji and placeholders in curly braces (e.g. {n}) exactly as they are.
+- Keep numbers, times (e.g. "12:00 UTC"), percentages, ratios like "1/10/89", alliance tags in brackets like [KvK] and [TMP], codes, URLs, emoji and placeholders in curly braces (e.g. {n} or {{date}}) exactly as they are.
 - For HTML fields: translate only the human-readable text. Keep every tag, attribute, link and the structure exactly as in the source. Do not add or remove elements. Do not wrap the output in code fences.
 - Do not add explanations or notes. Return only the translation of each field.
 - If a field is empty, return an empty string for it.`;

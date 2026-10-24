@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KvkFormation } from "@/lib/data/types";
-import { availableFilters, filterFormations, formationSummary, isValidRatio, openSlots, ratioLabel, sortFormations } from "@/lib/kvk/formations";
+import { availableFilters, filterFormations, formationSummary, isValidRatio, openSlots, ratioLabel, roleLabelKey, sortFormations } from "@/lib/kvk/formations";
 
 function formation(overrides: Partial<KvkFormation>): KvkFormation {
   return {
@@ -37,19 +37,36 @@ describe("filters", () => {
     formation({ id: "1", label: "A", side: "attack", role: "rally_lead" }),
     formation({ id: "2", label: "B", side: "attack", role: "rally_join" }),
     formation({ id: "3", label: "C", side: "defense" }),
+    formation({ id: "4", label: "D", side: "defense", role: "rally_lead" }),
+    formation({ id: "5", label: "E", side: "any", role: "rally_join" }),
   ];
 
-  it("filters by side and by role", () => {
+  it("filters by side and by role, with the role word following the side", () => {
     expect(filterFormations(list, "attack").map((f) => f.id)).toEqual(["1", "2"]);
-    expect(filterFormations(list, "defense").map((f) => f.id)).toEqual(["3"]);
-    expect(filterFormations(list, "rally_join").map((f) => f.id)).toEqual(["2"]);
-    expect(filterFormations(list, "all")).toHaveLength(3);
+    expect(filterFormations(list, "defense").map((f) => f.id)).toEqual(["3", "4"]);
+    expect(filterFormations(list, "rally_join").map((f) => f.id)).toEqual(["2", "5"]);
+    expect(filterFormations(list, "garrison_lead").map((f) => f.id)).toEqual(["4"]);
+    expect(filterFormations(list, "garrison_join").map((f) => f.id)).toEqual(["5"]);
+    expect(filterFormations(list, "all")).toHaveLength(5);
   });
 
   it("only offers the filters that are actually used", () => {
-    expect(availableFilters(list)).toEqual(["all", "attack", "defense", "rally_lead", "rally_join"]);
+    expect(availableFilters(list)).toEqual(["all", "attack", "defense", "rally_lead", "rally_join", "garrison_lead", "garrison_join"]);
     expect(availableFilters([formation({})])).toEqual(["all"]);
     expect(availableFilters([formation({ side: "defense" })])).toEqual(["all", "defense"]);
+    expect(availableFilters([formation({ side: "defense", role: "rally_join" })])).toEqual(["all", "defense", "garrison_join"]);
+  });
+});
+
+describe("roleLabelKey", () => {
+  it("says rally when attacking, garrison when defending, both when either", () => {
+    expect(roleLabelKey("attack", "rally_lead")).toBe("rally_lead");
+    expect(roleLabelKey("attack", "rally_join")).toBe("rally_join");
+    expect(roleLabelKey("defense", "rally_lead")).toBe("garrison_lead");
+    expect(roleLabelKey("defense", "rally_join")).toBe("garrison_join");
+    expect(roleLabelKey("any", "rally_lead")).toBe("lead");
+    expect(roleLabelKey("any", "rally_join")).toBe("join");
+    expect(roleLabelKey("defense", "any")).toBeNull();
   });
 });
 

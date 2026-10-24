@@ -3,17 +3,19 @@ import { sanitizeRichText } from "@/lib/html";
 import { DEFAULT_LOCALE } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
 import { translateFields, withRetry } from "./provider";
-import { sourceHash } from "./hash";
+import { columnHashes, encodeColumnHashes, staleColumns, storedColumnHashes } from "./hash";
 import { getTranslatableTable, isTranslatableRow, type TranslatableTable } from "./tables";
 
 /**
  * Translate database rows into every enabled language that is missing or
  * outdated, then write the translations back.
  *
- * Loop safety: each row's `source_hash` is compared with a hash of its current
- * English text. When they match and every language is present, nothing is
- * done — so the UPDATE this module performs (which fires the webhook again)
- * is a no-op on the second round.
+ * Loop safety and economy: `source_hash` holds one hash per translatable
+ * column (JSON; older rows hold one hash for the whole row). A column is only
+ * sent to the model when its English changed or a language is missing, so
+ * editing a plan's title never re-translates its long intro. When everything
+ * matches and every language is present, nothing is done — so the UPDATE this
+ * module performs (which fires the webhook again) is a no-op on the second round.
  *
  * Request economy: rows that need the same language are batched into one
  * Gemini request (up to a character budget), which keeps the free tier happy.
@@ -64,9 +66,14 @@ interface RowState {
   id: string;
   columns: Record<string, Localized>;
   source: Record<string, string>;
-  hash: string;
-  missing: string[];
-  done: Set<string>;
+  /** Current per-column hashes of the English text. */
+  hashes: Record<string, string>;
+  /** Per-column hashes already stored (a legacy whole-row hash is expanded). */
+  stored: Record<string, string>;
+  /** locale → columns that need a translation. */
+  needs: Map<string, Set<string>>;
+  /** locale → columns translated in this run. */
+  done: Map<string, Set<string>>;
   chars: number;
 }
 
@@ -78,24 +85,29 @@ function prepareRow(config: TranslatableTable, row: Row, targets: string[], forc
   for (const column of config.columns) {
     columns[column.name] = asLocalized(row[column.name]);
     source[column.name] = columns[column.name][DEFAULT_LOCALE] ?? "";
-    chars += source[column.name].length;
   }
 
   if (!Object.values(source).some((text) => text.trim() !== "")) {
     return { table: config.table, id, translated: [], skipped: true, reason: "no English source text" };
   }
 
-  const hash = sourceHash(source);
-  const upToDate = row.source_hash === hash;
-  const missing = force
-    ? targets
-    : targets.filter((locale) => {
-        if (!upToDate) return true;
-        return config.columns.some((c) => source[c.name].trim() !== "" && !(columns[c.name][locale] ?? "").trim());
-      });
+  const hashes = columnHashes(source);
+  const stored = storedColumnHashes(row.source_hash, source);
+  const stale = new Set(staleColumns(source, row.source_hash));
+  const needs = new Map<string, Set<string>>();
+  for (const locale of targets) {
+    const wanted = new Set<string>();
+    for (const column of config.columns) {
+      if (!source[column.name].trim()) continue;
+      if (force || stale.has(column.name) || !(columns[column.name][locale] ?? "").trim()) wanted.add(column.name);
+    }
+    if (wanted.size > 0) needs.set(locale, wanted);
+  }
+  if (needs.size === 0) return { table: config.table, id, translated: [], skipped: true, reason: "up to date" };
 
-  if (missing.length === 0) return { table: config.table, id, translated: [], skipped: true, reason: "up to date" };
-  return { id, columns, source, hash, missing, done: new Set(), chars };
+  chars = 0;
+  for (const column of new Set([...needs.values()].flatMap((set) => [...set]))) chars += source[column].length;
+  return { id, columns, source, hashes, stored, needs, done: new Map(), chars };
 }
 
 /**
@@ -130,8 +142,9 @@ export async function translateRows(
 
   if (options.dryRun) {
     for (const state of pending) {
-      log(`${table}/${state.id}: would translate into ${state.missing.join(", ")}`);
-      results.push({ table, id: state.id, translated: state.missing, skipped: false });
+      const summary = [...state.needs.entries()].map(([locale, cols]) => `${locale} (${[...cols].join(", ")})`).join(", ");
+      log(`${table}/${state.id}: would translate ${summary}`);
+      results.push({ table, id: state.id, translated: [...state.needs.keys()], skipped: false });
     }
     return results;
   }
@@ -141,18 +154,17 @@ export async function translateRows(
   const failures = new Map<string, string>();
 
   for (const locale of targets) {
-    const needing = pending.filter((s) => s.missing.includes(locale));
+    const needing = pending.filter((s) => s.needs.has(locale));
     for (const batch of chunk(needing)) {
       // Field keys are opaque ("f0", "f1", ...) so the model never sees ids.
       const fieldMap: Array<{ key: string; state: RowState; column: string }> = [];
       const fields: Record<string, string> = {};
       for (const state of batch) {
         for (const column of config.columns) {
-          const text = state.source[column.name];
-          if (!text.trim()) continue;
+          if (!state.needs.get(locale)?.has(column.name)) continue;
           const key = `f${fieldMap.length}`;
           fieldMap.push({ key, state, column: column.name });
-          fields[key] = text;
+          fields[key] = state.source[column.name];
         }
       }
       const htmlFields = fieldMap.filter((f) => htmlColumns.includes(f.column)).map((f) => f.key);
@@ -165,8 +177,9 @@ export async function translateRows(
           if (typeof text !== "string" || !text.trim()) continue;
           const isHtml = htmlColumns.includes(column);
           state.columns[column] = { ...state.columns[column], [locale]: isHtml ? sanitizeRichText(text) : text };
+          if (!state.done.has(locale)) state.done.set(locale, new Set());
+          state.done.get(locale)!.add(column);
         }
-        for (const state of batch) state.done.add(locale);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log(`${table}: ${locale} batch failed — ${message}`);
@@ -176,20 +189,52 @@ export async function translateRows(
   }
 
   for (const state of pending) {
-    const complete = state.missing.every((l) => state.done.has(l));
-    if (state.done.size === 0) {
+    const translatedLocales = [...state.done.keys()];
+    if (translatedLocales.length === 0) {
       results.push({ table, id: state.id, translated: [], skipped: true, reason: `failed: ${failures.get(state.id) ?? "unknown error"}` });
       continue;
     }
+    // Re-read before writing. An English edit made while we were translating
+    // must win: writing back the object we started from would revert it. The
+    // newer edit's own run translates it, so this run simply steps aside. The
+    // merge also keeps any language edited by hand in the meantime.
+    const { data: current, error: readError } = await supabase.from(table).select("*").eq(config.primaryKey, state.id).maybeSingle();
+    if (readError) throw readError;
+    if (!current) {
+      results.push({ table, id: state.id, translated: [], skipped: true, reason: "row deleted meanwhile" });
+      continue;
+    }
+    const currentSource: Record<string, string> = {};
+    for (const column of config.columns) currentSource[column.name] = asLocalized(current[column.name])[DEFAULT_LOCALE] ?? "";
+    const currentHashes = columnHashes(currentSource);
+    if (config.columns.some((c) => currentHashes[c.name] !== state.hashes[c.name])) {
+      log(`${table}/${state.id}: English changed while translating, leaving it to the newer run`);
+      results.push({ table, id: state.id, translated: [], skipped: true, reason: "superseded by a newer edit" });
+      continue;
+    }
+
     const update: Row = {};
-    for (const column of config.columns) update[column.name] = state.columns[column.name];
-    // Only mark the row as up to date when every requested language succeeded;
-    // otherwise the next run picks it up again.
-    if (complete) update.source_hash = state.hash;
+    const stored = { ...state.stored };
+    let partial = false;
+    for (const column of config.columns) {
+      const name = column.name;
+      const fresh: Localized = {};
+      for (const [locale, cols] of state.done) if (cols.has(name)) fresh[locale] = state.columns[name][locale];
+      update[name] = { ...asLocalized(current[name]), ...fresh };
+      const neededBy = [...state.needs.entries()].filter(([, cols]) => cols.has(name)).map(([locale]) => locale);
+      if (neededBy.length === 0) continue; // untouched column keeps its stored hash
+      if (neededBy.every((locale) => state.done.get(locale)?.has(name))) stored[name] = state.hashes[name];
+      else {
+        // A language failed: the column stays due, and the next run picks it up.
+        delete stored[name];
+        partial = true;
+      }
+    }
+    update.source_hash = Object.keys(stored).length > 0 ? encodeColumnHashes(stored) : null;
 
     const { error } = await supabase.from(table).update(update).eq(config.primaryKey, state.id);
     if (error) throw error;
-    results.push({ table, id: state.id, translated: [...state.done], skipped: false, reason: complete ? undefined : "partial" });
+    results.push({ table, id: state.id, translated: translatedLocales, skipped: false, reason: partial ? "partial" : undefined });
   }
 
   return results;

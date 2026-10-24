@@ -4,10 +4,26 @@ import type { FormationRole, FormationSide, KvkFormation, TroopType } from "@/li
 
 export const TROOP_ORDER: TroopType[] = ["infantry", "cavalry", "archers"];
 
-/** Chips above the board. `all` is always first; the others only appear when used. */
-export type FormationFilter = "all" | Exclude<FormationSide, "any"> | Exclude<FormationRole, "any">;
+/**
+ * The word for a role depends on the side: attackers rally (rally lead / rally
+ * join), defenders garrison (garrison lead / garrison join). The database keeps
+ * `rally_lead` / `rally_join` for both; only the label changes.
+ */
+export type RoleLabelKey = "rally_lead" | "rally_join" | "garrison_lead" | "garrison_join" | "lead" | "join";
 
-export const FILTER_ORDER: FormationFilter[] = ["all", "attack", "defense", "rally_lead", "rally_join"];
+/** Dictionary key suffix (`kvk.role.<key>`) for a formation's role, or null when it has no role. */
+export function roleLabelKey(side: FormationSide, role: FormationRole): RoleLabelKey | null {
+  if (role === "any") return null;
+  const part = role === "rally_lead" ? "lead" : "join";
+  if (side === "attack") return `rally_${part}`;
+  if (side === "defense") return `garrison_${part}`;
+  return part;
+}
+
+/** Chips above the board. `all` is always first; the others only appear when used. */
+export type FormationFilter = "all" | Exclude<FormationSide, "any"> | Exclude<RoleLabelKey, "lead" | "join">;
+
+export const FILTER_ORDER: FormationFilter[] = ["all", "attack", "defense", "rally_lead", "rally_join", "garrison_lead", "garrison_join"];
 
 export function isValidRatio(f: Pick<KvkFormation, "infantry" | "cavalry" | "archers">): boolean {
   const parts = [f.infantry, f.cavalry, f.archers];
@@ -23,7 +39,11 @@ export function matchesFilter(f: KvkFormation, filter: FormationFilter): boolean
       return f.side === filter;
     case "rally_lead":
     case "rally_join":
-      return f.role === filter;
+      return f.role === filter && f.side !== "defense";
+    case "garrison_lead":
+      return f.role === "rally_lead" && f.side !== "attack";
+    case "garrison_join":
+      return f.role === "rally_join" && f.side !== "attack";
   }
 }
 

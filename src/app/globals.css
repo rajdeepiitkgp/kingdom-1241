@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Dark mode is driven by next-themes putting `class="dark"` on <html>. */
+/* Dark mode is the `dark` class on <html>, set by src/lib/theme.ts (init script + toggle). */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
@@ -114,6 +114,14 @@
    smooth pass `behavior: "smooth"` themselves (see RulesTabs). */
 html {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* <details> rows (admin editor) draw their own open/close hint. */
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
 }
 
 /* Text size preference (A− / A+ in the header). Steps of the browser's own
@@ -281,6 +289,16 @@ body {
 #bottom-nav { --chrome-name: bottom-nav; }
 ::view-transition-group(.chrome) {
   z-index: 1;
+}
+
+/* Native <select> with our own chevron instead of the browser's edge caret. */
+@utility select-chevron {
+  appearance: none;
+  padding-inline-end: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238a98b5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1.1rem;
 }
 
 /* Hide scrollbars on horizontally scrolling tab strips. */

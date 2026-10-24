@@ -12,6 +12,7 @@ import {
   formationSummary,
   openSlots,
   ratioLabel,
+  roleLabelKey,
   sortFormations,
   type FormationFilter,
 } from "@/lib/kvk/formations";
@@ -69,7 +70,7 @@ const SIDE_CHIP: Record<string, string> = {
   defense: "bg-success-soft text-success",
 };
 const SIDE_ICON: Record<string, string> = { attack: "⚔️", defense: "🛡️" };
-const ROLE_ICON: Record<string, string> = { rally_lead: "👑", rally_join: "🤝" };
+const roleIcon = (key: string) => (key.endsWith("lead") ? "👑" : "🤝");
 
 export function FormationBoard({
   planId,
@@ -177,7 +178,7 @@ export function FormationBoard({
                 filter === value ? "border-primary bg-primary text-primary-ink" : "border-line bg-card text-ink-muted hover:border-primary hover:text-ink",
               )}
             >
-              {value !== "all" && <span aria-hidden>{SIDE_ICON[value] ?? ROLE_ICON[value]}</span>}
+              {value !== "all" && <span aria-hidden>{SIDE_ICON[value] ?? roleIcon(value)}</span>}
               {filterLabel(value)}
             </button>
           ))}
@@ -196,6 +197,7 @@ export function FormationBoard({
             const line = [...names, ...(open > 0 ? [otherHeroes(open)] : [])].join(" + ");
             const note = pick(f.note, locale);
             const untagged = f.side === "any" && f.role === "any";
+            const roleKey = roleLabelKey(f.side, f.role);
             return (
               <li key={f.id}>
                 <article className={clsx("card flex h-full flex-col gap-4 p-4 transition-shadow", isSaved && "ring-4 ring-success/30")}>
@@ -213,9 +215,9 @@ export function FormationBoard({
                             <span aria-hidden>{SIDE_ICON[f.side]}</span> {dict[`kvk.side.${f.side}`]}
                           </span>
                         )}
-                        {f.role !== "any" && (
+                        {roleKey && (
                           <span className="chip bg-primary-soft text-primary">
-                            <span aria-hidden>{ROLE_ICON[f.role]}</span> {dict[`kvk.role.${f.role}`]}
+                            <span aria-hidden>{roleIcon(roleKey)}</span> {dict[`kvk.role.${roleKey}`]}
                           </span>
                         )}
                         {untagged && (
@@ -240,7 +242,8 @@ export function FormationBoard({
                     </button>
                   </header>
 
-                  <div className="-mx-1 no-scrollbar flex gap-2 overflow-x-auto px-1 pt-1">
+                  {/* Scrolls sideways on phones, which also clips vertically: pt-3 gives the skill badge (10px above the portrait) room; -mt-2 keeps the spacing. */}
+                  <div className="-mx-1 -mt-2 no-scrollbar flex gap-2 overflow-x-auto px-1 pt-3">
                     {f.heroSlugs.map((slug, index) => (
                       <HeroAvatar
                         key={index}

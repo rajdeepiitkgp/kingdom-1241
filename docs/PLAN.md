@@ -17,7 +17,11 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 - **Guides:** how 1241 plays each event (Vikings, Bear Hunt, Swordland, KvK, Alliance Championship, more later).
 - **Tools:** rally troop refill, pack value check.
 - **KvK:** battle day sign-ups and group lists; minister appointment booking with automatic slot allocation (later phase).
-- **KvK battle plan (password-locked):** one page for both of the kingdom's battle events — the internal castle battle and KvK, which alternate every two weeks. It holds the formations every player must save in the game (hero portraits, required top-right skill level and stars, troop ratio, attack/defence and rally-lead/rally-join tags), the coordinators of the two battle alliances ([KvK] rallies the castle, [TMP] counter-rallies) and the battle-day instructions. Later: which players join which rally leader, attack and defence groups with their UTC hours, and a name search for assignments.
+- **KvK battle plan (password-locked):** one page for both of the kingdom's battle events — the internal castle battle and KvK, which alternate every two weeks. It holds the formations every player must save in the game (hero portraits, required top-right skill level and stars, troop ratio, attack/defence tags and the role: rally lead/join when attacking, garrison lead/join when defending), the coordinators of the two battle alliances ([KvK] rallies the castle, [TMP] counter-rallies) and the battle-day instructions. Later: which players join which rally leader, attack and defence groups with their UTC hours, and a name search for assignments.
+- **Rally-leader plan (password-locked, separate):** a second page for the players who start rallies, with its own password and its own audience: who leads which rally with which of their own heroes and ratio, assigned by in-game name.
+- **Battle-day checklist:** for the organisers, in the admin area: the things to confirm before and during the battle (outposts connected, everyone teleported, …), ticked off per battle and copied into the next plan.
+- **Battle retrospective:** after the battle, players submit feedback against their Governor ID (one entry per player and battle). Admins read, export and prune it; a retention setting and a size cap keep the free database from filling up.
+- **Resource dashboard (owner):** database size and row counts per table, translation spend, and the Vercel and Supabase usage figures their APIs expose, with a warning before a free-tier limit is reached.
 - **KvK history:** every past KvK with opponent, result and notes.
 - **Alliance pages:** leaders, power, members and requirements, updated automatically from MightPulse.
 - **Transfers:** a section that admins can switch on or off; when off, a short note naming who to contact about transfers.
@@ -37,7 +41,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 - **Administrators:** full control, including languages and who becomes a moderator.
 - **Moderators:** manage content and regular members.
 - **Members:** view the site; no login needed.
-- Admins and moderators sign in with Discord.
+- Admins and moderators sign in with Discord. The site owner (set in the hosting configuration, not in the site) is always an administrator and is the only one who can appoint administrators; administrators appoint moderators.
 - Players submit sign-ups and bookings with their Governor ID, which the site checks before accepting.
 
 ## Privacy
@@ -61,10 +65,11 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 ## Phases
 
 1. Site layout, languages, home, events, rules, guides and tools. — **done (PR "Phase 1")**; text-size control, remembered preferences and crossfades — **done (PR "Text size and transitions")**
-2. Admin panel with Discord login, roles and the content editor (including the battle plan and formations).
-3. KvK: battle plan with formations, coordinators and instructions — **done (PR "KvK battle plan")**; sign-ups, group lists, assignments and KvK history — open.
+2. Admin panel: Discord sign-in, roles, user management and the battle-plan editor — **done (PR "Admin area")**; the content editor with images for announcements, rules, guides and events, language management and translation fixes — open.
+3. KvK: battle plan with formations, coordinators and instructions — **done (PR "KvK battle plan")**; editor polish (arrows instead of order numbers, language dropdown, live `{{when}}` / `{{date}}` / `{{time}}` / `{{utc}}` tokens in the intro) — **done (PR "Admin area")**. Next, one PR each: rally-leader plan with its own password; organiser checklist; retrospective form with retention controls; then sign-ups, group lists, assignments and KvK history — open.
 4. Alliance pages from MightPulse and the transfer section.
 5. Minister appointment booking and slot allocation.
+6. Owner resource dashboard: own-database figures first (size, rows per table, translation tokens per run), then Vercel and Supabase usage through their management APIs where tokens allow.
 
 ## Operations
 
@@ -72,6 +77,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 - Vercel deploys `main` to production and every pull request to a preview link.
 - Database changes are SQL files in `supabase/migrations/`, applied to Supabase by a GitHub Action when they reach `main`.
 - Logs are structured (JSON in production) with a request id on every API response, so problems can be traced.
+- Player-submitted data (feedback, later sign-ups) is bounded by design: one row per player and battle, short text limits, a per-battle cap, and a retention period after which the Maintenance workflow prunes it; admins can delete a battle's submissions at any time.
 
 ## Open questions
 
