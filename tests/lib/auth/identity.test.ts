@@ -69,7 +69,7 @@ describe("identityFromUser", () => {
       id: "u3",
       email: "mallory@example.com",
       app_metadata: { provider: "discord", providers: ["discord"] },
-      user_metadata: { name: "rudeus4098", full_name: "Rudy", avatar_url: "https://evil.example/owner.png", provider_id: "1" },
+      user_metadata: { name: "the_owner", full_name: "Rudy", avatar_url: "https://evil.example/owner.png", provider_id: "1" },
       identities: [
         {
           id: "987654321",

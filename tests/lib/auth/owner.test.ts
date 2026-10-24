@@ -23,9 +23,9 @@ describe("owner configuration", () => {
   });
 
   it("accepts a comma-separated list (local development: Discord owner plus the dev account)", () => {
-    const owners = parseOwners(" rudeus4098 , dev-admin@kingdom1241.local,, ");
+    const owners = parseOwners(" the_owner , dev-admin@kingdom1241.local,, ");
     expect(owners).toHaveLength(2);
-    expect(isOwnerIdentity({ discordUsername: "rudeus4098", email: null }, owners)).toBe(true);
+    expect(isOwnerIdentity({ discordUsername: "the_owner", email: null }, owners)).toBe(true);
     expect(isOwnerIdentity({ discordUsername: null, email: "dev-admin@kingdom1241.local" }, owners)).toBe(true);
     expect(isOwnerIdentity({ discordUsername: "someone", email: "other@x.y" }, owners)).toBe(false);
     expect(parseOwners("")).toEqual([]);
