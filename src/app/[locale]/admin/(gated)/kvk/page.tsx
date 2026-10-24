@@ -96,7 +96,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
                     <DeleteForm
                       action={deletePlan}
                       hidden={{ locale, id: plan.id }}
-                      confirmText={`Delete "${title}" with all its instructions, coordinators and formations? This cannot be undone.`}
+                      confirmText={`Delete "${title}" with all its instructions, coordinators, formations and player feedback? This cannot be undone.`}
                     />
                   )}
                 </div>

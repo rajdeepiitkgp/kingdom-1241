@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { savePlan } from "@/lib/admin/kvk-actions";
@@ -14,9 +14,16 @@ import { Field, Notice } from "./ui";
 
 export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: string }) {
   const [state, action] = useActionState<ActionState, FormData>(savePlan, IDLE_STATE);
+  // Submitted inside a transition so React doesn't reset the fields to stale defaults after a save (see RetroSettingsForm).
+  const [, startSubmit] = useTransition();
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    startSubmit(() => action(data));
+  };
   const errors = state.errors ?? {};
   return (
-    <form action={action} className="card space-y-5 p-5">
+    <form action={action} onSubmit={submit} className="card space-y-5 p-5">
       <input type="hidden" name="locale" value={locale} />
       {plan && <input type="hidden" name="id" value={plan.id} />}
 
@@ -65,11 +72,11 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-ink">
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="active" defaultChecked={plan?.active ?? false} className="size-4" />
+          <input key={`active-${String(plan?.active ?? false)}`} type="checkbox" name="active" defaultChecked={plan?.active ?? false} className="size-4" />
           Active — the plan players see on /kvk (only one can be active)
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="published" defaultChecked={plan?.published ?? true} className="size-4" />
+          <input key={`published-${String(plan?.published ?? true)}`} type="checkbox" name="published" defaultChecked={plan?.published ?? true} className="size-4" />
           Published
         </label>
       </div>
