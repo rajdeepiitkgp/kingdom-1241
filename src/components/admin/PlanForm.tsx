@@ -48,6 +48,15 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           hint="Enter the UTC time, in the future; players see it in their own time zone."
           error={errors.battleAt}
         />
+        <DateTimeField
+          id="battleEndAt"
+          name="battleEndAt"
+          label="Battle ends (UTC)"
+          defaultValue={toUtcInputValue(plan?.battleEndAt)}
+          hint="Optional, after the start (it may already be over). After this time the page says the battle is over; without it, it keeps saying battle day."
+          error={errors.battleEndAt}
+          allowPast
+        />
         <Field label="Minimum hero stars" htmlFor="minHeroStars" error={errors.minHeroStars}>
           <input id="minHeroStars" name="minHeroStars" type="number" min={0} max={5} className="input" defaultValue={plan?.minHeroStars ?? 4} required />
         </Field>

@@ -57,6 +57,8 @@ describe("mapKvkPlan", () => {
     expect(mapped.coordinators).toEqual([]);
     expect(mapped.password).toBe("secret");
     expect(mapped.battleAt).toBe("2026-10-25T14:00:00.000Z");
+    expect(mapped.battleEndAt).toBeNull(); // optional
+    expect(mapKvkPlan({ ...plan, battle_end_at: "2026-10-25T17:00:00Z" }, [], [], []).battleEndAt).toBe("2026-10-25T17:00:00.000Z");
     expect(mapped.minSkillLevel).toBe(5); // clamped to the 0–5 range
     expect(mapped.minHeroStars).toBe(4);
     expect(mapped.eventType).toBe("kvk"); // default when the column is missing

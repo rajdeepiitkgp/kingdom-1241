@@ -310,6 +310,8 @@ export const UI_STRINGS = {
   "kvk.opponent": { en: "Opponent", de: "Gegner", ko: "상대", pl: "Przeciwnik", ar: "الخصم" },
   "kvk.battleStartsIn": { en: "Battle starts in", de: "Schlacht beginnt in", ko: "전투 시작까지", pl: "Bitwa zaczyna się za", ar: "تبدأ المعركة خلال" },
   "kvk.battleStarted": { en: "Battle day!", de: "Tag der Schlacht!", ko: "전투의 날!", pl: "Dzień bitwy!", ar: "يوم المعركة!" },
+  "kvk.battleLive": { en: "Battle in progress", de: "Schlacht läuft", ko: "전투 진행 중", pl: "Bitwa trwa", ar: "المعركة جارية" },
+  "kvk.battleEnded": { en: "Battle ended", de: "Schlacht beendet", ko: "전투 종료", pl: "Bitwa zakończona", ar: "انتهت المعركة" },
   "kvk.battleAt": { en: "Battle time", de: "Schlachtzeit", ko: "전투 시간", pl: "Czas bitwy", ar: "وقت المعركة" },
   "kvk.updated": { en: "Plan updated", de: "Plan aktualisiert", ko: "계획 업데이트", pl: "Plan zaktualizowano", ar: "آخر تحديث للخطة" },
   "kvk.instructions": { en: "Instructions", de: "Anweisungen", ko: "지침", pl: "Instrukcje", ar: "التعليمات" },

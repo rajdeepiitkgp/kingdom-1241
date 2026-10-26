@@ -20,7 +20,7 @@ export default async function FeedbackPage() {
   const dict = await getDictionary(locale);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <PageHeader icon="📝" title={dict["retro.title"]} subtitle={dict["retro.subtitle"]} />
       <Suspense fallback={<RetroGateSkeleton />}>
         <RetroGate dict={dict} locale={locale} />

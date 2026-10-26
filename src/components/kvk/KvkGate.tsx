@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { getActiveKvkPlan, getAlliances, getHeroes, getOpenRetrospective } from "@/lib/data";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
@@ -36,6 +37,7 @@ export async function KvkGate({ dict, locale }: { dict: Dictionary; locale: stri
   const { password: _password, ...safePlan } = plan;
   void _password;
   // The feedback form may belong to the previous battle; it is linked whenever one is open.
+  await connection();
   const feedbackHref = retro && isOpenNow(retro, new Date()) ? localePath(locale, "/kvk/feedback") : null;
   return (
     <div className="space-y-5">

@@ -28,6 +28,7 @@ export interface PlanInput {
   title: string;
   opponent: string | null;
   battleAt: string | null;
+  battleEndAt: string | null;
   /** Markdown written by the admin; rendered to sanitised HTML on save. */
   introSource: string;
   minHeroStars: number;
@@ -63,6 +64,11 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
     errors.battleAt = "That time is already in the past. A battle is planned ahead; enter a future time (UTC).";
   }
 
+  const battleEndAt = utcDateTimeField(fd, "battleEndAt");
+  if (battleEndAt === undefined) errors.battleEndAt = "Enter the date and time as the form shows them (UTC).";
+  else if (battleEndAt && !battleAt) errors.battleEndAt = "Set the start time first, or clear the end time.";
+  else if (battleEndAt && battleAt && Date.parse(battleEndAt) <= Date.parse(battleAt)) errors.battleEndAt = "The end must be after the start.";
+
   const introSource = textField(fd, "introSource");
   if (introSource.length > 20_000) errors.introSource = "Keep the introduction under 20 000 characters.";
 
@@ -80,6 +86,7 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
       title,
       opponent: optionalText(fd, "opponent"),
       battleAt: battleAt ?? null,
+      battleEndAt: battleEndAt ?? null,
       introSource,
       minHeroStars: minHeroStars ?? 4,
       minSkillLevel: minSkillLevel ?? 5,

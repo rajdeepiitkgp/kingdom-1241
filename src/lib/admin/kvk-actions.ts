@@ -56,10 +56,10 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   const id = uuidField(formData, "id");
   const admin = createAdminClient();
 
-  type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null };
+  type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null; battle_end_at?: string | null };
   let existing: ExistingPlan | null = null;
   if (id) {
-    const { data } = await admin.from("kvk_plans").select("title, intro, intro_source, battle_at").eq("id", id).maybeSingle();
+    const { data } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();
     if (!data) return PLAN_GONE;
     existing = data as ExistingPlan;
   }
@@ -75,7 +75,7 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   const introSource =
     existing && intro === existing.intro ? { ...(existing.intro_source ?? {}), en: input.introSource } : { en: input.introSource };
 
-  const row = {
+  const row: Record<string, unknown> = {
     slug: input.slug,
     event_type: input.eventType,
     title: localizedUpdate(existing?.title, input.title),
@@ -89,6 +89,9 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
     active: input.active,
     published: input.published,
   };
+
+  // The column arrives with migration 0009; until it is applied, a plan without an end time is saved as before.
+  if (input.battleEndAt || (existing && "battle_end_at" in existing)) row.battle_end_at = input.battleEndAt;
 
   if (input.active) {
     // Only one plan can be active (unique partial index): switch the others off first.
@@ -158,6 +161,7 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
       slug: `${String(plan.slug)}-copy-${Date.now().toString(36)}`.slice(0, 80),
       title: { en: copyTitle },
       battle_at: null,
+      ...("battle_end_at" in plan ? { battle_end_at: null } : {}),
       active: false,
       published: false,
     })

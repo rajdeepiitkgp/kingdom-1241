@@ -67,6 +67,17 @@ export function formatUtcTime(date: Date): string {
   return `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())} UTC`;
 }
 
+/** Visitor-local clock time only, e.g. "07:00 PM" (same hour format as formatLocalDateTime). */
+export function formatLocalTime(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+/** "12:00–17:00 UTC", or "22:00 UTC – 03:00 UTC" when the span crosses midnight UTC. */
+export function formatUtcRange(start: Date, end: Date): string {
+  if (start.toISOString().slice(0, 10) !== end.toISOString().slice(0, 10)) return `${formatUtcTime(start)} – ${formatUtcTime(end)}`;
+  return `${pad2(start.getUTCHours())}:${pad2(start.getUTCMinutes())}–${formatUtcTime(end)}`;
+}
+
 /** The visitor's IANA time zone name, e.g. "Europe/Warsaw". */
 export function localTimeZone(): string {
   try {

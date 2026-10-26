@@ -306,6 +306,7 @@ export function mapKvkPlan(row: Row, rules: Row[], coordinators: Row[], formatio
     title: loc(row.title),
     opponent: strOrNull(row.opponent),
     battleAt: row.battle_at ? iso(row.battle_at, "") || null : null,
+    battleEndAt: row.battle_end_at ? iso(row.battle_end_at, "") || null : null,
     intro: loc(row.intro),
     minHeroStars: stars(row.min_hero_stars, 4),
     minSkillLevel: stars(row.min_skill_level, 5),
