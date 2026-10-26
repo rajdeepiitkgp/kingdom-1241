@@ -150,6 +150,7 @@ function buildSeedKvkPlan(now: string): KvkPlanWithSecret {
     title: en(plan.title),
     opponent: plan.opponent,
     battleAt: plan.battleAt,
+    battleEndAt: null,
     intro: en(markdownToHtml(plan.introMarkdown)),
     minHeroStars: plan.minHeroStars,
     minSkillLevel: plan.minSkillLevel,

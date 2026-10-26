@@ -49,6 +49,22 @@ describe("parsePlanForm", () => {
     expect(parsePlanForm(form({ ...valid, battleAt: "" }), { now }).ok).toBe(true);
   });
 
+  it("takes an optional end time that must come after the start", () => {
+    const ok = parsePlanForm(form({ ...valid, battleEndAt: "2026-11-01T17:00" }));
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.value.battleEndAt).toBe("2026-11-01T17:00:00.000Z");
+    const none = parsePlanForm(form(valid));
+    if (none.ok) expect(none.value.battleEndAt).toBeNull();
+    for (const bad of [{ battleEndAt: "2026-11-01T14:00" }, { battleEndAt: "2026-11-01T09:00" }, { battleEndAt: "soon" }, { battleAt: "", battleEndAt: "2026-11-01T17:00" }]) {
+      const result = parsePlanForm(form({ ...valid, ...bad }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(Object.keys(result.errors)).toEqual(["battleEndAt"]);
+    }
+    // Only the start is checked against the clock; the end of a battle that is already over may be entered afterwards.
+    const later = new Date("2026-12-01T00:00:00.000Z");
+    expect(parsePlanForm(form({ ...valid, battleEndAt: "2026-11-01T17:00" }), { now: later, previousBattleAt: "2026-11-01T14:00:00+00:00" }).ok).toBe(true);
+  });
+
   it("reports every invalid field at once", () => {
     const result = parsePlanForm(form({ ...valid, title: "", password: "abc", battleAt: "soon", minHeroStars: "7", introSource: "x".repeat(20_001) }));
     expect(result.ok).toBe(false);

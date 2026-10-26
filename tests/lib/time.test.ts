@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DAY, formatUtcClock, formatUtcDate, formatUtcTime, HOUR, localTimeZone, MINUTE, nextDailyReset, pad2, splitDuration } from "@/lib/time";
+import { DAY, formatLocalTime, formatUtcClock, formatUtcDate, formatUtcRange, formatUtcTime, HOUR, localTimeZone, MINUTE, nextDailyReset, pad2, splitDuration } from "@/lib/time";
 
 describe("nextDailyReset", () => {
   it("is the next 00:00 UTC, never the current moment", () => {
@@ -34,6 +34,13 @@ describe("UTC formatters", () => {
   it("names the weekday and month in the visitor's language", () => {
     expect(formatUtcDate(at, "en-GB")).toMatch(/Fri.*23.*Oct/);
     expect(formatUtcDate(at, "de")).toMatch(/Fr\.?.*23.*Okt/);
+  });
+  it("formats a battle span in UTC, with both days when it crosses midnight", () => {
+    expect(formatUtcRange(new Date("2026-10-24T12:00:00Z"), new Date("2026-10-24T17:00:00Z"))).toBe("12:00–17:00 UTC");
+    expect(formatUtcRange(new Date("2026-10-24T22:00:00Z"), new Date("2026-10-25T03:00:00Z"))).toBe("22:00 UTC – 03:00 UTC");
+  });
+  it("formats a local clock time without the date", () => {
+    expect(formatLocalTime(at, "en")).toMatch(/^\d{2}:\d{2}/);
   });
   it("always returns a time zone name", () => {
     expect(typeof localTimeZone()).toBe("string");

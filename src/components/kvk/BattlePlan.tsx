@@ -64,7 +64,7 @@ export function BattlePlan({
           <LockButton label={dict["kvk.lock"]} />
         </div>
         <p className="relative mt-2 text-xs font-semibold text-ink-faint">{dict["kvk.cycle"]}</p>
-        {plan.battleAt && <BattleCountdown battleAt={plan.battleAt} dict={dict} locale={locale} />}
+        {plan.battleAt && <BattleCountdown battleAt={plan.battleAt} battleEndAt={plan.battleEndAt} dict={dict} locale={locale} />}
         {/* {{when}} / {{date}} / {{time}} / {{utc}} in the intro are filled in per visitor (see battle-tokens.ts). */}
         {intro &&
           (hasBattleTokens(intro) ? (

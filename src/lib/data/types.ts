@@ -204,6 +204,8 @@ export interface KvkPlan {
   opponent: string | null;
   /** Start of the castle battle, ISO timestamp (UTC), or null when not set yet. */
   battleAt: string | null;
+  /** End of the battle (UTC), or null when not set: the page then keeps saying "Battle day!" after the start. */
+  battleEndAt: string | null;
   /** Sanitised HTML. */
   intro: Localized;
   minHeroStars: number;

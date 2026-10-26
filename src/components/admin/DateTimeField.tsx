@@ -38,6 +38,7 @@ export function DateTimeField({
   defaultValue,
   hint,
   error,
+  allowPast = false,
 }: {
   id: string;
   name: string;
@@ -45,6 +46,8 @@ export function DateTimeField({
   defaultValue: string;
   hint: string;
   error?: string;
+  /** For times that may lie behind us (the end of a battle that is over): no minimum, no warning. */
+  allowPast?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(defaultValue);
@@ -61,12 +64,12 @@ export function DateTimeField({
 
   const ms = value ? Date.parse(`${value}Z`) : Number.NaN;
   const valid = !Number.isNaN(ms);
-  const past = valid && now !== null && ms < now.getTime();
+  const past = !allowPast && valid && now !== null && ms < now.getTime();
   // The picker greys out the past, except for an old plan whose stored time
   // already lies behind us (it must stay saveable; the server allows an unchanged past time).
   const storedMs = defaultValue ? Date.parse(`${defaultValue}Z`) : Number.NaN;
   const storedInPast = !Number.isNaN(storedMs) && now !== null && storedMs < now.getTime();
-  const min = now && !storedInPast ? now.toISOString().slice(0, 16) : undefined;
+  const min = now && !storedInPast && !allowPast ? now.toISOString().slice(0, 16) : undefined;
   const clear = () => {
     if (input.current) input.current.value = "";
     setValue("");
