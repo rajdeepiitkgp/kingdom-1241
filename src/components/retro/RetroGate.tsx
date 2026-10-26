@@ -1,5 +1,6 @@
 import { Castle, Swords } from "lucide-react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { RichText } from "@/components/content/RichText";
 import { getAlliances, getSettings } from "@/lib/data";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
@@ -23,6 +24,8 @@ export async function RetroGate({ dict, locale }: { dict: Dictionary; locale: st
   const { retro, unlocked } = access;
   if (!unlocked) return <UnlockCard dict={dict} />;
 
+  // Whether the form is still open depends on the clock: opt in to request time before reading it.
+  await connection();
   const open = isOpenNow(retro, new Date());
   const [alliances, settings] = await Promise.all([getAlliances(), getSettings()]);
   const title = pick(retro.title, locale) || pick(retro.battle.title, locale);
@@ -89,7 +92,7 @@ function Note({ icon, text }: { icon: string; text: string }) {
 
 export function RetroGateSkeleton() {
   return (
-    <div className="mx-auto max-w-2xl animate-pulse space-y-4" aria-hidden>
+    <div className="animate-pulse space-y-4" aria-hidden>
       <div className="card h-40 bg-card-soft" />
       <div className="card h-72 bg-card-soft" />
     </div>
