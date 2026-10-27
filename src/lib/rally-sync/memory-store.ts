@@ -64,7 +64,7 @@ async function demoRoom(m: Memory): Promise<RoomRow> {
     ["Demo leader B", 95],
     ["Demo leader C", 61],
   ] as const) {
-    const leader: LeaderRow = { id: randomUUID(), roomId: room.id, name, marchSeconds, previousMarchSeconds: null, marchChangedAt: null, tokenHash: null, createdAt: now };
+    const leader: LeaderRow = { id: randomUUID(), roomId: room.id, name, marchSeconds, status: "active", nextMarchSeconds: null, previousMarchSeconds: null, marchChangedAt: null, tokenHash: null, createdAt: now };
     m.leaders.set(leader.id, leader);
   }
   return room;
@@ -119,7 +119,7 @@ export function memoryStore(): RallyStore {
       if (all.filter((l) => l.roomId === leader.roomId).length >= MAX_LEADERS_PER_ROOM) throw new RallyStoreError("leader_limit", "rally_sync_leader_limit");
       const open = new Set(openRooms(m, now).map((r) => r.id));
       if (all.filter((l) => open.has(l.roomId)).length >= MAX_LEADERS_TOTAL) throw new RallyStoreError("total_limit", "rally_sync_total_limit");
-      const row: LeaderRow = { ...leader, id: randomUUID(), previousMarchSeconds: null, marchChangedAt: null, createdAt: iso() };
+      const row: LeaderRow = { ...leader, status: leader.status ?? "active", id: randomUUID(), nextMarchSeconds: null, previousMarchSeconds: null, marchChangedAt: null, createdAt: iso() };
       m.leaders.set(row.id, row);
       return row;
     },

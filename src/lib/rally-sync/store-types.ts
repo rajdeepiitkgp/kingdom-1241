@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
-import type { HitHistoryEntry, RoomMode } from "./room";
+import type { HitHistoryEntry, LeaderStatus, RoomMode } from "./room";
 
 /** Rows and the storage interface of Rally Sync (implementations in store.ts and memory-store.ts). */
 
@@ -29,6 +29,8 @@ export interface LeaderRow {
   roomId: string;
   name: string;
   marchSeconds: number;
+  status: LeaderStatus;
+  nextMarchSeconds: number | null;
   previousMarchSeconds: number | null;
   marchChangedAt: string | null;
   tokenHash: string | null;
@@ -42,8 +44,8 @@ export type NewRoom = Pick<
 export type RoomPatch = Partial<
   Pick<RoomRow, "title" | "passwordHash" | "coordinatorHash" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "enemyHitAt" | "hitAt" | "hitSetAt" | "history">
 >;
-export type NewLeader = Pick<LeaderRow, "roomId" | "name" | "marchSeconds" | "tokenHash">;
-export type LeaderPatch = Partial<Pick<LeaderRow, "name" | "marchSeconds" | "previousMarchSeconds" | "marchChangedAt">>;
+export type NewLeader = Pick<LeaderRow, "roomId" | "name" | "marchSeconds" | "tokenHash"> & { status?: LeaderStatus };
+export type LeaderPatch = Partial<Pick<LeaderRow, "name" | "marchSeconds" | "status" | "nextMarchSeconds" | "previousMarchSeconds" | "marchChangedAt">>;
 
 /** Why a write was refused. The first four come from the database's limits. */
 export type StoreProblem = "room_limit" | "leader_limit" | "total_limit" | "room_closed" | "duplicate" | "failed";

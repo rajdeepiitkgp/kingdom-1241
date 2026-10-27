@@ -118,10 +118,25 @@ export interface RoomView {
   lastSeenAt: string;
 }
 
+/**
+ * Whether a leader takes part: "active" leaders are in the rally that is set
+ * now; "next" leaders joined (or came back) while it was running and are in
+ * from the next hit time; "inactive" leaders sit out (no start time, no
+ * sounds, not counted by Re-sync) until they come back.
+ */
+export type LeaderStatus = "active" | "next" | "inactive";
+
+export function parseLeaderStatus(value: unknown): LeaderStatus {
+  return value === "next" || value === "inactive" ? value : "active";
+}
+
 export interface LeaderView {
   id: string;
   name: string;
   marchSeconds: number;
+  status: LeaderStatus;
+  /** A march time the leader changed while a rally was running: it waits for the next hit time (see leaderEdit). */
+  nextMarchSeconds: number | null;
   previousMarchSeconds: number | null;
   marchChangedAt: string | null;
 }
@@ -132,6 +147,77 @@ export interface RoomState {
   leaders: LeaderView[];
   /** The server's clock when the answer was made, for the page's clock correction. */
   serverNow: number;
+}
+
+// ---------------------------------------------------------------------------
+// March time changes during a rally
+// ---------------------------------------------------------------------------
+
+/** A rally is running: the hit time is set and still ahead (`now` on the game clock). */
+export function rallyRunning(hitAt: string | null, now: number): boolean {
+  return hitAt !== null && Date.parse(hitAt) > now;
+}
+
+/** The march time the next hit time is worked out with: the one waiting for the next rally, if any. */
+export function nextRallyMarch(leader: Pick<LeaderView, "marchSeconds" | "nextMarchSeconds">): number {
+  return leader.nextMarchSeconds ?? leader.marchSeconds;
+}
+
+/** The march times Re-sync plans the next rally with: everyone but those sitting out, with their next-rally values. */
+export function resyncMarches(leaders: ReadonlyArray<Pick<LeaderView, "marchSeconds" | "nextMarchSeconds" | "status">>): number[] {
+  return leaders.filter((l) => l.status !== "inactive").map(nextRallyMarch);
+}
+
+/** A new leader: in the rally at once, unless one is already running (then from the next one). */
+export function joinStatus(running: boolean): LeaderStatus {
+  return running ? "next" : "active";
+}
+
+/**
+ * Sitting out or coming back (the leader or the coordinator). Sitting out
+ * applies at once: it changes nobody else's times. Coming back during a
+ * running rally counts from the next one, like joining.
+ */
+export function statusAfter(current: LeaderStatus, active: boolean, running: boolean): LeaderStatus {
+  if (!active) return "inactive";
+  return current === "inactive" ? joinStatus(running) : current;
+}
+
+export interface LeaderEdit {
+  name: string;
+  marchSeconds?: number;
+  nextMarchSeconds: number | null;
+  previousMarchSeconds?: number;
+  marchChangedAt?: string;
+}
+
+/**
+ * What saving a leader's entry writes. While a rally is running, a leader in
+ * it must not move their own start in the middle of the countdown with a new
+ * march time: it waits in `nextMarchSeconds` until the coordinator sets the
+ * next hit time (typing the current value again cancels it). Otherwise, and
+ * always for the coordinator (who is in charge and can Re-sync), it applies at
+ * once; during a rally the old value is kept so the cards can flag "start
+ * time changed". A coordinator's edit that leaves the march time alone (a name
+ * fix) keeps a leader's waiting value.
+ */
+export function leaderEdit(
+  leader: Pick<LeaderView, "marchSeconds" | "nextMarchSeconds" | "status">,
+  input: { name: string; marchSeconds: number },
+  { running, byCoordinator, at }: { running: boolean; byCoordinator: boolean; at: string },
+): LeaderEdit {
+  // Only a leader who is in the running rally has a start to protect.
+  const inRally = running && leader.status === "active";
+  if (inRally && !byCoordinator) {
+    return { name: input.name, nextMarchSeconds: input.marchSeconds === leader.marchSeconds ? null : input.marchSeconds };
+  }
+  const changed = input.marchSeconds !== leader.marchSeconds;
+  return {
+    name: input.name,
+    marchSeconds: input.marchSeconds,
+    nextMarchSeconds: byCoordinator && !changed ? leader.nextMarchSeconds : null,
+    ...(changed && inRally ? { previousMarchSeconds: leader.marchSeconds, marchChangedAt: at } : {}),
+  };
 }
 
 /** The march time changed after the hit time was set, so this leader's start moved. */

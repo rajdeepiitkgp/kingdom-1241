@@ -8,7 +8,21 @@ import { ADDRESS_POLICY, recordFailure, retryAfter, triesLeft } from "@/lib/kvk/
 import { addressHash, clearThrottle, loadThrottle, saveThrottle } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId, type Logger } from "@/lib/log";
 import { hashPassword, hashToken, inviteKey, isValidInviteKey, newToken, roomAccessToken, roomCookieName, roomCookieOptions, tokenMatches, verifyPassword } from "./access";
-import { MAX_LEADERS_PER_ROOM, normalizeRoomCode, parseMarch, parseName, parsePassword, parseSettings, pushHistory, type RoomMode } from "./room";
+import {
+  joinStatus,
+  leaderEdit,
+  MAX_LEADERS_PER_ROOM,
+  normalizeRoomCode,
+  parseMarch,
+  parseName,
+  parsePassword,
+  parseSettings,
+  pushHistory,
+  rallyRunning,
+  resyncMarches,
+  type RoomMode,
+  statusAfter,
+} from "./room";
 import { findOpenRoom, hasRoomAccess } from "./session";
 import { type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
 import { ceilToSecond, clampGameOffset, counterHit, earliestHit, parseDuration, parseUtcClock, toGameTime } from "./timing";
@@ -64,6 +78,7 @@ export type CoordinatorOp =
   | { type: "addLeader"; name: string; marchSeconds: number }
   | { type: "editLeader"; leaderId: string; name: string; marchSeconds: number }
   | { type: "removeLeader"; leaderId: string }
+  | { type: "setActive"; leaderId: string; active: boolean }
   | { type: "password"; password: string }
   | { type: "invite" }
   | { type: "destroy" };
@@ -165,17 +180,13 @@ function parseLeader(input: LeaderInput): LeaderInput | null {
   return name.ok && march.ok ? { name: name.value, marchSeconds: march.value } : null;
 }
 
-/** A changed march time after the hit time was set keeps the old value, so the cards can flag "start time changed". */
-function leaderEdit(room: RoomRow, leader: LeaderRow, input: LeaderInput) {
-  const marchChanged = input.marchSeconds !== leader.marchSeconds;
-  return {
-    name: input.name,
-    marchSeconds: input.marchSeconds,
-    ...(marchChanged && room.hitAt ? { previousMarchSeconds: leader.marchSeconds, marchChangedAt: new Date().toISOString() } : {}),
-  };
+/** A leader's entry saved by the leader or the coordinator (the rules are in leaderEdit); `now` is on the game clock. */
+function editPatch(room: RoomRow, leader: LeaderRow, input: LeaderInput, now: number, byCoordinator: boolean) {
+  return leaderEdit(leader, input, { running: rallyRunning(room.hitAt, now), byCoordinator, at: new Date().toISOString() });
 }
 
-export async function joinRoom(code: string, input: LeaderInput): Promise<SyncResult<{ leaderId: string; token: string }>> {
+/** Joining as a rally leader. During a running rally (on the joiner's game clock) they are in from the next one. */
+export async function joinRoom(code: string, input: LeaderInput, gameOffsetSeconds = 0): Promise<SyncResult<{ leaderId: string; token: string }>> {
   const { log } = await context();
   const opened = await openUnlocked(code);
   if ("error" in opened) return { ok: false, error: opened.error };
@@ -185,7 +196,8 @@ export async function joinRoom(code: string, input: LeaderInput): Promise<SyncRe
   try {
     if ((await store.leaders(room.id)).length >= MAX_LEADERS_PER_ROOM) return { ok: false, error: "leader_limit" };
     const token = newToken();
-    const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, tokenHash: hashToken(token) });
+    const running = rallyRunning(room.hitAt, toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds)));
+    const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, status: joinStatus(running), tokenHash: hashToken(token) });
     log.info("Leader joined", { room: room.code, leader: row.id });
     return { ok: true, leaderId: row.id, token };
   } catch (error) {
@@ -201,18 +213,40 @@ async function ownLeader(code: string, leaderId: string, token: string): Promise
   return { ...opened, leader };
 }
 
-export async function updateMyLeader(code: string, leaderId: string, token: string, input: LeaderInput): Promise<SyncResult> {
+/**
+ * The leader's own entry. `gameOffsetSeconds` is their game-clock adjustment:
+ * whether a rally is still running (and a new march time waits for the next
+ * one) is decided on their game clock, like the countdown they see.
+ */
+export async function updateMyLeader(code: string, leaderId: string, token: string, input: LeaderInput, gameOffsetSeconds = 0): Promise<SyncResult> {
   const { log } = await context();
   try {
     const own = await ownLeader(code, leaderId, token);
     if ("error" in own) return { ok: false, error: own.error };
     const leader = parseLeader(input);
     if (!leader) return { ok: false, error: "invalid" };
-    await own.store.updateLeader(own.leader.id, leaderEdit(own.room, own.leader, leader));
+    const now = toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds));
+    await own.store.updateLeader(own.leader.id, editPatch(own.room, own.leader, leader, now, false));
     log.info("Leader updated their entry", { room: own.room.code, leader: own.leader.id });
     return { ok: true };
   } catch (error) {
     return storeError(error, log, "Updating a leader");
+  }
+}
+
+/** Sitting out or coming back (see statusAfter); "now" on the leader's game clock. */
+export async function setMyActive(code: string, leaderId: string, token: string, active: boolean, gameOffsetSeconds = 0): Promise<SyncResult> {
+  const { log } = await context();
+  try {
+    const own = await ownLeader(code, leaderId, token);
+    if ("error" in own) return { ok: false, error: own.error };
+    const running = rallyRunning(own.room.hitAt, toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds)));
+    const status = statusAfter(own.leader.status, active === true, running);
+    if (status !== own.leader.status) await own.store.updateLeader(own.leader.id, { status });
+    log.info("Leader set their status", { room: own.room.code, leader: own.leader.id, status });
+    return { ok: true };
+  } catch (error) {
+    return storeError(error, log, "Setting a leader's status");
   }
 }
 
@@ -248,6 +282,25 @@ function hitPatch(room: RoomRow, hitAt: number | null, now: number, enemyHitAt: 
 }
 
 /**
+ * A new hit time (or none) starts the next rally: march times that waited for
+ * it become the leaders' march times, and leaders who joined or came back
+ * during the last one are in. Those sitting out stay out. Called before the
+ * room is updated, so pages that refetch on the room's ping see both together.
+ */
+async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]): Promise<void> {
+  await Promise.all(
+    leaders
+      .filter((l) => l.nextMarchSeconds !== null || l.status === "next")
+      .map((l) =>
+        store.updateLeader(l.id, {
+          ...(l.nextMarchSeconds !== null ? { marchSeconds: l.nextMarchSeconds, nextMarchSeconds: null } : {}),
+          ...(l.status === "next" ? { status: "active" as const } : {}),
+        }),
+      ),
+  );
+}
+
+/**
  * One coordinator change. `gameOffsetSeconds` is the coordinator's game-clock
  * adjustment: typed times are game times as they are, while Re-sync, "lands
  * in" and the "already passed" check count from the coordinator's game "now".
@@ -271,7 +324,7 @@ export async function coordinate(code: string, token: string, op: CoordinatorOp,
         const settings = parseSettings(op);
         if (!settings.ok) return { ok: false, error: "invalid" };
         const patch: RoomPatch = { ...settings.value };
-        // Counter-rally: a new offset moves our hit along with it.
+        // Counter-rally: a new offset moves our hit along with it (still the same rally, so waiting march times keep waiting).
         if (settings.value.mode === "counter" && room.enemyHitAt && settings.value.counterOffsetSeconds !== room.counterOffsetSeconds) {
           const enemy = Date.parse(room.enemyHitAt);
           Object.assign(patch, hitPatch(room, counterHit(enemy, settings.value.counterOffsetSeconds), now, enemy));
@@ -283,11 +336,14 @@ export async function coordinate(code: string, token: string, op: CoordinatorOp,
         const hitAt = parseUtcClock(String(op.text ?? ""), now);
         if (hitAt === null) return { ok: false, error: "invalid" };
         if (hitAt <= now) return { ok: false, error: "past" };
+        await startNextRally(store, await store.leaders(room.id));
         await store.updateRoom(room.id, hitPatch(room, hitAt, now));
         return done();
       }
       case "resync": {
-        const marches = (await store.leaders(room.id)).map((l) => l.marchSeconds);
+        const leaders = await store.leaders(room.id);
+        const marches = resyncMarches(leaders);
+        await startNextRally(store, leaders);
         await store.updateRoom(room.id, hitPatch(room, earliestHit(now, room.rallyWaitSeconds, marches, room.bufferSeconds), now));
         return done({ leaders: marches.length });
       }
@@ -299,10 +355,12 @@ export async function coordinate(code: string, token: string, op: CoordinatorOp,
         if (enemy === null) return { ok: false, error: "invalid" };
         const hitAt = counterHit(enemy, room.counterOffsetSeconds);
         if (hitAt <= now) return { ok: false, error: "past" };
+        await startNextRally(store, await store.leaders(room.id));
         await store.updateRoom(room.id, { ...hitPatch(room, ceilToSecond(hitAt), now, enemy), mode: "counter" });
         return done();
       }
       case "clearHit": {
+        await startNextRally(store, await store.leaders(room.id));
         await store.updateRoom(room.id, hitPatch(room, null, now));
         return done();
       }
@@ -318,8 +376,15 @@ export async function coordinate(code: string, token: string, op: CoordinatorOp,
         if (!leader) return { ok: false, error: "invalid" };
         const existing = (await store.leaders(room.id)).find((l) => l.id === op.leaderId);
         if (!existing) return { ok: false, error: "missing" };
-        await store.updateLeader(existing.id, leaderEdit(room, existing, leader));
+        await store.updateLeader(existing.id, editPatch(room, existing, leader, now, true));
         return done({ leader: existing.id });
+      }
+      case "setActive": {
+        const existing = (await store.leaders(room.id)).find((l) => l.id === op.leaderId);
+        if (!existing) return { ok: false, error: "missing" };
+        const status = statusAfter(existing.status, op.active === true, rallyRunning(room.hitAt, now));
+        if (status !== existing.status) await store.updateLeader(existing.id, { status });
+        return done({ leader: existing.id, status });
       }
       case "removeLeader": {
         const existing = (await store.leaders(room.id)).find((l) => l.id === op.leaderId);

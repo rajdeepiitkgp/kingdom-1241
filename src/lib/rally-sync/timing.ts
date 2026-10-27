@@ -16,7 +16,8 @@ import { pad2 } from "@/lib/time";
  */
 
 export const DEFAULT_RALLY_WAIT_SECONDS = 300;
-export const DEFAULT_BUFFER_SECONDS = 120;
+/** Re-sync's hit already counts the longest march, so the buffer is only the slowest leader's time to get ready. */
+export const DEFAULT_BUFFER_SECONDS = 30;
 export const DEFAULT_COUNTER_OFFSET_SECONDS = 3;
 
 export const MIN_RALLY_WAIT_SECONDS = 10;
@@ -100,16 +101,23 @@ export function isTooLate(start: number, hitSetAt: number | null): boolean {
 export interface TimedLeader {
   name: string;
   marchSeconds: number;
+  /** Only "active" leaders are in the rally that is set now (see LeaderStatus in room.ts). */
+  status?: "active" | "next" | "inactive";
 }
 
 /**
  * Leaders with their start times, earliest start first (the longest march
- * starts first; without a hit time the order is the same). Ties by name.
+ * starts first; without a hit time the order is the same), leaders sitting
+ * out last. Ties by name. Leaders who aren't in this rally get no start time.
  */
 export function withStartTimes<T extends TimedLeader>(leaders: readonly T[], hitAt: number | null, rallyWaitSeconds: number): Array<T & { startAt: number | null }> {
+  const out = (l: TimedLeader) => (l.status === "inactive" ? 1 : 0);
   return leaders
-    .map((leader) => ({ ...leader, startAt: hitAt === null ? null : startAt(hitAt, rallyWaitSeconds, leader.marchSeconds) }))
-    .sort((a, b) => b.marchSeconds - a.marchSeconds || a.name.localeCompare(b.name));
+    .map((leader) => ({
+      ...leader,
+      startAt: hitAt === null || (leader.status ?? "active") !== "active" ? null : startAt(hitAt, rallyWaitSeconds, leader.marchSeconds),
+    }))
+    .sort((a, b) => out(a) - out(b) || b.marchSeconds - a.marchSeconds || a.name.localeCompare(b.name));
 }
 
 export type SoundCue = { at: number; kind: "chime" } | { at: number; kind: "tick"; step: number } | { at: number; kind: "go" };
@@ -143,15 +151,49 @@ export function parseDuration(text: string): number | null {
  * moved by a day.
  */
 export function parseUtcClock(text: string, now: number): number | null {
+  const time = clockSeconds(text);
+  if (time === null) return null;
+  const day = new Date(now);
+  const candidate = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()) + time * SECOND;
+  return candidate < now - 3600 * SECOND ? candidate + DAY_SECONDS * SECOND : candidate;
+}
+
+const DAY_SECONDS = 24 * 3600;
+
+/** A clock time in any of parseUtcClock's spellings → seconds since midnight. */
+function clockSeconds(text: string): number | null {
   const trimmed = text.trim();
   const compact = /^\d{4}(\d{2})?$/.test(trimmed) ? trimmed.match(/\d{2}/g) : null;
   const parts = compact ?? /^(\d{1,2})[:.\s]\s*(\d{2})(?:[:.\s]\s*(\d{2}))?$/.exec(trimmed)?.slice(1);
   if (!parts) return null;
   const [hours, minutes, seconds] = [Number(parts[0]), Number(parts[1]), Number(parts[2] ?? 0)];
   if (hours > 23 || minutes > 59 || seconds > 59) return null;
-  const day = new Date(now);
-  const candidate = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hours, minutes, seconds);
-  return candidate < now - 3600 * SECOND ? candidate + 24 * 3600 * SECOND : candidate;
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/** What a time field holds: plain seconds ("120"), a duration ("5:00" or "300") or a clock time ("14:30:00"). */
+export type StepKind = "seconds" | "duration" | "clock";
+
+/**
+ * A time field moved by `delta` seconds (the arrow keys), written back the way
+ * it was typed: plain seconds stay plain (empty counts as 0), "5:00" stays
+ * m:ss, a clock time comes back as HH:MM:SS and wraps at midnight. Seconds and
+ * durations stay within min…max. Null when the text isn't a time.
+ */
+export function stepTime(text: string, delta: number, kind: StepKind, min = 0, max = Number.MAX_SAFE_INTEGER): string | null {
+  const trimmed = text.trim();
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  if (kind === "clock") {
+    const time = clockSeconds(trimmed);
+    if (time === null) return null;
+    const next = (((time + delta) % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS;
+    return `${pad2(Math.floor(next / 3600))}:${pad2(Math.floor((next % 3600) / 60))}:${pad2(next % 60)}`;
+  }
+  if (kind === "seconds") return /^\d{0,5}$/.test(trimmed) ? String(clamp(Number(trimmed) + delta)) : null;
+  const seconds = parseDuration(trimmed);
+  if (seconds === null) return null;
+  const next = clamp(seconds + delta);
+  return trimmed.includes(":") ? formatSeconds(next) : String(next);
 }
 
 /** 42 → "0:42", 272 → "4:32", 3723 → "1:02:03"; negative values get a minus. */

@@ -10,6 +10,7 @@ import {
   isTooLate,
   parseDuration,
   parseUtcClock,
+  stepTime,
   secondsUntil,
   soundCues,
   startAt,
@@ -143,5 +144,45 @@ describe("rally sync timing", () => {
     expect(formatSeconds(3723)).toBe("1:02:03");
     expect(formatSeconds(-5)).toBe("-0:05");
     expect(ceilToSecond(1_000_001)).toBe(1_001_000);
+  });
+
+  it("steps a time field with the arrow keys and keeps the way it was typed", () => {
+    // Plain seconds (buffer, offset, march): empty counts as 0, clamped to the field's range.
+    expect(stepTime("120", 1, "seconds", 0, 600)).toBe("121");
+    expect(stepTime("120", -10, "seconds", 0, 600)).toBe("110");
+    expect(stepTime("", 1, "seconds")).toBe("1");
+    expect(stepTime("2", -10, "seconds", 0, 10)).toBe("0");
+    expect(stepTime("600", 10, "seconds", 0, 600)).toBe("600");
+    expect(stepTime("12a", 1, "seconds")).toBeNull();
+    // Durations stay m:ss when typed that way, plain seconds otherwise.
+    expect(stepTime("5:00", 1, "duration", 10, 3600)).toBe("5:01");
+    expect(stepTime("5:00", -10, "duration", 10, 3600)).toBe("4:50");
+    expect(stepTime("300", 1, "duration", 10, 3600)).toBe("301");
+    expect(stepTime("0:15", -10, "duration", 10, 3600)).toBe("0:10");
+    expect(stepTime("", 1, "duration")).toBeNull();
+    // Clock times come back as HH:MM:SS and wrap at midnight.
+    expect(stepTime("14:30", 1, "clock")).toBe("14:30:01");
+    expect(stepTime("14:30:59", 1, "clock")).toBe("14:31:00");
+    expect(stepTime("23:59:55", 10, "clock")).toBe("00:00:05");
+    expect(stepTime("00:00:03", -10, "clock")).toBe("23:59:53");
+    expect(stepTime("25:00", 1, "clock")).toBeNull();
+  });
+
+  it("gives start times only to leaders in this rally and lists those sitting out last", () => {
+    const hit = Date.parse("2026-11-07T12:10:00Z");
+    const timed = withStartTimes(
+      [
+        { name: "Out", marchSeconds: 300, status: "inactive" as const },
+        { name: "Late joiner", marchSeconds: 90, status: "next" as const },
+        { name: "In", marchSeconds: 60, status: "active" as const },
+      ],
+      hit,
+      300,
+    );
+    expect(timed.map((l) => [l.name, l.startAt])).toEqual([
+      ["Late joiner", null],
+      ["In", hit - 360_000],
+      ["Out", null],
+    ]);
   });
 });

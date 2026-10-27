@@ -64,6 +64,8 @@ export function leaderView(leader: LeaderRow): LeaderView {
     id: leader.id,
     name: leader.name,
     marchSeconds: leader.marchSeconds,
+    status: leader.status,
+    nextMarchSeconds: leader.nextMarchSeconds,
     previousMarchSeconds: leader.previousMarchSeconds,
     marchChangedAt: leader.marchChangedAt,
   };

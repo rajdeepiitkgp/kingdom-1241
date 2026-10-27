@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import { memoryStore } from "./memory-store";
 import { pruneClosedRooms } from "./prune";
-import { parseHistory } from "./room";
+import { parseHistory, parseLeaderStatus } from "./room";
 import { type LeaderPatch, type LeaderRow, RallyStoreError, type RallyStore, type RoomPatch, type RoomRow, type StoreProblem } from "./store-types";
 
 export * from "./store-types";
@@ -28,7 +28,7 @@ export function rallyStore(): RallyStore | null {
 
 const ROOM_COLUMNS =
   "id, code, title, password_hash, coordinator_hash, channel_key, mode, rally_wait_seconds, buffer_seconds, counter_offset_seconds, enemy_hit_at, hit_at, hit_set_at, hit_history, created_by, created_by_name, last_seen_at, created_at";
-const LEADER_COLUMNS = "id, room_id, name, march_seconds, previous_march_seconds, march_changed_at, token_hash, created_at";
+const LEADER_COLUMNS = "id, room_id, name, march_seconds, status, next_march_seconds, previous_march_seconds, march_changed_at, token_hash, created_at";
 
 type Row = Record<string, unknown>;
 
@@ -65,6 +65,8 @@ export function mapLeaderRow(row: Row): LeaderRow {
     roomId: text(row.room_id),
     name: text(row.name),
     marchSeconds: Number(row.march_seconds) || 0,
+    status: parseLeaderStatus(row.status),
+    nextMarchSeconds: optionalNumber(row.next_march_seconds),
     previousMarchSeconds: optionalNumber(row.previous_march_seconds),
     marchChangedAt: optionalText(row.march_changed_at),
     tokenHash: optionalText(row.token_hash),
@@ -89,6 +91,8 @@ const ROOM_PATCH_COLUMNS: Record<keyof RoomPatch, string> = {
 const LEADER_PATCH_COLUMNS: Record<keyof LeaderPatch, string> = {
   name: "name",
   marchSeconds: "march_seconds",
+  status: "status",
+  nextMarchSeconds: "next_march_seconds",
   previousMarchSeconds: "previous_march_seconds",
   marchChangedAt: "march_changed_at",
 };
@@ -182,7 +186,7 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
     async insertLeader(leader) {
       const { data, error } = await admin
         .from("rally_sync_leaders")
-        .insert({ room_id: leader.roomId, name: leader.name, march_seconds: leader.marchSeconds, token_hash: leader.tokenHash })
+        .insert({ room_id: leader.roomId, name: leader.name, march_seconds: leader.marchSeconds, status: leader.status ?? "active", token_hash: leader.tokenHash })
         .select(LEADER_COLUMNS)
         .single();
       if (error) fail("Adding a leader", error);
