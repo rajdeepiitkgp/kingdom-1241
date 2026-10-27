@@ -23,6 +23,9 @@ const EDITABLE_TEXT_COLUMNS: Record<string, readonly string[]> = {
   kvk_leader_briefs: ["intro"],
   kvk_leader_rules: ["text"],
   kvk_rally_leaders: ["target", "position", "note"],
+  kvk_checklist_briefs: ["intro"],
+  kvk_checklist_items: ["text", "note"],
+  kvk_checklist_rules: ["text"],
 };
 
 export const TEXT_LIMITS: Record<string, number> = { title: 120, intro: 20000, text: 400, note: 200, target: 120, position: 120 };

@@ -3,10 +3,11 @@ import Link from "next/link";
 import { adminPath } from "@/lib/auth/paths";
 
 /** The pages of one battle in the admin area; each public page has its own password. */
-export function PlanEditorTabs({ locale, planId, current }: { locale: string; planId: string; current: "plan" | "leaders" }) {
+export function PlanEditorTabs({ locale, planId, current }: { locale: string; planId: string; current: "plan" | "leaders" | "checklist" }) {
   const tabs = [
     { key: "plan", href: adminPath(locale, `/kvk/${planId}`), label: "⚔️ Battle plan (all players)" },
     { key: "leaders", href: adminPath(locale, `/kvk/${planId}/leaders`), label: "👑 Rally leaders" },
+    { key: "checklist", href: adminPath(locale, `/kvk/${planId}/checklist`), label: "🎖️ Commander checklist" },
   ] as const;
   return (
     <nav className="flex flex-wrap gap-2 rounded-2xl bg-card-soft p-1.5" aria-label="Pages of this battle">

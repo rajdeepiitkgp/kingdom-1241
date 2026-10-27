@@ -6,9 +6,9 @@ import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
 import { DeleteForm } from "@/components/admin/DeleteForm";
 import { LanguagePicker } from "@/components/admin/LanguagePicker";
-import { LeaderBriefForm } from "@/components/admin/LeaderBriefForm";
 import { LeaderRuleForm } from "@/components/admin/LeaderRuleForm";
 import { MoveButtons } from "@/components/admin/MoveButtons";
+import { PageBriefForm } from "@/components/admin/PageBriefForm";
 import { PendingRefresher } from "@/components/admin/PendingRefresher";
 import { PlanEditorTabs } from "@/components/admin/PlanEditorTabs";
 import { RallyLeaderForm } from "@/components/admin/RallyLeaderForm";
@@ -128,7 +128,7 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
       </p>
 
       <AdminSection id="leader-page" title="Leader page" hint="Its own password (not the battle plan's) and the instructions above the rallies.">
-        <LeaderBriefForm locale={locale} planId={plan.planId} brief={plan.brief} />
+        <PageBriefForm area="leaders" locale={locale} planId={plan.planId} brief={plan.brief} />
       </AdminSection>
 
       {plan.brief && (

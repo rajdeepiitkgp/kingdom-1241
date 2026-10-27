@@ -1,5 +1,5 @@
-import { mapKvkCoordinator, mapKvkFormation, mapKvkLeaderRule, mapKvkPlan, mapKvkRallyLeader, mapKvkRule } from "@/lib/data/mappers";
-import type { KvkEventType, KvkLeaderRule, KvkPlanWithSecret, KvkRallyLeader } from "@/lib/data/types";
+import { mapKvkChecklistItem, mapKvkChecklistRule, mapKvkCoordinator, mapKvkFormation, mapKvkLeaderRule, mapKvkPlan, mapKvkRallyLeader, mapKvkRule } from "@/lib/data/mappers";
+import type { KvkChecklistItem, KvkChecklistRule, KvkEventType, KvkLeaderRule, KvkPlanWithSecret, KvkRallyLeader } from "@/lib/data/types";
 import { pick, type Localized } from "@/lib/i18n/localized";
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
@@ -217,6 +217,83 @@ export async function getLeaderPlanForEditing(planId: string): Promise<AdminLead
       : null,
     rules: (rules.data ?? []).map(mapKvkLeaderRule),
     rallies: (rallies.data ?? []).map(mapKvkRallyLeader),
+    pendingRows,
+    available: true,
+  };
+}
+
+/** The commander checklist of one plan, for its editor: the brief (null until first saved), every item and every line, shown or not. */
+export interface AdminChecklistPlan {
+  planId: string;
+  slug: string;
+  title: Localized;
+  active: boolean;
+  brief: {
+    id: string;
+    password: string;
+    intro: Localized;
+    /** English Markdown source of the commander's brief. */
+    introSource: string;
+    introSources: Localized;
+    published: boolean;
+    pendingColumns: string[];
+  } | null;
+  items: KvkChecklistItem[];
+  rules: KvkChecklistRule[];
+  /** Columns the pipeline still has to translate, per item or line id. */
+  pendingRows: Record<string, string[]>;
+  /** False until migration 0011 is applied: the editor then explains instead of failing. */
+  available: boolean;
+}
+
+export async function getChecklistPlanForEditing(planId: string): Promise<AdminChecklistPlan | null> {
+  if (!isUuid(planId)) return null;
+  if (!(await allowed("checklist"))) return null;
+  const admin = createAdminClient();
+  const { data: plan, error } = await admin.from("kvk_plans").select("*").eq("id", planId).maybeSingle();
+  if (error) {
+    log.error("Could not load the plan", { id: planId, error: error.message });
+    return null;
+  }
+  if (!plan) return null;
+  const mapped = mapKvkPlan(plan, [], [], []);
+  const base = { planId: mapped.id, slug: mapped.slug, title: mapped.title, active: mapped.active };
+
+  const [brief, items, rules] = await Promise.all([
+    admin.from("kvk_checklist_briefs").select("*").eq("plan_id", planId).maybeSingle(),
+    admin.from("kvk_checklist_items").select("*").eq("plan_id", planId).order("sort_order"),
+    admin.from("kvk_checklist_rules").select("*").eq("plan_id", planId).order("sort_order"),
+  ]);
+  const loadError = brief.error ?? items.error ?? rules.error;
+  if (loadError) {
+    // The tables don't exist yet (migration 0011 not applied): Postgres 42P01, or PGRST205 from the API.
+    const missing = loadError.code === "42P01" || loadError.code === "PGRST205";
+    if (!missing) log.error("Could not load the checklist", { id: planId, error: loadError.message });
+    return { ...base, brief: null, items: [], rules: [], pendingRows: {}, available: false };
+  }
+
+  const pendingRows: Record<string, string[]> = {};
+  for (const [table, result] of [["kvk_checklist_items", items], ["kvk_checklist_rules", rules]] as const) {
+    for (const row of result.data ?? []) {
+      const columns = pendingColumns(table, row);
+      if (columns.length > 0) pendingRows[String(row.id)] = columns;
+    }
+  }
+  const row = brief.data;
+  return {
+    ...base,
+    brief: row
+      ? {
+          id: String(row.id),
+          password: String(row.password ?? ""),
+          intro: localizedOf(row.intro),
+          ...introSourcesOf(row),
+          published: row.published !== false,
+          pendingColumns: pendingColumns("kvk_checklist_briefs", row),
+        }
+      : null,
+    items: (items.data ?? []).map(mapKvkChecklistItem),
+    rules: (rules.data ?? []).map(mapKvkChecklistRule),
     pendingRows,
     available: true,
   };
