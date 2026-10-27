@@ -102,12 +102,16 @@ async function Users({ locale }: { locale: string }) {
                   {grant.discordUsername ? `@${grant.discordUsername}` : grant.email}
                 </span>
                 <span className="min-w-0 flex-1 text-ink-muted">{grant.note}</span>
-                <DeleteForm
-                  action={deleteGrant}
-                  hidden={{ locale, id: grant.id }}
-                  confirmText="Remove this pre-authorisation? Accounts that already have the role keep it."
-                  label="Remove"
-                />
+                {grant.role !== "admin" || user.isOwner ? (
+                  <DeleteForm
+                    action={deleteGrant}
+                    hidden={{ locale, id: grant.id }}
+                    confirmText="Remove this pre-authorisation? Accounts that already have the role keep it."
+                    label="Remove"
+                  />
+                ) : (
+                  <span className="text-xs font-semibold text-ink-muted">Owner only</span>
+                )}
               </li>
             ))}
           </ul>
