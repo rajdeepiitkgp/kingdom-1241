@@ -2,7 +2,7 @@
 
 Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in ten languages (English, German, Korean, Polish, Arabic, Turkish, Italian, Japanese, Traditional Chinese, French — more are a table row away). Modelled on 1424.win, hosted for free.
 
-**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks), the separate password-locked **rally-leader plan** (who leads which rally with which of their own heroes and troop ratio), the **battle feedback** form players fill in after each battle (star ratings and short texts, Governor ID checked through MightPulse, results, CSV export and an on-demand AI summary for the council, deleted automatically after 30 days) and the **admin area** (Discord sign-in, roles, battle-plan editor, feedback results, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
+**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks), the separate password-locked **rally-leader plan** (who leads which rally with which of their own heroes and troop ratio), the third password-locked page, the **commander checklist** (what to prepare by phase, ticked off on the commander's device, the battle commander's orders and general guidelines), the **battle feedback** form players fill in after each battle (star ratings and short texts, Governor ID checked through MightPulse, results, CSV export and an on-demand AI summary for the council, deleted automatically after 30 days) and the **admin area** (Discord sign-in, roles, battle-plan editor, feedback results, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
 
 ## Stack
 
@@ -25,7 +25,7 @@ npm run dev
 
 ```
 src/
-  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/feedback, /kvk/leaders, /tools
+  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/feedback, /kvk/leaders, /kvk/checklist, /tools
   app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results + CSV export, users; English only
   app/auth/callback       finishes the Discord sign-in (code → session cookies)
   app/api/translate       Supabase webhook → translation provider → writes translations back, refreshes cache
@@ -37,7 +37,7 @@ src/
   lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile), FormData parsers, shared action replies, audit log
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
-  lib/kvk/                password locks (one signed cookie per page: plan, leaders), Server Actions, formation helpers
+  lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers
   lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
@@ -68,7 +68,9 @@ scripts/
 
 `/kvk` is locked with one shared password per plan (`kvk_plans.password`). A correct entry sets an HttpOnly cookie holding an HMAC of the plan id and password, so changing the password logs everyone out. The `kvk_*` tables have no public read policy; the server reads them with the service-role key only after checking the cookie, and the password never reaches a component. Formations reference the `heroes` table; players tick off the ones they saved in the game (kept in their browser).
 
-`/kvk/leaders` is the rally-leader plan of the same battle, behind its own password (`kvk_leader_briefs.password`, never the plan's) and its own cookie and throttle scope; `kvk_leader_rules` holds the leaders' instructions (for every leader, rally leads or garrison leads) and `kvk_rally_leaders` who leads which rally: battle team, position, UTC start time, when to use pets, heroes and ratio. The header's KvK entry is a dropdown with both pages.
+`/kvk/leaders` is the rally-leader plan of the same battle, behind its own password (`kvk_leader_briefs.password`, never the plan's) and its own cookie and throttle scope; `kvk_leader_rules` holds the leaders' instructions (for every leader, rally leads or garrison leads) and `kvk_rally_leaders` who leads which rally: battle team, position, UTC start time, when to use pets, heroes and ratio.
+
+`/kvk/checklist` is the battle commander's checklist for the same battle, again behind its own password (`kvk_checklist_briefs.password`; no two pages of a battle may share one) and its own cookie and throttle scope. `kvk_checklist_items` are the tasks by phase (before battle day, battle day before the start, during, after), which the commander ticks off in their browser (per plan, so the next battle starts fresh), and `kvk_checklist_rules` the commander's orders and the general guidelines as do / don't / info lines. The header's KvK entry is a dropdown with all three pages.
 
 ### Logging
 
