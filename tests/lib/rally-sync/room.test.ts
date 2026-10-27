@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
 import {
+  canSwitchMode,
   formatRoomCode,
   joinStatus,
   leaderEdit,
@@ -109,7 +110,16 @@ describe("rally sync rooms", () => {
     expect(parseSettings({ mode: "rally", rallyWaitSeconds: 5, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(false);
     expect(parseSettings({ mode: "rally", rallyWaitSeconds: 300, bufferSeconds: 601, counterOffsetSeconds: 3 }).ok).toBe(false);
     expect(parseSettings({ mode: "rally", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 11 }).ok).toBe(false);
-    expect(parseSettings({ mode: "garrison", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(false);
+    expect(parseSettings({ mode: "defend", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(false);
+    expect(parseSettings({ mode: "garrison", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(true);
+  });
+
+  it("switches a rally room between rally and counter-rally, never into or out of garrison", () => {
+    expect(canSwitchMode("rally", "counter")).toBe(true);
+    expect(canSwitchMode("counter", "rally")).toBe(true);
+    expect(canSwitchMode("garrison", "garrison")).toBe(true);
+    expect(canSwitchMode("rally", "garrison")).toBe(false);
+    expect(canSwitchMode("garrison", "counter")).toBe(false);
   });
 
   it("knows when a rally is running and which march time the next hit time uses", () => {

@@ -73,4 +73,23 @@ describe("rally sync limits (in-memory store, same rules as the database trigger
     await store.deleteRoom(created.id);
     expect(await store.instanceById(instances[0].id)).toBeNull();
   });
+
+  it("writes a room only if nobody wrote it since it was read (compare-and-swap)", async () => {
+    const store = memoryStore();
+    const created = await store.insertRoom(room("AAAAAA"));
+    expect(await store.updateRoomIf(created.id, created.updatedAt, { title: "first" })).toBe(true);
+    // A second write based on the same read loses and has to read again.
+    expect(await store.updateRoomIf(created.id, created.updatedAt, { title: "second" })).toBe(false);
+    const fresh = await store.roomById(created.id);
+    expect(fresh?.title).toBe("first");
+    expect(await store.updateRoomIf(created.id, fresh?.updatedAt ?? "", { title: "second" })).toBe(true);
+  });
+
+  it("has a demo garrison room with placeholder enemy leaders", async () => {
+    const store = memoryStore();
+    const demo = await store.roomByCode("DEFEND");
+    expect(demo).toMatchObject({ mode: "garrison", garrison: { rallies: [] } });
+    expect(demo?.garrison.enemies.map((e) => e.marchSeconds)).toEqual([42, 38, 45]);
+    expect(await store.leaders(demo?.id ?? "")).toEqual([]);
+  });
 });

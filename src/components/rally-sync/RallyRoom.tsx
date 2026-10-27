@@ -5,12 +5,13 @@ import clsx from "clsx";
 import { ArrowLeft, Clock3, DoorClosed, Minus, MonitorSmartphone, Pencil, Plus, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, joinRoom, leaveRoom, renameMe, setMyActive, updateMyLeader } from "@/lib/rally-sync/actions";
 import { NOTABLE_OFFSET_MS } from "@/lib/rally-sync/clock";
 import { parseRoomHash, updateDevice, updateDeviceRoom } from "@/lib/rally-sync/device";
+import { playerPlan, refillCues } from "@/lib/rally-sync/garrison";
 import type { LinkStatus } from "@/lib/rally-sync/realtime";
 import {
   formatRoomCode,
@@ -23,8 +24,9 @@ import {
   type RoomState,
 } from "@/lib/rally-sync/room";
 import { CuePlayer } from "@/lib/rally-sync/sound";
-import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, withStartTimes } from "@/lib/rally-sync/timing";
+import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, soundCues, withStartTimes } from "@/lib/rally-sync/timing";
 import { CoordinatorPanel } from "./CoordinatorPanel";
+import { GarrisonBoard } from "./Garrison";
 import { useCorrectedSecond, useDevice, useRoomSync, useRunner, useWakeLock } from "./hooks";
 import { type Clock, FocusBlock, isUrgent, LeaderRow, NextMarch, shown, type TimedLeaderView } from "./LeaderCards";
 import { ErrorLine, LeaderForm } from "./LeaderForm";
@@ -81,6 +83,16 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
   const myStart = myLeader?.startAt ?? null;
   const myLate = myStart !== null && isTooLate(myStart, hitSetAt);
 
+  // Garrison rooms: this player's refills, worked out here from the room's enemy hits and their own march time.
+  const garrison = room.mode === "garrison";
+  const { marchSeconds: garrisonMarch, spacingSeconds } = device.garrison;
+  const plan = useMemo(
+    () => (garrison && now !== null ? playerPlan(room.garrison, now, garrisonMarch, spacingSeconds) : null),
+    [garrison, room.garrison, now, garrisonMarch, spacingSeconds],
+  );
+  // A tap's exact moment on this device's game clock (the coordinator marks enemy rallies with it).
+  const exactNow = useCallback(() => Date.now() + sync.offsetMs + gameOffsetMs, [sync.offsetMs, gameOffsetMs]);
+
   // Sound: unlocked by the first tap (browsers require one), then cues are booked on the audio clock.
   const player = useRef<CuePlayer | null>(null);
   const [soundReady, setSoundReady] = useState(false);
@@ -98,10 +110,12 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       window.removeEventListener("keydown", unlock);
     };
   }, [device.sound]);
+  // A leader's own start, or a garrison player's sends and speedups (the player rebooks only when the moments change).
+  const cues = !device.sound ? null : garrison ? (plan ? refillCues(plan.steps) : null) : myStart !== null && !myLate ? soundCues(myStart) : null;
   useEffect(() => {
     if (now === null) return;
-    player.current?.sync(device.sound && !myLate ? myStart : null, sync.offsetMs + gameOffsetMs);
-  }, [now, device.sound, myStart, myLate, sync.offsetMs, gameOffsetMs]);
+    player.current?.sync(cues, sync.offsetMs + gameOffsetMs);
+  }, [now, cues, sync.offsetMs, gameOffsetMs]);
   useEffect(() => () => player.current?.cancel(), []);
 
   useWakeLock(device.wakeLock);
@@ -120,21 +134,50 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     );
   }
 
+  const statusBar = (
+    <StatusBar
+      room={room}
+      now={now}
+      clock={clock}
+      link={realtime ? sync.link : null}
+      offsetMs={sync.offsetMs}
+      sound={device.sound}
+      soundReady={soundReady}
+      wakeLock={device.wakeLock}
+      dict={dict}
+    />
+  );
+  const coordinatorPanel = coordinatorToken && (
+    <CoordinatorPanel
+      room={room}
+      leaders={timed}
+      now={now}
+      clock={clock}
+      token={coordinatorToken}
+      dict={dict}
+      locale={locale}
+      version={sync.updatedAt}
+      exactNow={exactNow}
+      onChanged={sync.refresh}
+    />
+  );
+
+  // A garrison room: no leaders and no list of who is in, only the coordinator's marking and each player's own refills.
+  if (garrison) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        {statusBar}
+        {coordinatorPanel}
+        <GarrisonBoard plan={plan} now={now} clock={clock} dict={dict} />
+      </div>
+    );
+  }
+
   const urgent = isUrgent(myLeader, room, now);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <StatusBar
-        room={room}
-        now={now}
-        clock={clock}
-        link={realtime ? sync.link : null}
-        offsetMs={sync.offsetMs}
-        sound={device.sound}
-        soundReady={soundReady}
-        wakeLock={device.wakeLock}
-        dict={dict}
-      />
+      {statusBar}
 
       {/* Pinned under the site header (h-16 + border) in the last minute, wherever the page is scrolled. */}
       <div className={clsx(urgent && "sticky top-17 z-30")}>
@@ -154,19 +197,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
 
       {!myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />}
 
-      {coordinatorToken && (
-        <CoordinatorPanel
-          room={room}
-          leaders={timed}
-          now={now}
-          clock={clock}
-          token={coordinatorToken}
-          dict={dict}
-          locale={locale}
-          version={sync.updatedAt}
-          onChanged={sync.refresh}
-        />
-      )}
+      {coordinatorPanel}
 
       <LeaderList
         leaders={myLeader ? timed.filter((l) => l.id !== myLeader.id) : timed}
@@ -294,7 +325,8 @@ function StatusBar({
             </span>
             <span aria-hidden>·</span>
             <span>
-              {dict[`sync.mode.${room.mode}`]} · {formatSeconds(room.rallyWaitSeconds)}
+              {dict[`sync.mode.${room.mode}`]}
+              {room.mode !== "garrison" && ` · ${formatSeconds(room.rallyWaitSeconds)}`}
             </span>
             {link && (
               <span className="inline-flex items-center gap-1">

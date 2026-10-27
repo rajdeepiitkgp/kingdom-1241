@@ -4,7 +4,7 @@
 import clsx from "clsx";
 import { ChevronDown, Crown, RefreshCw, Shield, Swords, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, type CoordinatorOp } from "@/lib/rally-sync/actions";
@@ -20,6 +20,8 @@ import {
   MIN_RALLY_WAIT_SECONDS,
   parseDuration,
 } from "@/lib/rally-sync/timing";
+import { Disclosure } from "./Disclosure";
+import { GarrisonControls } from "./Garrison";
 import { useRunner } from "./hooks";
 import { InstancesPanel } from "./InstancesPanel";
 import { InvitePanel } from "./InvitePanel";
@@ -44,6 +46,7 @@ export function CoordinatorPanel({
   dict,
   locale,
   version,
+  exactNow,
   onChanged,
 }: {
   room: RoomView;
@@ -55,6 +58,8 @@ export function CoordinatorPanel({
   locale: string;
   /** Changes whenever the room's state was fetched again (the instance list reloads with it). */
   version: number | null;
+  /** The page's corrected game-clock "now" in milliseconds (garrison rooms mark rallies at the tap's moment). */
+  exactNow: () => number;
   onChanged: () => void;
 }) {
   const router = useRouter();
@@ -80,6 +85,8 @@ export function CoordinatorPanel({
   const preview = now === null ? null : earliestHit(now, room.rallyWaitSeconds, [longest], room.bufferSeconds);
   const running = now !== null && rallyRunning(room.hitAt, now);
   const confirmingResync = running && resyncArmed;
+  // A garrison room is a different tool: marking enemy rallies instead of the hit time and leaders.
+  const garrison = room.mode === "garrison";
 
   function resync() {
     if (running && !resyncArmed) {
@@ -146,6 +153,10 @@ export function CoordinatorPanel({
         {dict["sync.coord.title"]}
       </h2>
 
+      {garrison ? (
+        <GarrisonControls room={room} now={now} clock={clock} token={token} exactNow={exactNow} dict={dict} onChanged={onChanged} />
+      ) : (
+        <>
       <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label={dict["sync.mode"]}>
         {(["rally", "counter"] as const).map((mode) => (
           <button
@@ -233,6 +244,8 @@ export function CoordinatorPanel({
           {format(dict[room.mode === "counter" ? "sync.coord.lateCounter" : "sync.coord.late"], { names: late.map((l) => l.name).join(", ") })}
         </p>
       )}
+        </>
+      )}
       <button type="button" className="btn-ghost btn-sm mt-4" aria-expanded={more} onClick={() => setMore((v) => !v)}>
         <ChevronDown className={clsx("size-4 transition-transform", more && "rotate-180")} aria-hidden />
         {dict["sync.coord.more"]}
@@ -240,6 +253,7 @@ export function CoordinatorPanel({
 
       {more && (
       <div className="mt-3 space-y-2">
+        {!garrison && (
         <Disclosure title={dict["sync.coord.settings"]}>
           <form onSubmit={saveSettings} key={`${room.rallyWaitSeconds}-${room.bufferSeconds}-${room.counterOffsetSeconds}`} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -276,7 +290,9 @@ export function CoordinatorPanel({
             </button>
           </form>
         </Disclosure>
+        )}
 
+        {!garrison && (
         <Disclosure title={dict["sync.coord.addLeader"]}>
           <p className="mb-3 text-sm text-ink-muted">{dict["sync.coord.addLeaderHint"]}</p>
           <LeaderForm
@@ -295,6 +311,7 @@ export function CoordinatorPanel({
             }
           />
         </Disclosure>
+        )}
 
         <Disclosure title={dict["sync.invite.title"]}>
           <InvitePanel code={room.code} token={token} dict={dict} />
@@ -304,7 +321,7 @@ export function CoordinatorPanel({
           <InstancesPanel code={room.code} token={token} version={version} now={now} dict={dict} onCount={setInstanceCount} />
         </Disclosure>
 
-        {room.history.length > 0 && (
+        {!garrison && room.history.length > 0 && (
           <Disclosure title={format(dict["sync.history"], { n: room.history.length })}>
             <ul className="space-y-1 text-sm text-ink-muted">
               {room.history.map((entry) => (
@@ -317,7 +334,7 @@ export function CoordinatorPanel({
         )}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
-        {room.hitAt && (
+        {!garrison && room.hitAt && (
           <button type="button" className="btn-ghost btn-sm" onClick={() => void send("clear", { type: "clearHit" })} disabled={pending !== null}>
             {dict["sync.coord.clear"]}
           </button>
@@ -419,19 +436,5 @@ function ResyncConfirmLabel({ template, time }: { template: string; time: string
       </span>
       {after}
     </span>
-  );
-}
-
-function Disclosure({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <details className="card-soft group px-4 py-3">
-      <summary className="cursor-pointer text-sm font-extrabold text-ink">
-        <span className="me-1 inline-block transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90" aria-hidden>
-          ›
-        </span>
-        {title}
-      </summary>
-      <div className="mt-3">{children}</div>
-    </details>
   );
 }

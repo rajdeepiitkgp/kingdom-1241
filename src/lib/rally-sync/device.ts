@@ -1,14 +1,16 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { DAY } from "@/lib/time";
-import { DEFAULT_SETTINGS, type RoomSettings } from "./room";
-import { clampGameOffset } from "./timing";
+import { DEFAULT_SEND_SPACING_SECONDS, MAX_SEND_SPACING_SECONDS, MIN_SEND_SPACING_SECONDS } from "./garrison";
+import { DEFAULT_SETTINGS, ROOM_MODES, type RoomSettings } from "./room";
+import { clampGameOffset, MAX_MARCH_SECONDS } from "./timing";
 
 /**
  * What this browser remembers for Rally Sync (localStorage, one JSON entry):
  * per room the coordinator token, the leader's own row + token, the invite key
  * and (on the creator's device) the password; the leader's name and march time
  * for the next room; the creator's last room settings; the sound and
- * screen-awake switches; and the game-clock adjustment in seconds. Read with useSyncExternalStore (useDevice); the
+ * screen-awake switches; the game-clock adjustment in seconds; and for garrison rooms the
+ * player's march to the castle and how fast they send one march after another. Read with useSyncExternalStore (useDevice); the
  * parsing is pure and tolerant, so a hand-edited value just counts as empty.
  */
 
@@ -33,9 +35,19 @@ export interface DeviceData {
   wakeLock: boolean;
   /** How far this device's game clock is from true UTC, in whole seconds (see clampGameOffset). */
   gameOffsetSeconds: number;
+  /** Garrison rooms: the player's march to the castle (null until entered) and the seconds between their sends. */
+  garrison: { marchSeconds: number | null; spacingSeconds: number };
 }
 
-export const EMPTY_DEVICE: DeviceData = { rooms: {}, profile: null, lastSettings: DEFAULT_SETTINGS, sound: true, wakeLock: true, gameOffsetSeconds: 0 };
+export const EMPTY_DEVICE: DeviceData = {
+  rooms: {},
+  profile: null,
+  lastSettings: DEFAULT_SETTINGS,
+  sound: true,
+  wakeLock: true,
+  gameOffsetSeconds: 0,
+  garrison: { marchSeconds: null, spacingSeconds: DEFAULT_SEND_SPACING_SECONDS },
+};
 
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0 && v.length < 200;
 
@@ -80,12 +92,23 @@ export function parseDevice(raw: string | null | undefined): DeviceData {
     sound: parsed.sound !== false,
     wakeLock: parsed.wakeLock !== false,
     gameOffsetSeconds: clampGameOffset(parsed.gameOffsetSeconds),
+    garrison: parseGarrisonPrefs(parsed.garrison),
+  };
+}
+
+function parseGarrisonPrefs(value: unknown): DeviceData["garrison"] {
+  const v = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const whole = (n: unknown, min: number, max: number) => (typeof n === "number" && Number.isInteger(n) && n >= min && n <= max ? n : null);
+  return {
+    marchSeconds: whole(v.marchSeconds, 1, MAX_MARCH_SECONDS),
+    spacingSeconds: whole(v.spacingSeconds, MIN_SEND_SPACING_SECONDS, MAX_SEND_SPACING_SECONDS) ?? DEFAULT_SEND_SPACING_SECONDS,
   };
 }
 
 function pickSettings(s: Partial<RoomSettings>): Partial<RoomSettings> {
   const out: Partial<RoomSettings> = {};
-  if (s.mode === "rally" || s.mode === "counter") out.mode = s.mode;
+  const mode = ROOM_MODES.find((m) => m === s.mode);
+  if (mode) out.mode = mode;
   for (const key of ["rallyWaitSeconds", "bufferSeconds", "counterOffsetSeconds"] as const) if (typeof s[key] === "number") out[key] = s[key];
   return out;
 }

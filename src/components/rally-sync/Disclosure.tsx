@@ -1,0 +1,16 @@
+import type { ReactNode } from "react";
+
+/** A quiet fold-out section of the coordinator's panel. */
+export function Disclosure({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className="card-soft group px-4 py-3">
+      <summary className="cursor-pointer text-sm font-extrabold text-ink">
+        <span className="me-1 inline-block transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90" aria-hidden>
+          ›
+        </span>
+        {title}
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}

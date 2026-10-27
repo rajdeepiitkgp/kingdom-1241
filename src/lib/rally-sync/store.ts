@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
+import { parseGarrison } from "./garrison";
 import { memoryStore } from "./memory-store";
 import { pruneClosedRooms } from "./prune";
 import { parseHistory, parseLeaderStatus } from "./room";
@@ -26,9 +27,9 @@ export function rallyStore(): RallyStore | null {
   return isSupabaseAdminConfigured() ? supabaseStore(createAdminClient()) : null;
 }
 
-const ROOM_COLUMNS =
-  "id, code, title, password_hash, coordinator_hash, channel_key, mode, rally_wait_seconds, buffer_seconds, counter_offset_seconds, enemy_hit_at, hit_at, hit_set_at, hit_history, created_by, created_by_name, last_seen_at, created_at";
-// Leaders are read whole: instance_id arrives with migration 0014, and a deploy may run a minute ahead of it.
+// Rooms and leaders are read whole: columns arrive with later migrations (garrison 0015, instance_id 0014),
+// and a deploy may run a minute ahead of its migration.
+const ROOM_COLUMNS = "*";
 const LEADER_COLUMNS = "*";
 const INSTANCE_COLUMNS = "id, room_id, tag, name, coordinator, created_at, last_seen_at";
 /** Instance ids come from cookies and forms: only well-formed ones reach a query. */
@@ -48,7 +49,7 @@ export function mapRoomRow(row: Row): RoomRow {
     passwordHash: text(row.password_hash),
     coordinatorHash: text(row.coordinator_hash),
     channelKey: text(row.channel_key),
-    mode: row.mode === "counter" ? "counter" : "rally",
+    mode: row.mode === "counter" || row.mode === "garrison" ? row.mode : "rally",
     rallyWaitSeconds: Number(row.rally_wait_seconds) || 0,
     bufferSeconds: Number(row.buffer_seconds) || 0,
     counterOffsetSeconds: Number(row.counter_offset_seconds) || 0,
@@ -56,10 +57,12 @@ export function mapRoomRow(row: Row): RoomRow {
     hitAt: optionalText(row.hit_at),
     hitSetAt: optionalText(row.hit_set_at),
     history: parseHistory(row.hit_history),
+    garrison: parseGarrison(row.garrison),
     createdBy: optionalText(row.created_by),
     createdByName: optionalText(row.created_by_name),
     lastSeenAt: text(row.last_seen_at),
     createdAt: text(row.created_at),
+    updatedAt: text(row.updated_at),
   };
 }
 
@@ -103,6 +106,7 @@ const ROOM_PATCH_COLUMNS: Record<keyof RoomPatch, string> = {
   hitAt: "hit_at",
   hitSetAt: "hit_set_at",
   history: "hit_history",
+  garrison: "garrison",
 };
 
 const LEADER_PATCH_COLUMNS: Record<keyof LeaderPatch, string> = {
@@ -189,6 +193,11 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
     async updateRoom(id, patch) {
       const { error } = await admin.from("rally_sync_rooms").update(toColumns(patch, ROOM_PATCH_COLUMNS)).eq("id", id);
       if (error) fail("Updating a room", error);
+    },
+    async updateRoomIf(id, updatedAt, patch) {
+      const { data, error } = await admin.from("rally_sync_rooms").update(toColumns(patch, ROOM_PATCH_COLUMNS)).eq("id", id).eq("updated_at", updatedAt).select("id");
+      if (error) fail("Updating a room", error);
+      return (data?.length ?? 0) > 0;
     },
     async touchRoom(id, now) {
       const { error } = await admin
