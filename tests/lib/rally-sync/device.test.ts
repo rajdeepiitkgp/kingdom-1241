@@ -39,6 +39,13 @@ describe("rally sync device memory", () => {
     expect(parseDevice(JSON.stringify({ gameOffsetSeconds: 999 })).gameOffsetSeconds).toBe(60);
   });
 
+  it("keeps a garrison player's march time and send spacing, within range", () => {
+    expect(EMPTY_DEVICE.garrison).toEqual({ marchSeconds: null, spacingSeconds: 5 });
+    expect(parseDevice(JSON.stringify({ garrison: { marchSeconds: 31, spacingSeconds: 3 } })).garrison).toEqual({ marchSeconds: 31, spacingSeconds: 3 });
+    expect(parseDevice(JSON.stringify({ garrison: { marchSeconds: 0, spacingSeconds: 99 } })).garrison).toEqual({ marchSeconds: null, spacingSeconds: 5 });
+    expect(parseDevice(JSON.stringify({ lastSettings: { mode: "garrison" } })).lastSettings.mode).toBe("garrison");
+  });
+
   it("lists today's rooms newest first and forgets older ones", () => {
     const now = 10 * DAY;
     const data = { ...EMPTY_DEVICE, rooms: { AAAAAA: { seenAt: now - 1000 }, BBBBBB: { seenAt: now - 10 }, CCCCCC: { seenAt: now - 2 * DAY } } };

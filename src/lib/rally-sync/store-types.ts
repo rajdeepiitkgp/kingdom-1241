@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
+import type { GarrisonState } from "./garrison";
 import type { HitHistoryEntry, LeaderStatus, RoomMode } from "./room";
 
 /** Rows and the storage interface of Rally Sync (implementations in store.ts and memory-store.ts). */
@@ -18,10 +19,14 @@ export interface RoomRow {
   hitAt: string | null;
   hitSetAt: string | null;
   history: HitHistoryEntry[];
+  /** Garrison mode (migration 0015): enemy leaders and incoming rallies. */
+  garrison: GarrisonState;
   createdBy: string | null;
   createdByName: string | null;
   lastSeenAt: string;
   createdAt: string;
+  /** Changes with every write (database trigger): the compare-and-swap of updateRoomIf. */
+  updatedAt: string;
 }
 
 export interface LeaderRow {
@@ -58,7 +63,7 @@ export type NewRoom = Pick<
   "code" | "title" | "passwordHash" | "coordinatorHash" | "channelKey" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "createdBy" | "createdByName"
 >;
 export type RoomPatch = Partial<
-  Pick<RoomRow, "title" | "passwordHash" | "coordinatorHash" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "enemyHitAt" | "hitAt" | "hitSetAt" | "history">
+  Pick<RoomRow, "title" | "passwordHash" | "coordinatorHash" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "enemyHitAt" | "hitAt" | "hitSetAt" | "history" | "garrison">
 >;
 export type NewLeader = Pick<LeaderRow, "roomId" | "name" | "marchSeconds" | "tokenHash"> & { status?: LeaderStatus; instanceId?: string | null };
 export type LeaderPatch = Partial<Pick<LeaderRow, "name" | "marchSeconds" | "status" | "nextMarchSeconds" | "previousMarchSeconds" | "marchChangedAt">>;
@@ -90,6 +95,8 @@ export interface RallyStore {
   leaderCounts(roomIds: readonly string[]): Promise<Map<string, number>>;
   insertRoom(room: NewRoom): Promise<RoomRow>;
   updateRoom(id: string, patch: RoomPatch): Promise<void>;
+  /** Writes only if the room is unchanged since it was read (`updatedAt`); false when somebody wrote in between. */
+  updateRoomIf(id: string, updatedAt: string, patch: RoomPatch): Promise<boolean>;
   /** Somebody has the room on screen: bump last_seen_at (at most once a minute, so open pages don't write on every poll). */
   touchRoom(id: string, now: number): Promise<void>;
   deleteRoom(id: string): Promise<void>;

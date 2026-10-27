@@ -16,7 +16,12 @@ import { useDevice } from "../rally-sync/hooks";
 import { Field, Notice } from "./ui";
 import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
-const MODE_LABELS: Record<RoomMode, string> = { rally: "Rally (we attack)", counter: "Counter-rally (land right after the enemy)" };
+const MODE_LABELS: Record<RoomMode, string> = {
+  rally: "Rally (we attack)",
+  counter: "Counter-rally (land right after the enemy)",
+  garrison: "Garrison refill (defend: refills land between enemy hits; fixed for this room)",
+};
+const MODE_CHIPS: Record<RoomMode, string> = { rally: "Rally", counter: "Counter-rally", garrison: "Garrison" };
 
 /**
  * The admin Rally Sync page: create a room, see the open ones, destroy one or
@@ -55,7 +60,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
     if (result.created) {
       const created = result.created;
       updateDeviceRoom(created.code, (room) => ({ ...room, coordinator: created.coordinatorToken, invite: created.inviteKey, password: created.password, title: created.title }));
-      const mode = formData.get("mode") === "counter" ? "counter" : "rally";
+      const mode = ROOM_MODES.find((m) => m === formData.get("mode")) ?? "rally";
       updateDevice((data) => ({
         ...data,
         lastSettings: {
@@ -190,7 +195,7 @@ function RoomRow({ room, locale }: { room: AdminRallyRoom; locale: string }) {
             <span dir="ltr">{formatRoomCode(room.code)}</span>
             {room.title && <span className="wrap-break-word">{room.title}</span>}
             {room.open ? <span className="chip bg-success-soft text-success">Open</span> : <span className="chip bg-card-soft text-ink-muted">Closed</span>}
-            <span className="chip bg-card-soft text-ink-muted">{room.mode === "counter" ? "Counter-rally" : "Rally"}</span>
+            <span className="chip bg-card-soft text-ink-muted">{MODE_CHIPS[room.mode]}</span>
             {isCoordinatorHere && <span className="chip bg-gold-soft text-gold-ink">Coordinator on this device</span>}
           </p>
           <p className="text-sm text-ink-muted">

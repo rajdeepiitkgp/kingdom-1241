@@ -10,6 +10,7 @@ import {
   MAX_RALLY_WAIT_SECONDS,
   MIN_RALLY_WAIT_SECONDS,
 } from "./timing";
+import type { GarrisonState } from "./garrison";
 
 /**
  * Rooms of Rally Sync (pure, unit-tested; storage in store.ts, the rules are
@@ -18,8 +19,14 @@ import {
  * has it on screen and is never older than a day.
  */
 
-export type RoomMode = "rally" | "counter";
-export const ROOM_MODES: readonly RoomMode[] = ["rally", "counter"];
+/** "garrison" rooms time refills between enemy hits (garrison.ts) and are chosen when the room is created. */
+export type RoomMode = "rally" | "counter" | "garrison";
+export const ROOM_MODES: readonly RoomMode[] = ["rally", "counter", "garrison"];
+
+/** A rally room switches between rally and counter-rally; a garrison room stays one (its page is a different tool). */
+export function canSwitchMode(from: RoomMode, to: RoomMode): boolean {
+  return from === to || (from !== "garrison" && to !== "garrison");
+}
 
 /** No 0/O and no 1/I/L, so a code read out in voice chat can't be mistyped. */
 export const ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -120,6 +127,8 @@ export interface RoomView {
   hitAt: string | null;
   hitSetAt: string | null;
   history: HitHistoryEntry[];
+  /** Garrison mode: the enemy rally leaders and the incoming rallies (empty otherwise). */
+  garrison: GarrisonState;
   /** Realtime topic the page listens on (only ever sent to visitors who unlocked the room). */
   channel: string;
   createdAt: string;

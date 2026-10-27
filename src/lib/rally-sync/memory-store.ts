@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { randomUUID } from "node:crypto";
+import { laterStamp } from "@/lib/kvk/throttle";
 import { hashPassword, hashToken } from "./access";
+import { EMPTY_GARRISON, type GarrisonState } from "./garrison";
 import { DEFAULT_SETTINGS, isRoomOpen, MAX_INSTANCES_PER_ROOM, MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "./room";
 import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, type RoomRow } from "./store-types";
 
@@ -10,27 +12,31 @@ import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, typ
  * process only and vanish on restart; the limits behave like the database's
  * triggers. There is no Realtime here, so pages poll.
  *
- * A demo room is always there to try (a minute after it is destroyed or closes, it comes back):
+ * Two demo rooms are always there to try (a minute after one is destroyed or closes, it comes back):
  *   /tools/rally-sync/TEST23                                     password "review123"
  *   /tools/rally-sync/TEST23#c=local-review-coordinator          … as its coordinator
+ *   /tools/rally-sync/DEFEND                                     a garrison room, same password and coordinator link
  */
 
 export const DEMO_ROOM = { code: "TEST23", password: "review123", coordinatorToken: "local-review-coordinator" };
+export const DEMO_GARRISON_ROOM = { ...DEMO_ROOM, code: "DEFEND" };
+const DEMO_CODES = [DEMO_ROOM.code, DEMO_GARRISON_ROOM.code];
 
 interface Memory {
   rooms: Map<string, RoomRow>;
   leaders: Map<string, LeaderRow>;
   instances: Map<string, InstanceRow>;
-  /** When the demo room was last deleted (its pages should see "closed" for a while, not a fresh room). */
-  demoGoneAt: number;
+  /** When each demo room was last deleted (its pages should see "closed" for a while, not a fresh room). */
+  demoGoneAt: Record<string, number>;
 }
 
 // Route handlers and Server Actions are separate bundles: one copy on globalThis.
 const holder = globalThis as typeof globalThis & { __rallySyncMemory?: Memory };
 
 function memory(): Memory {
-  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), demoGoneAt: 0 };
+  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), demoGoneAt: {} };
   holder.__rallySyncMemory.instances ??= new Map(); // a process that started before instances existed
+  if (typeof holder.__rallySyncMemory.demoGoneAt !== "object") holder.__rallySyncMemory.demoGoneAt = {};
   return holder.__rallySyncMemory;
 }
 
@@ -40,14 +46,29 @@ function openRooms(m: Memory, now: number): RoomRow[] {
   return [...m.rooms.values()].filter((r) => isRoomOpen(r, now));
 }
 
-/** The demo room with three placeholder leaders (outside the room limit, like a room created before it was reached). */
-async function demoRoom(m: Memory): Promise<RoomRow> {
+/** Placeholder enemy rally leaders of the demo garrison room. */
+const DEMO_ENEMIES: GarrisonState = {
+  enemies: [
+    ["Demo enemy A", 42],
+    ["Demo enemy B", 38],
+    ["Demo enemy C", 45],
+  ].map(([name, marchSeconds], i) => ({ id: `demo-enemy-${i + 1}`, name: String(name), marchSeconds: Number(marchSeconds), active: true, previousMarchSeconds: null, marchChangedAt: null })),
+  rallies: [],
+};
+
+/**
+ * A demo room (outside the room limit, like a room created before it was reached): the rally room with three
+ * placeholder leaders, or the garrison room with three placeholder enemy leaders.
+ */
+async function demoRoom(m: Memory, code: string): Promise<RoomRow> {
   const now = new Date().toISOString();
+  const garrison = code === DEMO_GARRISON_ROOM.code;
   const room: RoomRow = {
     ...DEFAULT_SETTINGS,
+    ...(garrison ? { mode: "garrison" as const } : {}),
     id: randomUUID(),
-    code: DEMO_ROOM.code,
-    title: "Demo room (local review)",
+    code,
+    title: garrison ? "Demo garrison (local review)" : "Demo room (local review)",
     passwordHash: await hashPassword(DEMO_ROOM.password),
     coordinatorHash: hashToken(DEMO_ROOM.coordinatorToken),
     channelKey: "local-review",
@@ -55,12 +76,15 @@ async function demoRoom(m: Memory): Promise<RoomRow> {
     hitAt: null,
     hitSetAt: null,
     history: [],
+    garrison: garrison ? DEMO_ENEMIES : EMPTY_GARRISON,
     createdBy: null,
     createdByName: "Local review",
     lastSeenAt: now,
     createdAt: now,
+    updatedAt: now,
   };
   m.rooms.set(room.id, room);
+  if (garrison) return room;
   for (const [name, marchSeconds] of [
     ["Demo leader A", 42],
     ["Demo leader B", 95],
@@ -78,7 +102,7 @@ export function memoryStore(): RallyStore {
     kind: "memory",
     async roomByCode(code) {
       const room = [...m.rooms.values()].find((r) => r.code === code) ?? null;
-      return room ?? (code === DEMO_ROOM.code && Date.now() - m.demoGoneAt > 60_000 ? demoRoom(m) : null);
+      return room ?? (DEMO_CODES.includes(code) && Date.now() - (m.demoGoneAt[code] ?? 0) > 60_000 ? demoRoom(m, code) : null);
     },
     async roomById(id) {
       return m.rooms.get(id) ?? null;
@@ -96,20 +120,27 @@ export function memoryStore(): RallyStore {
       if (openRooms(m, Date.now()).length >= MAX_OPEN_ROOMS) throw new RallyStoreError("room_limit", "rally_sync_room_limit");
       if ([...m.rooms.values()].some((r) => r.code === room.code)) throw new RallyStoreError("duplicate", "duplicate code");
       const now = iso();
-      const row: RoomRow = { ...room, id: randomUUID(), enemyHitAt: null, hitAt: null, hitSetAt: null, history: [], lastSeenAt: now, createdAt: now };
+      const row: RoomRow = { ...room, id: randomUUID(), enemyHitAt: null, hitAt: null, hitSetAt: null, history: [], garrison: EMPTY_GARRISON, lastSeenAt: now, createdAt: now, updatedAt: now };
       m.rooms.set(row.id, row);
       return row;
     },
     async updateRoom(id, patch) {
       const room = m.rooms.get(id);
-      if (room) m.rooms.set(id, { ...room, ...patch });
+      if (room) m.rooms.set(id, { ...room, ...patch, updatedAt: laterStamp(room.updatedAt, Date.now()) });
+    },
+    async updateRoomIf(id, updatedAt, patch) {
+      const room = m.rooms.get(id);
+      if (!room || room.updatedAt !== updatedAt) return false;
+      m.rooms.set(id, { ...room, ...patch, updatedAt: laterStamp(room.updatedAt, Date.now()) });
+      return true;
     },
     async touchRoom(id, now) {
       const room = m.rooms.get(id);
-      if (room && Date.parse(room.lastSeenAt) < now - 60_000) m.rooms.set(id, { ...room, lastSeenAt: new Date(now).toISOString() });
+      if (room && Date.parse(room.lastSeenAt) < now - 60_000) m.rooms.set(id, { ...room, lastSeenAt: new Date(now).toISOString(), updatedAt: laterStamp(room.updatedAt, now) });
     },
     async deleteRoom(id) {
-      if (m.rooms.get(id)?.code === DEMO_ROOM.code) m.demoGoneAt = Date.now();
+      const code = m.rooms.get(id)?.code;
+      if (code && DEMO_CODES.includes(code)) m.demoGoneAt[code] = Date.now();
       m.rooms.delete(id);
       for (const [leaderId, leader] of m.leaders) if (leader.roomId === id) m.leaders.delete(leaderId);
       for (const [instanceId, instance] of m.instances) if (instance.roomId === id) m.instances.delete(instanceId);

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { localeField } from "@/lib/admin/forms";
@@ -23,6 +24,23 @@ import {
   verifyPassword,
 } from "./access";
 import {
+  clearRallies,
+  defaultEnemyName,
+  type GarrisonEdit,
+  type GarrisonState,
+  launchFromTap,
+  markRally,
+  nudgeRally,
+  rallyLands,
+  removeEnemy,
+  removeRally,
+  saveEnemy,
+  secondsInRange,
+  setEnemyActive,
+  tapMoment,
+} from "./garrison";
+import {
+  canSwitchMode,
   joinStatus,
   type InstanceView,
   leaderEdit,
@@ -42,7 +60,7 @@ import {
 } from "./room";
 import { findOpenRoom, roomAccess } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
-import { ceilToSecond, clampGameOffset, counterHit, earliestHit, parseDuration, parseUtcClock, toGameTime } from "./timing";
+import { ceilToSecond, clampGameOffset, counterHit, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, parseDuration, parseUtcClock, toGameTime } from "./timing";
 
 /**
  * Server Actions of a Rally Sync room. Like every Server Function they can be
@@ -68,6 +86,10 @@ export type SyncError =
   | "leader_limit"
   | "total_limit"
   | "instance_limit"
+  /** Garrison: the rally has launched, so only a measured landing may change it. */
+  | "launched"
+  /** Garrison: the list of enemy leaders or incoming rallies is full. */
+  | "too_many"
   | "failed";
 
 export type SyncResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: SyncError; retryAt?: number };
@@ -102,7 +124,31 @@ export type CoordinatorOp =
   | { type: "removeOthers" }
   /** The current invite key; with `password`, also whether that (a device's saved copy) is still the room's password. */
   | { type: "invite"; password?: string }
-  | { type: "destroy" };
+  | { type: "destroy" }
+  | GarrisonOp;
+
+/**
+ * Garrison rooms (garrison.ts): the list of enemy rally leaders, and marking their rallies. `tappedAt` is
+ * the moment of the tap on the coordinator's game clock (their page's corrected clock), so the request's
+ * travel time doesn't move the launch.
+ */
+export type GarrisonOp =
+  /** Adds a leader (no `enemyId`; an empty name becomes "#1", "#2" …) or edits one. */
+  | { type: "enemySave"; enemyId?: string; name: string; marchSeconds: number }
+  | { type: "enemyActive"; enemyId: string; active: boolean }
+  | { type: "enemyRemove"; enemyId: string }
+  /** A countdown button: the enemy's rally launches `countdownSeconds` after the tap. */
+  | { type: "rallyMark"; enemyId: string; countdownSeconds: number; tappedAt: number }
+  /** The incoming march showed `landsInSeconds` at the tap (corrects a marching rally's march time). */
+  | { type: "rallyLands"; enemyId: string; landsInSeconds: number; tappedAt: number }
+  | { type: "rallyNudge"; rallyId: string; deltaSeconds: number }
+  | { type: "rallyRemove"; rallyId: string }
+  | { type: "ralliesClear" };
+
+/** Tries of a garrison write against concurrent writes (the room's heartbeat also counts as one). */
+const GARRISON_WRITE_ROUNDS = 5;
+
+const GARRISON_OPS: ReadonlySet<string> = new Set(["enemySave", "enemyActive", "enemyRemove", "rallyMark", "rallyLands", "rallyNudge", "rallyRemove", "ralliesClear"]);
 
 const baseLog = createLogger("rally-sync");
 
@@ -432,7 +478,7 @@ export async function coordinate(
   token: string,
   op: CoordinatorOp,
   gameOffsetSeconds = 0,
-): Promise<SyncResult<{ inviteKey?: string; passwordCurrent?: boolean }>> {
+): Promise<SyncResult<{ inviteKey?: string; passwordCurrent?: boolean; enemyId?: string }>> {
   const { log } = await context();
   // A direct POST can send anything; the checks below expect a token string and an op object.
   if (typeof token !== "string" || typeof op !== "object" || op === null || typeof op.type !== "string") return { ok: false, error: "invalid" };
@@ -452,7 +498,7 @@ export async function coordinate(
     switch (op.type) {
       case "settings": {
         const settings = parseSettings(op);
-        if (!settings.ok) return { ok: false, error: "invalid" };
+        if (!settings.ok || !canSwitchMode(room.mode, settings.value.mode)) return { ok: false, error: "invalid" };
         const patch: RoomPatch = { ...settings.value };
         // Counter-rally: a new offset moves our hit along with it (still the same rally, so waiting march times keep waiting).
         if (settings.value.mode === "counter" && room.enemyHitAt && settings.value.counterOffsetSeconds !== room.counterOffsetSeconds) {
@@ -553,10 +599,64 @@ export async function coordinate(
         (await cookies()).delete(roomCookieName(room.code));
         return done();
       }
-      default:
-        return { ok: false, error: "invalid" };
+      default: {
+        if (!GARRISON_OPS.has(op.type) || room.mode !== "garrison") return { ok: false, error: "invalid" };
+        // Two coordinators may tap in the same moment: each write applies to the room as it is (compare-and-swap, re-read on a clash).
+        const garrisonOp = op as GarrisonOp;
+        const newId = randomUUID();
+        let current: RoomRow | null = room;
+        for (let round = 0; current && round < GARRISON_WRITE_ROUNDS; round++) {
+          const edit = garrisonEdit(current.garrison, garrisonOp, now, newId);
+          if (!edit.ok) return { ok: false, error: edit.error };
+          if (await store.updateRoomIf(current.id, current.updatedAt, { garrison: edit.state })) {
+            done({ rallies: edit.state.rallies.length, round });
+            // A new leader: the panel selects them at once (the coordinator is about to mark their rally).
+            return garrisonOp.type === "enemySave" && !garrisonOp.enemyId ? { ok: true, enemyId: newId } : { ok: true };
+          }
+          current = await store.roomById(current.id);
+        }
+        if (!current) return { ok: false, error: "closed" };
+        log.warn("Garrison write kept clashing", { room: room.code, action: op.type });
+        return { ok: false, error: "failed" };
+      }
     }
   } catch (error) {
     return storeError(error, log, `Coordinator action ${op.type}`);
+  }
+}
+
+/** One garrison change on the stored state (the rules are in garrison.ts); `now` is the coordinator's game clock. */
+function garrisonEdit(state: GarrisonState, op: GarrisonOp, now: number, newId: string): GarrisonEdit {
+  const invalid: GarrisonEdit = { ok: false, error: "invalid" };
+  const id = (value: unknown) => (typeof value === "string" ? value : "");
+  switch (op.type) {
+    case "enemySave": {
+      const typed = typeof op.name === "string" ? op.name.trim() : "";
+      const editing = typeof op.enemyId === "string" && op.enemyId !== "";
+      const name = typed ? parseName(typed) : editing ? ({ ok: false } as const) : ({ ok: true, value: defaultEnemyName(state.enemies) } as const);
+      const march = parseMarch(op.marchSeconds);
+      if (!name.ok || !march.ok) return invalid;
+      return saveEnemy(state, { id: editing ? op.enemyId : undefined, name: name.value, marchSeconds: march.value }, newId, now);
+    }
+    case "enemyActive":
+      return setEnemyActive(state, id(op.enemyId), op.active === true);
+    case "enemyRemove":
+      return removeEnemy(state, id(op.enemyId));
+    case "rallyMark": {
+      const countdown = secondsInRange(op.countdownSeconds, 1, MAX_RALLY_WAIT_SECONDS);
+      if (countdown === null) return invalid;
+      return markRally(state, id(op.enemyId), launchFromTap(tapMoment(op.tappedAt, now), countdown), now, newId);
+    }
+    case "rallyLands": {
+      const landsIn = secondsInRange(op.landsInSeconds, 1, MAX_MARCH_SECONDS);
+      if (landsIn === null) return invalid;
+      return rallyLands(state, id(op.enemyId), launchFromTap(tapMoment(op.tappedAt, now), landsIn), now, newId);
+    }
+    case "rallyNudge":
+      return nudgeRally(state, id(op.rallyId), Number(op.deltaSeconds), now);
+    case "rallyRemove":
+      return removeRally(state, id(op.rallyId));
+    case "ralliesClear":
+      return clearRallies(state);
   }
 }

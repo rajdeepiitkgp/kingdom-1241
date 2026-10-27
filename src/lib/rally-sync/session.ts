@@ -68,6 +68,7 @@ export function roomView(room: RoomRow): RoomView {
     hitAt: room.hitAt,
     hitSetAt: room.hitSetAt,
     history: room.history,
+    garrison: room.garrison,
     channel: `rally:${room.channelKey}`,
     createdAt: room.createdAt,
     lastSeenAt: room.lastSeenAt,

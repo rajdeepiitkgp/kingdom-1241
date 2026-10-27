@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
-import { type SoundCue, soundCues } from "./timing";
+import type { SoundCue } from "./timing";
 
 /**
- * The countdown sounds of a leader's own rally (browser, Web Audio; no sound
- * files). Cues are booked ahead on the audio clock rather than fired by timers,
+ * The countdown sounds of a leader's own rally, or a garrison player's sends
+ * and speedups (browser, Web Audio; no sound files). Cues are booked ahead on the audio clock rather than fired by timers,
  * so a laptop tab in the background (where timers run late) still beeps on the
  * second. Browsers allow sound only after a tap on the page: `unlock()` runs in
  * that tap.
@@ -32,20 +32,20 @@ export class CuePlayer {
   }
 
   /**
-   * Books the cues of `start` that lie ahead on the corrected clock (device
-   * clock + `offsetMs`; a new start or a clock correction rebooks everything).
-   * `start` null (no hit time, or sound off) cancels all.
+   * Books the cues that lie ahead on the corrected clock (device clock +
+   * `offsetMs`; new cues or a clock correction rebook everything). `cues`
+   * null (no hit time, or sound off) cancels all.
    */
-  sync(start: number | null, offsetMs: number): void {
+  sync(cues: readonly SoundCue[] | null, offsetMs: number): void {
     const now = Date.now() + offsetMs;
-    const key = start === null ? "" : `${start}:${Math.round(offsetMs / 50)}`;
+    const key = cues === null ? "" : `${cues.map((c) => c.at).join(",")}:${Math.round(offsetMs / 50)}`;
     if (key !== this.key) {
       this.cancel();
       this.key = key;
     }
     const context = this.context;
-    if (start === null || !context || context.state !== "running") return;
-    for (const cue of soundCues(start)) {
+    if (cues === null || !context || context.state !== "running") return;
+    for (const cue of cues) {
       const ahead = cue.at - now;
       if (ahead <= 0 || ahead > LOOKAHEAD_MS || this.booked.has(cue.at)) continue;
       this.booked.set(cue.at, this.play(context, cue, context.currentTime + ahead / 1000));
