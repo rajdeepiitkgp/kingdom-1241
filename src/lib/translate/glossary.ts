@@ -217,6 +217,11 @@ export const GLOSSARY: GlossaryEntry[] = [
     note: "A pet whose skill speeds up gathering.",
   },
   {
+    term: "Alliance RSS node",
+    translations: { de: "Allianz-Ressourcenfeld", pl: "Węzeł surowców sojuszu", ko: "연맹 자원지", ar: "عقدة موارد التحالف" },
+    note: "A protected resource tile the alliance places (one resource type per day): nobody can attack marches gathering there, and they gather up to full capacity.",
+  },
+  {
     term: "Invasion",
     translations: { de: "Invasion", pl: "Inwazja", ko: "침공", ar: "الغزو" },
     note: "The KvK phase on Saturday when kingdoms can attack each other.",

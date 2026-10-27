@@ -631,11 +631,11 @@ export const UI_STRINGS = {
   },
   "prep.tip.bisonSave": { en: "Save your bison skill for Day {day}.", de: "Spare den Bison-Skill für Tag {day} auf.", ko: "들소 스킬은 {day}일차를 위해 아껴두세요.", pl: "Zachowaj umiejętność bizona na dzień {day}.", ar: "احتفظ بمهارة البيسون ليوم {day}." },
   "prep.tip.allianceNode": {
-    en: "Get max gathering in the alliance node.",
-    de: "Hol beim Sammeln im Allianz-Ressourcenfeld das Maximum heraus.",
-    ko: "연맹 자원지에서 최대한 채집하세요.",
-    pl: "Zbieraj maksymalnie w węźle sojuszu.",
-    ar: "اجمع أقصى ما يمكن في عقدة موارد التحالف.",
+    en: "Gather as much as you can on the Alliance RSS node: it's protected, so nobody can attack your marches there, and you can gather up to your full capacity.",
+    de: "Sammle so viel wie möglich am Allianz-Ressourcenfeld: Es ist geschützt, niemand kann deine Truppen dort angreifen, und du sammelst bis zu deiner vollen Kapazität.",
+    ko: "연맹 자원지에서 최대한 채집하세요: 보호 구역이라 아무도 부대를 공격할 수 없고, 채집 한도까지 모두 채집할 수 있습니다.",
+    pl: "Zbieraj jak najwięcej w węźle surowców sojuszu: jest chroniony, nikt nie zaatakuje tam twoich oddziałów, a zbierasz do pełnej pojemności.",
+    ar: "اجمع أكبر قدر ممكن في عقدة موارد التحالف: إنها محمية فلا يستطيع أحد مهاجمة قواتك هناك، ويمكنك الجمع حتى سعتك الكاملة.",
   },
   "prep.tip.gatherEarly": {
     en: "Send out your gatherers 7 hours before the reset, so they finish after it.",
