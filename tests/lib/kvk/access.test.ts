@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidKvkToken, kvkAccessToken, passwordMatches } from "@/lib/kvk/access";
+import { areaAccessToken, isValidAreaToken, isValidKvkToken, KVK_AREA_COOKIES, kvkAccessToken, passwordMatches } from "@/lib/kvk/access";
 
 describe("kvk access tokens", () => {
   const secret = "test-secret";
@@ -28,6 +28,35 @@ describe("kvk access tokens", () => {
 
   it("does not expose the password through the token", () => {
     expect(kvkAccessToken("plan-1", "castle", secret)).not.toContain("castle");
+  });
+});
+
+describe("area access tokens (one password and cookie per locked page)", () => {
+  const secret = "test-secret";
+
+  it("keeps the battle plan's original token, so cookies already handed out stay valid", () => {
+    expect(areaAccessToken("plan", "plan-1", "castle", secret)).toBe(kvkAccessToken("plan-1", "castle", secret));
+  });
+
+  it("gives the leader page a different token even with the same password", () => {
+    const leaders = areaAccessToken("leaders", "plan-1", "castle", secret);
+    expect(leaders).not.toBe(areaAccessToken("plan", "plan-1", "castle", secret));
+    // A battle-plan cookie never opens the leader page, and the other way round.
+    expect(isValidAreaToken("leaders", kvkAccessToken("plan-1", "castle", secret), "plan-1", "castle", secret)).toBe(false);
+    expect(isValidAreaToken("plan", leaders, "plan-1", "castle", secret)).toBe(false);
+    expect(isValidAreaToken("leaders", leaders, "plan-1", "castle", secret)).toBe(true);
+  });
+
+  it("stops working when the leaders' password or the plan changes", () => {
+    const leaders = areaAccessToken("leaders", "plan-1", "rally", secret);
+    expect(isValidAreaToken("leaders", leaders, "plan-1", "rally2", secret)).toBe(false);
+    expect(isValidAreaToken("leaders", leaders, "plan-2", "rally", secret)).toBe(false);
+    expect(isValidAreaToken("leaders", undefined, "plan-1", "rally", secret)).toBe(false);
+  });
+
+  it("uses a separate cookie per page", () => {
+    expect(new Set(Object.values(KVK_AREA_COOKIES)).size).toBe(Object.keys(KVK_AREA_COOKIES).length);
+    expect(KVK_AREA_COOKIES.plan).toBe("kd1241_kvk");
   });
 });
 

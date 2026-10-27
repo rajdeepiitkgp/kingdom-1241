@@ -299,6 +299,12 @@ function contextFor(table: string): string {
       return "A short note about a KvK coordinator, e.g. the languages they speak.";
     case "kvk_formations":
       return "A short note about a troop formation for KvK (when to use it).";
+    case "kvk_leader_briefs":
+      return "Instructions for the players who lead rallies on KvK battle day, written by the coordinators.";
+    case "kvk_leader_rules":
+      return "A short instruction for the players who lead rallies or garrisons on KvK battle day.";
+    case "kvk_rally_leaders":
+      return "Which rally a player leads on KvK battle day (e.g. the castle, first wave), where on the map they teleport or stand, and a short note about it.";
     default:
       return "";
   }

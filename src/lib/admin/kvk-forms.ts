@@ -1,4 +1,4 @@
-import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind } from "@/lib/data/types";
+import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
 import {
   boolField,
   intField,
@@ -54,9 +54,8 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
   const slug = slugify(textField(fd, "slug") || title);
   if (!slug) errors.slug = "The slug needs at least one letter or digit.";
 
-  const password = textField(fd, "password");
-  if (password.length < 4) errors.password = "Use at least 4 characters (longer is safer; guesses are throttled either way).";
-  else if (password.length > 64) errors.password = "Keep the password under 64 characters.";
+  const { value: password, error: passwordError } = parsePassword(textField(fd, "password"));
+  if (passwordError) errors.password = passwordError;
 
   const battleAt = utcDateTimeField(fd, "battleAt");
   if (battleAt === undefined) errors.battleAt = "Enter the date and time as the form shows them (UTC).";
@@ -162,21 +161,8 @@ export function parseFormationForm(fd: FormData, heroSlugs: readonly string[]): 
   const label = textField(fd, "label").toUpperCase();
   if (!FORMATION_LABELS.includes(label)) errors.label = "Pick a preset letter from A to L.";
 
-  const heroes = [1, 2, 3].map((n) => optionalText(fd, `hero${n}`)) as [string | null, string | null, string | null];
-  heroes.forEach((slug, i) => {
-    if (slug && !heroSlugs.includes(slug)) errors[`hero${i + 1}`] = "Unknown hero.";
-  });
-  const chosen = heroes.filter((h): h is string => Boolean(h));
-  if (new Set(chosen).size !== chosen.length) errors.heroes = "A hero can only be in one slot.";
-
-  const infantry = intField(fd, "infantry", 0, 100);
-  const cavalry = intField(fd, "cavalry", 0, 100);
-  const archers = intField(fd, "archers", 0, 100);
-  if (infantry === null || cavalry === null || archers === null) {
-    errors.ratio = "Each troop share must be a whole number from 0 to 100.";
-  } else if (infantry + cavalry + archers !== 100) {
-    errors.ratio = `The three shares must add up to 100 (now ${infantry + cavalry + archers}).`;
-  }
+  const heroes = parseHeroSlots(fd, heroSlugs, errors);
+  const ratio = parseRatio(fd, errors);
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return {
@@ -186,13 +172,158 @@ export function parseFormationForm(fd: FormData, heroSlugs: readonly string[]): 
       side: oneOfField(fd, "side", SIDES, "any"),
       role: oneOfField(fd, "role", FORMATION_ROLES, "any"),
       heroes,
-      infantry: infantry ?? 0,
-      cavalry: cavalry ?? 0,
-      archers: archers ?? 0,
+      ...ratio,
       note: textField(fd, "note").slice(0, 200),
       published: boolField(fd, "published"),
     },
   };
+}
+
+export interface LeaderBriefInput {
+  password: string;
+  /** Markdown written by the admin; rendered to sanitised HTML on save. */
+  introSource: string;
+  published: boolean;
+}
+
+/** The rally-leader page's settings: its own password (never the battle plan's) and the leaders' instructions. */
+export function parseLeaderBriefForm(fd: FormData, planPassword?: string | null): FormResult<LeaderBriefInput> {
+  const errors: Record<string, string> = {};
+  const password = parsePassword(textField(fd, "password"));
+  if (password.error) errors.password = password.error;
+  else if (planPassword && password.value === planPassword.trim()) {
+    errors.password = "Use a different password from the battle plan's, or every player could open the leaders' page.";
+  }
+  const introSource = textField(fd, "introSource");
+  if (introSource.length > 20_000) errors.introSource = "Keep the instructions under 20 000 characters.";
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return { ok: true, value: { password: password.value, introSource, published: boolField(fd, "published") } };
+}
+
+export const LEADER_AUDIENCES: readonly LeaderAudience[] = ["all", "rally", "garrison"];
+
+export interface LeaderRuleInput extends RuleInput {
+  audience: LeaderAudience;
+}
+
+/** A leader instruction: a rule line plus who it is for (every leader, rally leads, garrison leads). */
+export function parseLeaderRuleForm(fd: FormData): FormResult<LeaderRuleInput> {
+  const rule = parseRuleForm(fd);
+  if (!rule.ok) return rule;
+  return { ok: true, value: { ...rule.value, audience: oneOfField(fd, "audience", LEADER_AUDIENCES, "all") } };
+}
+
+/** Pets: minutes after the battle start, up to a day (the database limit; the battle length limits it further). */
+export const MAX_PETS_OFFSET = 1440;
+
+export interface RallyLeaderFormOptions {
+  /** Latest pets start whose 2-hour boost still ends within the battle (minutes after the start). */
+  latestPetsOffset?: number;
+}
+
+export interface RallyLeaderInput {
+  target: string;
+  side: FormationSide;
+  team: CoordinatorTeam;
+  name: string;
+  allianceTag: string | null;
+  position: string;
+  startAt: string | null;
+  petsOffsetMinutes: number | null;
+  heroes: [string | null, string | null, string | null];
+  infantry: number;
+  cavalry: number;
+  archers: number;
+  note: string;
+  published: boolean;
+}
+
+/** One rally on the leader page: which rally, who leads it, with which of their own heroes and ratio. */
+export function parseRallyLeaderForm(
+  fd: FormData,
+  heroSlugs: readonly string[],
+  allianceTags: readonly string[],
+  options: RallyLeaderFormOptions = {},
+): FormResult<RallyLeaderInput> {
+  const errors: Record<string, string> = {};
+  const target = textField(fd, "target");
+  if (!target) errors.target = "Say which rally this is, e.g. Castle — first wave.";
+  else if (target.length > 120) errors.target = "Keep it under 120 characters.";
+
+  const name = textField(fd, "name");
+  if (!name) errors.name = "Enter the leader's in-game name.";
+  else if (name.length > 60) errors.name = "Keep the name under 60 characters.";
+  const tag = optionalText(fd, "allianceTag");
+  if (tag && !allianceTags.includes(tag)) errors.allianceTag = "Pick one of the kingdom's alliances.";
+
+  const position = textField(fd, "position");
+  if (position.length > 120) errors.position = "Keep the position under 120 characters.";
+
+  // Any time, also a past one: an old plan stays editable.
+  const startAt = utcDateTimeField(fd, "startAt");
+  if (startAt === undefined) errors.startAt = "Enter the date and time as the form shows them (UTC).";
+
+  let petsOffsetMinutes: number | null = null;
+  if (textField(fd, "petsOffsetMinutes")) {
+    petsOffsetMinutes = intField(fd, "petsOffsetMinutes", 0, MAX_PETS_OFFSET);
+    if (petsOffsetMinutes === null) errors.petsOffsetMinutes = "Pick when to use pets, from the start up to 24 hours later.";
+    else if (options.latestPetsOffset !== undefined && petsOffsetMinutes > options.latestPetsOffset) {
+      errors.petsOffsetMinutes = `The 2-hour pet boost would run past the end of the battle; start it at most ${options.latestPetsOffset / 60} h after the battle start.`;
+      petsOffsetMinutes = null;
+    }
+  }
+
+  const heroes = parseHeroSlots(fd, heroSlugs, errors);
+  const ratio = parseRatio(fd, errors);
+
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      target,
+      side: oneOfField(fd, "side", SIDES, "attack"),
+      team: oneOfField(fd, "team", TEAMS, "kvk"),
+      name,
+      allianceTag: tag,
+      position,
+      startAt: startAt ?? null,
+      petsOffsetMinutes,
+      heroes,
+      ...ratio,
+      note: textField(fd, "note").slice(0, 200),
+      published: boolField(fd, "published"),
+    },
+  };
+}
+
+function parsePassword(password: string): { value: string; error?: string } {
+  if (password.length < 4) return { value: password, error: "Use at least 4 characters (longer is safer; guesses are throttled either way)." };
+  if (password.length > 64) return { value: password, error: "Keep the password under 64 characters." };
+  return { value: password };
+}
+
+/** The three hero slots of a formation or rally (`hero1`…`hero3`, empty = any hero); errors go into `errors`. */
+function parseHeroSlots(fd: FormData, heroSlugs: readonly string[], errors: Record<string, string>): [string | null, string | null, string | null] {
+  const heroes = [1, 2, 3].map((n) => optionalText(fd, `hero${n}`)) as [string | null, string | null, string | null];
+  heroes.forEach((slug, i) => {
+    if (slug && !heroSlugs.includes(slug)) errors[`hero${i + 1}`] = "Unknown hero.";
+  });
+  const chosen = heroes.filter((h): h is string => Boolean(h));
+  if (new Set(chosen).size !== chosen.length) errors.heroes = "A hero can only be in one slot.";
+  return heroes;
+}
+
+/** Infantry / cavalry / archers in percent, adding up to 100; errors go into `errors`. */
+function parseRatio(fd: FormData, errors: Record<string, string>): { infantry: number; cavalry: number; archers: number } {
+  const infantry = intField(fd, "infantry", 0, 100);
+  const cavalry = intField(fd, "cavalry", 0, 100);
+  const archers = intField(fd, "archers", 0, 100);
+  if (infantry === null || cavalry === null || archers === null) {
+    errors.ratio = "Each troop share must be a whole number from 0 to 100.";
+  } else if (infantry + cavalry + archers !== 100) {
+    errors.ratio = `The three shares must add up to 100 (now ${infantry + cavalry + archers}).`;
+  }
+  return { infantry: infantry ?? 0, cavalry: cavalry ?? 0, archers: archers ?? 0 };
 }
 
 function sameMoment(a: string, b: string | null | undefined): boolean {

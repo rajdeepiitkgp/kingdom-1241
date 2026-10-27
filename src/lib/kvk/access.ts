@@ -15,6 +15,19 @@ import { createLogger } from "@/lib/log";
 
 export const KVK_COOKIE = "kd1241_kvk";
 
+/**
+ * The password-locked pages of a battle. Each has its own password, cookie and
+ * throttle scope, so knowing one never opens another: `plan` is the battle plan
+ * every player gets (its feedback form rides on the same cookie), `leaders` the
+ * rally-leader plan.
+ */
+export type KvkArea = "plan" | "leaders";
+
+export const KVK_AREA_COOKIES: Record<KvkArea, string> = {
+  plan: KVK_COOKIE,
+  leaders: "kd1241_kvk_leaders",
+};
+
 /** 30 days, long enough for one KvK cycle. */
 export const KVK_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
@@ -36,6 +49,28 @@ export function kvkSessionSecret(): string {
 
 export function kvkAccessToken(planId: string, password: string, secret = kvkSessionSecret()): string {
   return createHmac("sha256", secret).update(`${planId}\u0000${password}`).digest("hex");
+}
+
+/**
+ * Cookie value for one area. The battle plan keeps its original token (cookies
+ * already handed out stay valid); every other area mixes its name in, so equal
+ * passwords on two pages still give different cookies.
+ */
+export function areaAccessToken(area: KvkArea, planId: string, password: string, secret = kvkSessionSecret()): string {
+  if (area === "plan") return kvkAccessToken(planId, password, secret);
+  return createHmac("sha256", secret).update(`${area}\u0000${planId}\u0000${password}`).digest("hex");
+}
+
+/** Is `token` (from the area's cookie) the current token of that area of this plan? */
+export function isValidAreaToken(
+  area: KvkArea,
+  token: string | undefined | null,
+  planId: string,
+  password: string,
+  secret = kvkSessionSecret(),
+): boolean {
+  if (!token) return false;
+  return safeEqual(token, areaAccessToken(area, planId, password, secret));
 }
 
 function safeEqual(a: string, b: string): boolean {

@@ -435,6 +435,83 @@ export const UI_STRINGS = {
   "kvk.tab.plan": { en: "Battle plan", de: "Schlachtplan", ko: "전투 계획", pl: "Plan bitwy", ar: "خطة المعركة" },
   "kvk.tab.feedback": { en: "Feedback", de: "Feedback", ko: "피드백", pl: "Opinie", ar: "الآراء" },
 
+  // KvK menu (navigation dropdown)
+  "kvk.menu.planHint": { en: "Formations for every player", de: "Formationen für alle Spieler", ko: "모든 플레이어를 위한 편성", pl: "Formacje dla każdego gracza", ar: "التشكيلات لجميع اللاعبين" },
+  "kvk.menu.leaders": { en: "Rally leaders", de: "Rally-Leiter", ko: "집결 대장", pl: "Liderzy rajdów", ar: "قادة الحشود" },
+  "kvk.menu.leadersHint": { en: "Who leads which rally", de: "Wer welche Rally führt", ko: "누가 어떤 집결을 이끄는지", pl: "Kto prowadzi który rajd", ar: "من يقود أي حشد" },
+
+  // Rally-leader plan (separate password)
+  "leaders.title": { en: "Rally-leader plan", de: "Rally-Leiter-Plan", ko: "집결 대장 계획", pl: "Plan liderów rajdów", ar: "خطة قادة الحشود" },
+  "leaders.subtitle": {
+    en: "Who leads which rally, with which heroes and troop ratio. For the kingdom's rally leaders only.",
+    de: "Wer welche Rally mit welchen Helden und welchem Truppenverhältnis führt. Nur für die Rally-Leiter des Königreichs.",
+    ko: "누가 어떤 영웅과 병력 비율로 어떤 집결을 이끄는지. 왕국 집결 대장 전용.",
+    pl: "Kto prowadzi który rajd, z jakimi bohaterami i proporcjami wojsk. Tylko dla liderów rajdów królestwa.",
+    ar: "من يقود أي حشد، وبأي أبطال ونسبة قوات. لقادة حشود المملكة فقط.",
+  },
+  "leaders.locked.body": {
+    en: "Enter the rally leaders' password from your coordinator. It is not the battle-plan password.",
+    de: "Gib das Passwort für Rally-Leiter ein, das du von deinem Koordinator bekommen hast. Es ist nicht das Passwort des Schlachtplans.",
+    ko: "코디네이터에게 받은 집결 대장 비밀번호를 입력하세요. 전투 계획 비밀번호와는 다릅니다.",
+    pl: "Wpisz hasło liderów rajdów otrzymane od koordynatora. To nie jest hasło do planu bitwy.",
+    ar: "أدخل كلمة مرور قادة الحشود التي استلمتها من منسقك. إنها ليست كلمة مرور خطة المعركة.",
+  },
+  "leaders.noPlan": {
+    en: "No rally-leader plan has been published for the next battle yet.",
+    de: "Für die nächste Schlacht wurde noch kein Rally-Leiter-Plan veröffentlicht.",
+    ko: "다음 전투를 위한 집결 대장 계획이 아직 공개되지 않았습니다.",
+    pl: "Plan liderów rajdów na najbliższą bitwę nie został jeszcze opublikowany.",
+    ar: "لم تُنشر خطة قادة الحشود للمعركة القادمة بعد.",
+  },
+  "leaders.unavailable": {
+    en: "The rally-leader plan is not available right now. Try again later.",
+    de: "Der Rally-Leiter-Plan ist gerade nicht verfügbar. Versuch es später noch einmal.",
+    ko: "지금은 집결 대장 계획을 볼 수 없습니다. 나중에 다시 시도하세요.",
+    pl: "Plan liderów rajdów jest teraz niedostępny. Spróbuj później.",
+    ar: "خطة قادة الحشود غير متاحة حاليًا. حاول مرة أخرى لاحقًا.",
+  },
+  "leaders.rallies": { en: "Rallies", de: "Rallys", ko: "집결", pl: "Rajdy", ar: "الحشود" },
+  "leaders.ralliesHint": {
+    en: "Each leader uses their own heroes and the troop ratio shown.",
+    de: "Jeder Leiter nutzt seine eigenen Helden und das angegebene Truppenverhältnis.",
+    ko: "각 대장은 자신의 영웅과 표시된 병력 비율을 사용합니다.",
+    pl: "Każdy lider używa własnych bohaterów i podanych proporcji wojsk.",
+    ar: "يستخدم كل قائد أبطاله الخاصين ونسبة القوات المبيّنة.",
+  },
+  "leaders.overview": {
+    en: "Find your name below. Your card shows your battle team, where to teleport, when to start your rally (in UTC and in your own time) and when to activate your pets: their boost lasts two hours, so the council spreads the activations over the battle. Work out your march time before the battle.",
+    de: "Such unten deinen Namen. Deine Karte zeigt dein Kampfteam, wohin du teleportierst, wann du deine Rally startest (in UTC und in deiner Zeit) und wann du deine Haustiere aktivierst: Ihr Boost hält zwei Stunden, deshalb verteilt der Rat die Aktivierungen über die Schlacht. Ermittle deine Marschzeit vor der Schlacht.",
+    ko: "아래에서 이름을 찾으세요. 카드에 전투 팀, 텔레포트 위치, 집결 시작 시각(UTC와 내 시간), 펫 활성화 시점이 나와 있습니다. 펫 버프는 2시간 지속되므로 운영진이 활성화 시점을 전투 전체에 나눠 배정합니다. 전투 전에 행군 시간을 미리 계산해 두세요.",
+    pl: "Znajdź poniżej swoje imię. Twoja karta pokazuje drużynę bojową, miejsce teleportu, kiedy rozpocząć rajd (w UTC i w twoim czasie) i kiedy aktywować zwierzaki: ich wzmocnienie trwa dwie godziny, więc rada rozkłada aktywacje na całą bitwę. Przed bitwą sprawdź swój czas marszu.",
+    ar: "ابحث عن اسمك أدناه. تُظهر بطاقتك فريقك القتالي ومكان الانتقال ووقت بدء حشدك (بتوقيت UTC وبتوقيتك) ووقت تفعيل حيواناتك: يدوم تعزيزها ساعتين، لذلك يوزّع المجلس أوقات التفعيل على مدار المعركة. احسب زمن مسيرتك قبل المعركة.",
+  },
+  "leaders.instructions": { en: "Leader instructions", de: "Anweisungen für Leiter", ko: "대장 지침", pl: "Instrukcje dla liderów", ar: "تعليمات القادة" },
+  "leaders.audience.all": { en: "Every leader", de: "Alle Leiter", ko: "모든 대장", pl: "Każdy lider", ar: "كل القادة" },
+  "leaders.audience.rally": { en: "Rally leads", de: "Rally-Leiter", ko: "집결 대장", pl: "Liderzy rajdów", ar: "قادة الحشد" },
+  "leaders.audience.garrison": { en: "Garrison leads", de: "Garnison-Leiter", ko: "주둔 대장", pl: "Liderzy garnizonu", ar: "قادة الحامية" },
+  "leaders.glance": { en: "At a glance", de: "Auf einen Blick", ko: "한눈에 보기", pl: "W skrócie", ar: "نظرة سريعة" },
+  "leaders.position": { en: "Position", de: "Position", ko: "위치", pl: "Pozycja", ar: "الموقع" },
+  "leaders.start": { en: "Start the rally", de: "Rally starten", ko: "집결 시작", pl: "Rozpocznij rajd", ar: "ابدأ الحشد" },
+  "leaders.startCalled": {
+    en: "When your coordinator calls it",
+    de: "Wenn dein Koordinator es ansagt",
+    ko: "코디네이터가 지시할 때",
+    pl: "Gdy koordynator da znak",
+    ar: "عندما يعطي منسقك الإشارة",
+  },
+  "leaders.pets": { en: "Pets", de: "Haustiere", ko: "펫", pl: "Zwierzaki", ar: "الحيوانات الأليفة" },
+  "leaders.pets.start": { en: "At the battle start", de: "Zum Schlachtbeginn", ko: "전투 시작 시", pl: "Na początku bitwy", ar: "عند بدء المعركة" },
+  "leaders.pets.boost": { en: "Boost for {time}", de: "Boost für {time}", ko: "{time} 동안 버프", pl: "Wzmocnienie na {time}", ar: "تعزيز لمدة {time}" },
+  "leaders.pets.after": { en: "{time} after the start", de: "{time} nach dem Start", ko: "시작 {time} 후", pl: "{time} po starcie", ar: "بعد {time} من البداية" },
+  "leaders.homeAlliance": { en: "Home alliance", de: "Heimatallianz", ko: "소속 연맹", pl: "Macierzysty sojusz", ar: "التحالف الأصلي" },
+  "leaders.empty": {
+    en: "No rallies have been assigned yet.",
+    de: "Es wurden noch keine Rallys zugeteilt.",
+    ko: "아직 배정된 집결이 없습니다.",
+    pl: "Nie przydzielono jeszcze żadnych rajdów.",
+    ar: "لم يتم تعيين أي حشود بعد.",
+  },
+
   // Battle feedback — page and form
   "retro.title": { en: "Battle feedback", de: "Schlacht-Feedback", ko: "전투 피드백", pl: "Opinie o bitwie", ar: "آراء المعركة" },
   "retro.subtitle": {
