@@ -45,6 +45,7 @@ src/
   lib/tools/              pure calculator logic (rally refill, pack value)
 tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
 public/heroes/            128px hero portraits (from kingshotdata.com)
+public/items/             128px game icons for the KvK prep page (kingshotdata.com, kingshot.net, kingshotwiki.com, g2384/Kingshot-Data)
 supabase/
   migrations/000N_*.sql     schema, one additive file per change (init, kvk, admin auth, game names, alliance tag, unlock throttle, …)
   webhooks.sql              wires every content table to /api/translate (Maintenance → webhooks runs it)
@@ -72,7 +73,7 @@ scripts/
 
 `/kvk/checklist` is the battle commander's checklist for the same battle, again behind its own password (`kvk_checklist_briefs.password`; no two pages of a battle may share one) and its own cookie and throttle scope. `kvk_checklist_items` are the tasks by phase (before battle day, battle day before the start, during, after), which the commander ticks off in their browser (per plan, so the next battle starts fresh), and `kvk_checklist_rules` the commander's orders and the general guidelines as do / don't / info lines. The header's KvK entry is a dropdown with all three pages.
 
-`/kvk/prep` is public: the KvK preparation week, which repeats every four weeks (Day 0 on Sunday, Days 1–4 Monday to Thursday 00:00–24:00 UTC, Day 5 from Friday 00:00 UTC until the invasion on Saturday 10:00 UTC, shields up 10:00–22:00 UTC around the 12:00–17:00 UTC castle battle). The schedule, the council's item × day table and the tips are fixed in `src/lib/kvk/prep.ts` and the `prep.*` interface strings; a change is a PR. The page and the Home card are static and the client picks today and fills the countdown. Item pictures are 128px WebP files in `public/items/` (downloaded once from kingshotdata.com, kingshot.net, kingshotwiki.com and the g2384/Kingshot-Data repository, rendered `unoptimized` like the hero portraits); items without one keep their emoji.
+`/kvk/prep` is public: the KvK preparation week, which repeats every four weeks (Day 0 on Sunday, Days 1–4 Monday to Thursday 00:00–24:00 UTC, Day 5 from Friday 00:00 UTC until the invasion on Saturday 10:00 UTC, shields up 10:00–22:00 UTC around the 12:00–17:00 UTC castle battle). Prep proper starts on Monday; Sunday is the get-ready day. The page shows a live status card, one tab per day with its own countdown, each day's ✅ use / 🆗 also counts lists with the points per item, ⚠ get-ready items, the council's tips (intel stacking with Master Pan, bison skill, Alliance RSS node, gathering speed boost, War Academy research, shield and home coordinates), the item × day table and the "save these for KvK" list. The schedule, the table, the points (the council's sheet, checked against kingshotdata.com) and the tips are fixed in `src/lib/kvk/prep.ts` and the `prep.*` interface strings; a change is a PR. The page and the Home card are static and the client picks today and fills the countdowns. Item pictures are 128px WebP files in `public/items/` (downloaded once, rendered `unoptimized` like the hero portraits); items without one keep their emoji.
 
 ### Logging
 
