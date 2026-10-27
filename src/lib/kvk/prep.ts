@@ -244,6 +244,7 @@ export type PrepTipId =
   | "bisonSave"
   | "allianceNode"
   | "gatherEarly"
+  | "gatherBoost"
   | "warAcademy"
   | "troopBatch"
   | "troopsFirst"
@@ -255,10 +256,10 @@ export type PrepTipId =
 /** The ❗ lines of each day; `day` fills the tip's {day}. Intel stacking has its own card (`INTEL_STACK_STEPS`). */
 export const PREP_TIPS: Record<PrepDay, ReadonlyArray<{ id: PrepTipId; day?: ScoringDay }>> = {
   0: [],
-  1: [{ id: "intelOpen" }, { id: "bisonSave", day: 2 }, { id: "allianceNode" }, { id: "gatherEarly" }],
+  1: [{ id: "intelOpen" }, { id: "bisonSave", day: 2 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
   2: [{ id: "warAcademy" }],
-  3: [{ id: "intelOpen" }, { id: "troopBatch", day: 4 }, { id: "bisonSave", day: 4 }, { id: "allianceNode" }, { id: "gatherEarly" }],
-  4: [{ id: "troopsFirst" }, { id: "bisonSave", day: 5 }, { id: "allianceNode" }, { id: "gatherEarly" }],
+  3: [{ id: "intelOpen" }, { id: "troopBatch", day: 4 }, { id: "bisonSave", day: 4 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
+  4: [{ id: "troopsFirst" }, { id: "bisonSave", day: 5 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
   5: [{ id: "intelOpen" }, { id: "finalPush" }, { id: "battleNext" }, { id: "shield" }, { id: "homeCoords" }],
 };
 

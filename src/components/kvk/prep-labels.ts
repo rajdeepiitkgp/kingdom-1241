@@ -58,6 +58,7 @@ export const SAVE_IMAGES: Partial<Record<SaveItemId, string>> = {
 export const TIP_IMAGES: Partial<Record<PrepTipId, string>> = {
   intelOpen: ITEM_IMAGES.intel,
   bisonSave: "/items/bison.webp",
+  gatherBoost: "/items/gathering-boost.webp",
   warAcademy: "/items/war-academy.webp",
   shield: "/items/shield.webp",
   homeCoords: "/items/teleporter.webp",

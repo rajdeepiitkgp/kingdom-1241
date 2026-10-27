@@ -644,6 +644,13 @@ export const UI_STRINGS = {
     pl: "Wyślij zbieraczy 7 godzin przed resetem, żeby skończyli dopiero po nim.",
     ar: "أرسل جامعي الموارد قبل إعادة التعيين بـ 7 ساعات حتى ينتهوا بعدها.",
   },
+  "prep.tip.gatherBoost": {
+    en: "Activate the 24 h gathering speed boost (600 gems) when you send out your gatherers.",
+    de: "Aktiviere den 24-Std.-Sammelgeschwindigkeits-Boost (600 Edelsteine), wenn du deine Sammler losschickst.",
+    ko: "채집 부대를 보낼 때 24시간 채집 속도 버프(보석 600개)를 사용하세요.",
+    pl: "Włącz 24-godzinne przyspieszenie zbierania (600 klejnotów), gdy wysyłasz zbieraczy.",
+    ar: "فعّل تعزيز سرعة الجمع لمدة 24 ساعة (600 جوهرة) عند إرسال جامعي الموارد.",
+  },
   "prep.tip.warAcademy": {
     en: "Do both kinds of research today: normal research with speedups, and War Academy research with Truegold Dust.",
     de: "Mach heute beide Forschungen: normale Forschung mit Beschleunigungen und Forschung in der Kriegsakademie mit Truegold-Staub.",

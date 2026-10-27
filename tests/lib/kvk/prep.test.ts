@@ -173,6 +173,7 @@ describe("the prep table", () => {
       if (!bison?.day) continue;
       expect(bison.day).toBe(day + 1);
       expect(PREP_ITEMS.find((i) => i.id === "gathering")?.marks[bison.day - 1]).toBe("best");
+      for (const id of ["allianceNode", "gatherEarly", "gatherBoost"] as const) expect(PREP_TIPS[day].some((t) => t.id === id), `${id} on day ${day}`).toBe(true);
     }
   });
 });
