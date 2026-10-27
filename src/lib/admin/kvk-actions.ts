@@ -16,7 +16,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { localeField, localizedUpdate, textField, uuidField } from "./forms";
+import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, textField, uuidField } from "./forms";
 import {
   isMoveDirection,
   MAX_FORMATIONS,
@@ -45,8 +45,12 @@ import { isEditableTextColumn, pendingColumns, TEXT_LIMITS, withLanguage } from 
 
 const PLAN_GONE: ActionState = { status: "error", message: "This plan no longer exists." };
 
-/** Columns a copied row must not carry over. */
-const ROW_META = new Set(["id", "created_at", "updated_at", "source_hash"]);
+/**
+ * Columns a copied row must not carry over. `source_hash` is kept: the copy has
+ * the same English and the same translations, so only the columns the copy
+ * changes (its title) are translated again, and hand-made fixes survive.
+ */
+const ROW_META = new Set(["id", "created_at", "updated_at"]);
 
 function withoutRowMeta(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([key]) => !ROW_META.has(key)));
@@ -80,7 +84,7 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   const id = uuidField(formData, "id");
   const admin = createAdminClient();
 
-  type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null; battle_end_at?: string | null };
+  type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null; battle_end_at?: string | null; active?: boolean };
   let existing: ExistingPlan | null = null;
   if (id) {
     const { data } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();
@@ -97,7 +101,10 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
 
   // A changed English intro drops the other languages (HTML and Markdown sources alike);
   // the pipeline refills the HTML, and sources are re-derived from it when edited.
-  const intro = localizedUpdate(existing?.intro, markdownToHtml(input.introSource));
+  const intro =
+    existing && introSourceUnchanged(input.introSource, shownIntroSource(existing.intro_source, existing.intro))
+      ? existing.intro
+      : localizedUpdate(existing?.intro, markdownToHtml(input.introSource));
   const introSource =
     existing && intro === existing.intro ? { ...(existing.intro_source ?? {}), en: input.introSource } : { en: input.introSource };
 
@@ -119,13 +126,11 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   // The column arrives with migration 0009; until it is applied, a plan without an end time is saved as before.
   if (input.battleEndAt || (existing && "battle_end_at" in existing)) row.battle_end_at = input.battleEndAt;
 
-  if (input.active) {
-    // Only one plan can be active (unique partial index): switch the others off first.
-    let deactivate = admin.from("kvk_plans").update({ active: false }).eq("active", true);
-    if (id) deactivate = deactivate.neq("id", id);
-    const { error } = await deactivate;
-    if (error) return failed(log, "Deactivating other plans", error);
-  }
+  // Only one plan can be active (unique partial index). The plan is saved first and
+  // switched on afterwards, so a save that fails (a slug clash, say) never leaves
+  // the kingdom without its active plan.
+  const activating = input.active && !existing?.active;
+  if (activating) row.active = false;
 
   const result = id
     ? await admin.from("kvk_plans").update(row).eq("id", id).select("id").single()
@@ -136,6 +141,12 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   }
 
   const planId = String(result.data.id);
+  if (activating) {
+    const { error: offError } = await admin.from("kvk_plans").update({ active: false }).eq("active", true).neq("id", planId);
+    if (offError) return failed(log, "Deactivating other plans", offError);
+    const { error: onError } = await admin.from("kvk_plans").update({ active: true }).eq("id", planId);
+    if (onError) return failed(log, "Activating the plan", onError);
+  }
   await audit(access.user, id ? "kvk_plan.update" : "kvk_plan.create", "kvk_plans", planId, {
     slug: input.slug,
     active: input.active,
@@ -247,7 +258,7 @@ const CHILD_TABLES: Record<ChildTable, { anchor: string; action: string; page: s
 };
 
 function isChildTable(value: string): value is ChildTable {
-  return value in CHILD_TABLES;
+  return Object.hasOwn(CHILD_TABLES, value);
 }
 
 async function planExists(planId: string): Promise<boolean> {
@@ -475,7 +486,10 @@ async function savePageBrief(area: BriefArea, formData: FormData): Promise<Actio
   const existing = existingRow as ExistingBrief | null;
 
   // As for the plan intro: a changed English text drops the other languages, the pipeline refills them.
-  const intro = localizedUpdate(existing?.intro, markdownToHtml(input.introSource));
+  const intro =
+    existing && introSourceUnchanged(input.introSource, shownIntroSource(existing.intro_source, existing.intro))
+      ? existing.intro
+      : localizedUpdate(existing?.intro, markdownToHtml(input.introSource));
   const introSource =
     existing && intro === existing.intro ? { ...(existing.intro_source ?? {}), en: input.introSource } : { en: input.introSource };
   const row = { password: input.password, intro, intro_source: introSource, published: input.published };

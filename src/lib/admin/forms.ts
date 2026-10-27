@@ -98,6 +98,23 @@ export function localizedUpdate(existing: Localized | null | undefined, english:
   return { en: english };
 }
 
+/** The English intro source the editor shows: the stored Markdown, else text derived from the HTML (rows written as HTML, e.g. the seed). */
+export function shownIntroSource(introSource: Localized | null | undefined, intro: Localized | null | undefined): string {
+  const stored = introSource?.en;
+  return typeof stored === "string" && stored.trim() ? stored : htmlToEditableText(intro?.en ?? "");
+}
+
+/**
+ * True when the posted English intro source is the one the editor showed, so
+ * the English intro wasn't edited and its translations stay (comparing freshly
+ * rendered HTML instead would drop them whenever the stored HTML came from an
+ * older renderer, or from the seed).
+ */
+export function introSourceUnchanged(posted: string, shown: string): boolean {
+  const normalize = (text: string) => text.replace(/\r\n?/g, "\n").trim();
+  return normalize(posted) === normalize(shown);
+}
+
 /**
  * Rough HTML → Markdown-ish text, used once to open a row that was written as
  * HTML (the seed) in the Markdown editor. Paragraphs, line breaks, emphasis,

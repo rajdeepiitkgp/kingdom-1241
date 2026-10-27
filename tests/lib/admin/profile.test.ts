@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatGameName, parseGameName, parseProfileForm, splitAllianceTag } from "@/lib/admin/profile";
+import { formatGameName, gameNameTaken, parseGameName, parseProfileForm, splitAllianceTag } from "@/lib/admin/profile";
 
 const TAGS = ["NAM", "ULU", "KvK"];
 
@@ -53,5 +53,23 @@ describe("formatGameName", () => {
     expect(formatGameName("Rudy", "ULU")).toBe("[ULU] Rudy");
     expect(formatGameName("Rudy", null)).toBe("Rudy");
     expect(formatGameName(null, "ULU")).toBeNull();
+  });
+});
+
+describe("gameNameTaken", () => {
+  const profiles = [
+    { id: "me", game_name: "Rudy" },
+    { id: "other", game_name: "Iron  Fist" },
+    { id: "blank", game_name: null },
+  ];
+
+  it("refuses a name another account uses, ignoring case and spacing", () => {
+    expect(gameNameTaken("iron fist", "me", profiles)).toBe(true);
+    expect(gameNameTaken("IRON FIST ", "me", profiles)).toBe(true);
+  });
+
+  it("allows the account's own name and names nobody uses", () => {
+    expect(gameNameTaken("rudy", "me", profiles)).toBe(false);
+    expect(gameNameTaken("Nova", "me", profiles)).toBe(false);
   });
 });
