@@ -57,7 +57,8 @@ function parseJsonText(text: string): unknown {
   try {
     return JSON.parse(cleaned);
   } catch {
-    throw new Error(`The model returned invalid JSON: ${cleaned.slice(0, 160)}`);
+    // Only the length: the reply holds players' texts, which never go into a log.
+    throw new Error(`The model returned invalid JSON (${cleaned.length} characters).`);
   }
 }
 

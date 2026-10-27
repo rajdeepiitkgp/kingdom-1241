@@ -26,6 +26,9 @@ import { formatAverage, overallAverage, percent, summarizeByAlliance, summarizeR
 
 export const metadata: Metadata = { title: "Feedback results" };
 
+/** "Translate and analyse" runs as a Server Action of this page: a large battle needs more than the default time. */
+export const maxDuration = 300;
+
 type ResultsProps = PageProps<"/[locale]/admin/feedback/[planId]">;
 
 const NOTICES: Record<string, string> = {

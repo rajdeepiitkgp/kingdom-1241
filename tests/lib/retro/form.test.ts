@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD, isGovernorId, isHoneypotFilled, NO_ALLIANCE, normalizeGovernorId, parseRetroForm } from "@/lib/retro/form";
+import { clipText, FIELD, isGovernorId, isHoneypotFilled, NO_ALLIANCE, normalizeGovernorId, parseRetroForm } from "@/lib/retro/form";
 import { defaultConfig } from "@/lib/retro/questions";
 
 function form(entries: Record<string, string>): FormData {
@@ -108,5 +108,18 @@ describe("parseRetroForm", () => {
     const result = parseRetroForm(form(valid), strict, TAGS);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[FIELD.text("suggestions")]).toBe("required");
+  });
+});
+
+describe("clipText", () => {
+  it("never cuts an emoji in half", () => {
+    const clipped = clipText("ab🔥🔥", 3);
+    expect(clipped).toBe("ab🔥");
+    expect(clipped.isWellFormed()).toBe(true);
+    expect("ab🔥🔥".slice(0, 3).isWellFormed()).toBe(false);
+  });
+
+  it("leaves short texts alone", () => {
+    expect(clipText("short", 10)).toBe("short");
   });
 });
