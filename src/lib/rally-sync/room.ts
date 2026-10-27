@@ -28,6 +28,9 @@ export const ROOM_CODE_LENGTH = 6;
 export const MAX_OPEN_ROOMS = 3;
 export const MAX_LEADERS_PER_ROOM = 10;
 export const MAX_LEADERS_TOTAL = 15;
+/** Browsers (instances) per room, as in migration 0014. */
+export const MAX_INSTANCES_PER_ROOM = 50;
+export const INSTANCE_TAG_LENGTH = 4;
 /** A room closes after this long without anybody on the page … */
 export const IDLE_CLOSE_MS = 30 * MINUTE;
 /** … and a day after it was created at the latest. */
@@ -58,6 +61,11 @@ export function normalizeRoomCode(input: unknown): string | null {
   const code = input.toUpperCase().replace(/[\s-]/g, "");
   if (code.length !== ROOM_CODE_LENGTH) return null;
   return [...code].every((c) => ROOM_CODE_ALPHABET.includes(c)) ? code : null;
+}
+
+/** The random label of an instance without a name ("Watcher K7M4"): the room-code alphabet, so it reads out the same way. */
+export function randomInstanceTag(randomByte: () => number): string {
+  return randomRoomCode(randomByte).slice(0, INSTANCE_TAG_LENGTH);
 }
 
 /** "K7M4QX" → "K7M 4QX" (easier to read out). */
@@ -141,12 +149,55 @@ export interface LeaderView {
   marchChangedAt: string | null;
 }
 
+/** The visitor's own instance (browser), as their page sees it; null for a cookie from before instances existed. */
+export interface InstanceSelf {
+  tag: string;
+  name: string | null;
+}
+
 /** The answer of GET /api/rally-sync/[code]. */
 export interface RoomState {
   room: RoomView;
   leaders: LeaderView[];
+  me: InstanceSelf | null;
   /** The server's clock when the answer was made, for the page's clock correction. */
   serverNow: number;
+}
+
+// ---------------------------------------------------------------------------
+// Instances: every browser in a room (the coordinator's "In the room" list)
+// ---------------------------------------------------------------------------
+
+/** One instance in the coordinator's list: never a token or a cookie, only what helps to tell them apart. */
+export interface InstanceView {
+  id: string;
+  tag: string;
+  name: string | null;
+  /** Names of the leaders this instance added (one player may run two browsers, each with a leader). */
+  leaders: string[];
+  coordinator: boolean;
+  /** The coordinator's own instance (it can't remove itself). */
+  me: boolean;
+  lastSeenAt: string;
+}
+
+/** How an instance is called: its own name, else its leaders' names, else "Watcher" + tag (the page words it). */
+export function instanceLabel(instance: Pick<InstanceView, "name" | "leaders" | "tag">): { kind: "name" | "leaders" | "watcher"; text: string } {
+  if (instance.name) return { kind: "name", text: instance.name };
+  if (instance.leaders.length > 0) return { kind: "leaders", text: instance.leaders.join(", ") };
+  return { kind: "watcher", text: instance.tag };
+}
+
+/** The coordinator's list: their own instance first, then the most recently active. */
+export function sortInstances<T extends Pick<InstanceView, "me" | "lastSeenAt">>(instances: readonly T[]): T[] {
+  return [...instances].sort((a, b) => Number(b.me) - Number(a.me) || b.lastSeenAt.localeCompare(a.lastSeenAt));
+}
+
+/** An instance's own name: like a leader's name, or empty to go back to its tag. */
+export function parseInstanceName(value: unknown): Parsed<string | null> {
+  const name = typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  if (!name) return { ok: true, value: null };
+  return name.length <= NAME_MAX ? { ok: true, value: name } : { ok: false };
 }
 
 // ---------------------------------------------------------------------------

@@ -5,20 +5,29 @@ import clsx from "clsx";
 import { ArrowLeft, Clock3, DoorClosed, Minus, MonitorSmartphone, Pencil, Plus, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
-import { coordinate, joinRoom, leaveRoom, setMyActive, updateMyLeader } from "@/lib/rally-sync/actions";
+import { coordinate, joinRoom, leaveRoom, renameMe, setMyActive, updateMyLeader } from "@/lib/rally-sync/actions";
 import { NOTABLE_OFFSET_MS } from "@/lib/rally-sync/clock";
 import { parseRoomHash, updateDevice, updateDeviceRoom } from "@/lib/rally-sync/device";
 import type { LinkStatus } from "@/lib/rally-sync/realtime";
-import { formatRoomCode, MAX_LEADERS_PER_ROOM, nextRallyMarch, rallyRunning, type RoomState } from "@/lib/rally-sync/room";
+import {
+  formatRoomCode,
+  type InstanceSelf,
+  MAX_LEADERS_PER_ROOM,
+  NAME_MAX,
+  nextRallyMarch,
+  parseInstanceName,
+  rallyRunning,
+  type RoomState,
+} from "@/lib/rally-sync/room";
 import { CuePlayer } from "@/lib/rally-sync/sound";
 import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, withStartTimes } from "@/lib/rally-sync/timing";
 import { CoordinatorPanel } from "./CoordinatorPanel";
 import { useCorrectedSecond, useDevice, useRoomSync, useRunner, useWakeLock } from "./hooks";
 import { type Clock, FocusBlock, isUrgent, LeaderRow, NextMarch, shown, type TimedLeaderView } from "./LeaderCards";
-import { LeaderForm } from "./LeaderForm";
+import { ErrorLine, LeaderForm } from "./LeaderForm";
 
 const noSubscribe = () => () => {};
 
@@ -60,7 +69,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     if (room.title) updateDeviceRoom(code, (r) => (r.title === room.title ? r : { ...r, title: room.title }));
   }, [code, room.title]);
 
-  // The password changed under us: the server shows the lock again.
+  // The coordinator removed this browser (or an old cookie met a new password): the server shows the lock again.
   useEffect(() => {
     if (sync.ending === "locked") router.refresh();
   }, [sync.ending, router]);
@@ -134,6 +143,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
 
       <MyEntry
         code={code}
+        me={sync.state.me}
         myLeader={myLeader}
         prominent={!coordinatorToken}
         runningHitAt={now !== null && rallyRunning(room.hitAt, now) ? room.hitAt : null}
@@ -142,7 +152,21 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
         onChanged={sync.refresh}
       />
 
-      {coordinatorToken && <CoordinatorPanel room={room} leaders={timed} now={now} clock={clock} token={coordinatorToken} dict={dict} locale={locale} onChanged={sync.refresh} />}
+      {!myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />}
+
+      {coordinatorToken && (
+        <CoordinatorPanel
+          room={room}
+          leaders={timed}
+          now={now}
+          clock={clock}
+          token={coordinatorToken}
+          dict={dict}
+          locale={locale}
+          version={sync.updatedAt}
+          onChanged={sync.refresh}
+        />
+      )}
 
       <LeaderList
         leaders={myLeader ? timed.filter((l) => l.id !== myLeader.id) : timed}
@@ -159,6 +183,77 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
 }
 
 const LINK_DOT: Record<LinkStatus, string> = { live: "bg-success", connecting: "bg-gold-strong", offline: "bg-danger" };
+
+/**
+ * How the coordinator's list shows this browser, with a small form to rename it.
+ * A watcher shows as "Watcher K7M4" until it names itself; a leader's browser shows
+ * as the leader unless it is renamed (a proxy running the entry for someone else),
+ * and that line sits inside the leader's edit card, out of the way.
+ */
+function BrowserName({
+  code,
+  me,
+  leaderName,
+  dict,
+  onChanged,
+}: {
+  code: string;
+  me: InstanceSelf;
+  /** The browser's own leader entry, if it has one. */
+  leaderName: string | null;
+  dict: Dictionary;
+  onChanged: () => void;
+}) {
+  const { pending, run, errorFor, fail } = useRunner(onChanged);
+  const [editing, setEditing] = useState(false);
+  const tagLabel = format(dict["sync.instances.watcher"], { tag: me.tag });
+  const shownName = me.name ?? leaderName ?? tagLabel;
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = parseInstanceName(new FormData(event.currentTarget).get("name"));
+    if (!name.ok) return fail("name", "invalid");
+    if (await run("name", () => renameMe(code, name.value))) setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <p className={clsx("text-sm text-ink-muted", leaderName === null && "text-center")}>
+        {format(dict[leaderName === null ? "sync.watching" : "sync.device.leaderLine"], { name: shownName })}{" "}
+        <button type="button" className="font-bold text-primary underline" onClick={() => setEditing(true)}>
+          {me.name || leaderName !== null ? dict["sync.edit"] : dict["sync.watching.set"]}
+        </button>
+      </p>
+    );
+  }
+  return (
+    <form onSubmit={(event) => void save(event)} className={clsx(leaderName === null && "card-soft px-4 py-3")}>
+      <label htmlFor="sync-my-name" className="label">
+        {dict[leaderName === null ? "sync.watching.label" : "sync.device.label"]}
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <input
+          id="sync-my-name"
+          name="name"
+          className="input min-w-0 flex-1 basis-40"
+          defaultValue={me.name ?? ""}
+          placeholder={leaderName ?? undefined}
+          maxLength={NAME_MAX}
+          autoComplete="off"
+          dir="auto"
+        />
+        <button type="submit" className="btn-primary shrink-0" disabled={pending !== null}>
+          {dict["sync.save"]}
+        </button>
+        <button type="button" className="btn-ghost shrink-0" onClick={() => setEditing(false)}>
+          {dict["sync.cancel"]}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-ink-faint">{leaderName === null ? format(dict["sync.watching.hint"], { tag: tagLabel }) : dict["sync.device.leaderHint"]}</p>
+      {errorFor("name") && <ErrorLine dict={dict} error={errorFor("name") ?? "failed"} />}
+    </form>
+  );
+}
 
 /** One slim line: which room, whether updates are live, the clock, and icon switches for sound, screen and the game clock. */
 function StatusBar({
@@ -303,6 +398,7 @@ function ClockPanel({ now, clock, offsetMs, dict }: { now: number | null; clock:
  */
 function MyEntry({
   code,
+  me,
   myLeader,
   prominent,
   runningHitAt,
@@ -311,6 +407,8 @@ function MyEntry({
   onChanged,
 }: {
   code: string;
+  /** This browser as the coordinator's list shows it (null for a cookie from before instances). */
+  me: InstanceSelf | null;
   myLeader: TimedLeaderView | null;
   prominent: boolean;
   /** The hit time while a rally is running (changes then wait for the next rally), else null. */
@@ -470,6 +568,11 @@ function MyEntry({
         </button>
       </LeaderForm>
       {runningHitAt !== null && myLeader.status !== "inactive" && <p className="mt-2 text-xs text-ink-faint">{dict["sync.me.sitOutRunning"]}</p>}
+      {me && (
+        <div className="mt-4 border-t border-line pt-3">
+          <BrowserName code={code} me={me} leaderName={myLeader.name} dict={dict} onChanged={onChanged} />
+        </div>
+      )}
     </section>
   );
 }

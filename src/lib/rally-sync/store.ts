@@ -6,13 +6,13 @@ import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import { memoryStore } from "./memory-store";
 import { pruneClosedRooms } from "./prune";
 import { parseHistory, parseLeaderStatus } from "./room";
-import { type LeaderPatch, type LeaderRow, RallyStoreError, type RallyStore, type RoomPatch, type RoomRow, type StoreProblem } from "./store-types";
+import { type InstanceRow, type LeaderPatch, type LeaderRow, RallyStoreError, type RallyStore, type RoomPatch, type RoomRow, type StoreProblem } from "./store-types";
 
 export * from "./store-types";
 
 /**
- * Storage of Rally Sync rooms (server only): tables rally_sync_rooms and
- * rally_sync_leaders through the service role, or an in-memory store for
+ * Storage of Rally Sync rooms (server only): tables rally_sync_rooms,
+ * rally_sync_leaders and rally_sync_instances through the service role, or an in-memory store for
  * local review without a database (RALLY_SYNC_STORE=memory, never on Vercel).
  * The database enforces the limits and broadcasts the Realtime pings
  * (migration 0012); the actions check the limits first for a friendly reply.
@@ -28,7 +28,11 @@ export function rallyStore(): RallyStore | null {
 
 const ROOM_COLUMNS =
   "id, code, title, password_hash, coordinator_hash, channel_key, mode, rally_wait_seconds, buffer_seconds, counter_offset_seconds, enemy_hit_at, hit_at, hit_set_at, hit_history, created_by, created_by_name, last_seen_at, created_at";
-const LEADER_COLUMNS = "id, room_id, name, march_seconds, status, next_march_seconds, previous_march_seconds, march_changed_at, token_hash, created_at";
+// Leaders are read whole: instance_id arrives with migration 0014, and a deploy may run a minute ahead of it.
+const LEADER_COLUMNS = "*";
+const INSTANCE_COLUMNS = "id, room_id, tag, name, coordinator, created_at, last_seen_at";
+/** Instance ids come from cookies and forms: only well-formed ones reach a query. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Row = Record<string, unknown>;
 
@@ -70,7 +74,20 @@ export function mapLeaderRow(row: Row): LeaderRow {
     previousMarchSeconds: optionalNumber(row.previous_march_seconds),
     marchChangedAt: optionalText(row.march_changed_at),
     tokenHash: optionalText(row.token_hash),
+    instanceId: optionalText(row.instance_id),
     createdAt: text(row.created_at),
+  };
+}
+
+export function mapInstanceRow(row: Row): InstanceRow {
+  return {
+    id: text(row.id),
+    roomId: text(row.room_id),
+    tag: text(row.tag),
+    name: optionalText(row.name),
+    coordinator: row.coordinator === true,
+    createdAt: text(row.created_at),
+    lastSeenAt: text(row.last_seen_at),
   };
 }
 
@@ -103,9 +120,11 @@ function toColumns<T extends object>(patch: T, columns: Record<keyof T, string>)
   return out;
 }
 
-/** The database's limit errors (raised by the triggers of migration 0012) as problems. */
+/** The database's limit errors (raised by the triggers of migrations 0012 and 0014) as problems. */
 function problemOf(error: { message: string; code?: string }): StoreProblem {
-  for (const problem of ["room_limit", "leader_limit", "total_limit", "room_closed"] as const) if (error.message.includes(`rally_sync_${problem}`)) return problem;
+  for (const problem of ["room_limit", "leader_limit", "total_limit", "instance_limit", "room_closed"] as const) if (error.message.includes(`rally_sync_${problem}`)) return problem;
+  // A table or column the API doesn't know yet: the migration hasn't run.
+  if (error.code === "PGRST205" || error.code === "PGRST204" || error.code === "42P01" || error.code === "42703") return "not_migrated";
   return error.code === "23505" ? "duplicate" : "failed";
 }
 
@@ -186,7 +205,15 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
     async insertLeader(leader) {
       const { data, error } = await admin
         .from("rally_sync_leaders")
-        .insert({ room_id: leader.roomId, name: leader.name, march_seconds: leader.marchSeconds, status: leader.status ?? "active", token_hash: leader.tokenHash })
+        .insert({
+          room_id: leader.roomId,
+          name: leader.name,
+          march_seconds: leader.marchSeconds,
+          status: leader.status ?? "active",
+          token_hash: leader.tokenHash,
+          // Only with an instance, which exists only once migration 0014 has run.
+          ...(leader.instanceId ? { instance_id: leader.instanceId } : {}),
+        })
         .select(LEADER_COLUMNS)
         .single();
       if (error) fail("Adding a leader", error);
@@ -199,6 +226,47 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
     async deleteLeader(id) {
       const { error } = await admin.from("rally_sync_leaders").delete().eq("id", id);
       if (error) fail("Removing a leader", error);
+    },
+    async instances(roomId) {
+      const { data, error } = await admin.from("rally_sync_instances").select(INSTANCE_COLUMNS).eq("room_id", roomId).order("created_at").limit(100);
+      if (error) fail("Reading instances", error);
+      return (data ?? []).map(mapInstanceRow);
+    },
+    async instanceById(id) {
+      if (!UUID.test(id)) return null;
+      const { data, error } = await admin.from("rally_sync_instances").select(INSTANCE_COLUMNS).eq("id", id).maybeSingle();
+      if (error) fail("Reading an instance", error);
+      return data ? mapInstanceRow(data) : null;
+    },
+    async insertInstance(instance) {
+      const { data, error } = await admin.from("rally_sync_instances").insert({ room_id: instance.roomId, tag: instance.tag }).select(INSTANCE_COLUMNS).single();
+      if (error) fail("Adding an instance", error);
+      return mapInstanceRow(data);
+    },
+    async updateInstance(id, patch) {
+      const { error } = await admin.from("rally_sync_instances").update(toColumns(patch, { name: "name", coordinator: "coordinator" })).eq("id", id);
+      if (error) fail("Updating an instance", error);
+    },
+    async touchInstance(id, now) {
+      const { error } = await admin
+        .from("rally_sync_instances")
+        .update({ last_seen_at: new Date(now).toISOString() })
+        .eq("id", id)
+        .lt("last_seen_at", new Date(now - 60_000).toISOString());
+      if (error) log.warn("Could not mark an instance as seen", { error: error.message });
+    },
+    async deleteInstances(roomId, which) {
+      let query = admin.from("rally_sync_instances").delete().eq("room_id", roomId);
+      if ("ids" in which) {
+        const ids = which.ids.filter((id) => UUID.test(id));
+        if (ids.length === 0) return 0;
+        query = query.in("id", ids);
+      } else if (which.except) {
+        query = query.neq("id", which.except);
+      }
+      const { data, error } = await query.select("id");
+      if (error) fail("Removing instances", error);
+      return data?.length ?? 0;
     },
     async deleteClosedRooms(now) {
       return pruneClosedRooms(admin, new Date(now));

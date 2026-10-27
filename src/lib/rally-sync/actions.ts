@@ -8,12 +8,27 @@ import { localePath } from "@/lib/i18n/paths";
 import { ADDRESS_POLICY, retryAfter, triesLeft } from "@/lib/kvk/throttle";
 import { addressHash, clearThrottle, loadThrottle, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId, type Logger } from "@/lib/log";
-import { hashPassword, hashToken, inviteKey, isValidInviteKey, newToken, roomAccessToken, roomCookieName, roomCookieOptions, tokenMatches, verifyPassword } from "./access";
+import {
+  hashPassword,
+  hashToken,
+  instanceCookieValue,
+  inviteKey,
+  isValidInviteKey,
+  newInstanceTag,
+  newToken,
+  roomAccessToken,
+  roomCookieName,
+  roomCookieOptions,
+  tokenMatches,
+  verifyPassword,
+} from "./access";
 import {
   joinStatus,
+  type InstanceView,
   leaderEdit,
   MAX_LEADERS_PER_ROOM,
   normalizeRoomCode,
+  parseInstanceName,
   parseMarch,
   parseName,
   parsePassword,
@@ -22,10 +37,11 @@ import {
   rallyRunning,
   resyncMarches,
   type RoomMode,
+  sortInstances,
   statusAfter,
 } from "./room";
-import { findOpenRoom, hasRoomAccess } from "./session";
-import { type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
+import { findOpenRoom, roomAccess } from "./session";
+import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
 import { ceilToSecond, clampGameOffset, counterHit, earliestHit, parseDuration, parseUtcClock, toGameTime } from "./timing";
 
 /**
@@ -51,6 +67,7 @@ export type SyncError =
   | "room_limit"
   | "leader_limit"
   | "total_limit"
+  | "instance_limit"
   | "failed";
 
 export type SyncResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: SyncError; retryAt?: number };
@@ -81,7 +98,10 @@ export type CoordinatorOp =
   | { type: "removeLeader"; leaderId: string }
   | { type: "setActive"; leaderId: string; active: boolean }
   | { type: "password"; password: string }
-  | { type: "invite" }
+  | { type: "removeInstance"; instanceId: string }
+  | { type: "removeOthers" }
+  /** The current invite key; with `password`, also whether that (a device's saved copy) is still the room's password. */
+  | { type: "invite"; password?: string }
   | { type: "destroy" };
 
 const baseLog = createLogger("rally-sync");
@@ -119,20 +139,22 @@ export async function unlockRoom(_previous: UnlockRoomState, formData: FormData)
   if (codeWait > 0) return { status: "error", error: "throttled", retryAt: now + codeWait };
 
   if ("problem" in found && (found.problem === "unavailable" || found.problem === "closed")) return { status: "error", error: found.problem };
-  const room = "room" in found ? found.room : null;
+  const opened = "room" in found ? found : null;
   // Every try is counted before anything is checked, so parallel requests can't outrun the lockout.
-  const scope = room ? roomScope(room.id, address) : codeScope(address);
+  const scope = opened ? roomScope(opened.room.id, address) : codeScope(address);
   const attempt = throttling ? await takeTry(scope, now, ADDRESS_POLICY) : ({ allowed: true, state: null } as const);
   if (!attempt.allowed) return { status: "error", error: "throttled", retryAt: attempt.retryAt };
 
-  if (!room || !(await verifyPassword(password, room.passwordHash))) {
-    log.info("Room unlock failed", { room: code, reason: room ? "password" : "code", failures: attempt.state?.failures });
+  if (!opened || !(await verifyPassword(password, opened.room.passwordHash))) {
+    log.info("Room unlock failed", { room: code, reason: opened ? "password" : "code", failures: attempt.state?.failures });
     const lock = retryAfter(attempt.state, now);
     if (lock > 0) return { status: "error", error: "throttled", retryAt: now + lock };
     return { status: "error", error: "wrong", triesLeft: triesLeft(attempt.state, now, ADDRESS_POLICY) };
   }
 
-  (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, room.passwordHash), ...roomCookieOptions() });
+  const { store, room } = opened;
+  const problem = await enterRoom(store, room, log);
+  if (problem) return { status: "error", error: problem };
   if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "password" });
   redirect(localePath(locale, `/tools/rally-sync/${room.code}`));
@@ -153,30 +175,56 @@ export async function unlockRoomWithKey(code: string, key: string): Promise<Sync
     log.info("Room unlock failed", { room: room.code, reason: "invite key", failures: attempt.state?.failures });
     return { ok: false, error: "wrong" };
   }
-  (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, room.passwordHash), ...roomCookieOptions() });
+  const problem = await enterRoom(store, room, log);
+  if (problem) return { ok: false, error: problem };
   if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "invite link" });
   return { ok: true };
+}
+
+/**
+ * Makes this browser an instance of the room and sets the room cookie naming it
+ * (a browser that is already in keeps its instance). While a deploy runs ahead of
+ * migration 0014 there is no instance table yet: the old password-bound cookie then.
+ */
+async function enterRoom(store: RallyStore, room: RoomRow, log: Logger): Promise<SyncError | null> {
+  const current = await roomAccess(store, room).catch(() => null);
+  if (current?.instance) return null;
+  let value: string;
+  try {
+    const instance = await store.insertInstance({ roomId: room.id, tag: newInstanceTag() });
+    value = instanceCookieValue(room.id, instance.id);
+  } catch (error) {
+    if (!(error instanceof RallyStoreError && error.problem === "not_migrated")) return storeError(error, log, "Entering a room").error;
+    value = roomAccessToken(room.id, room.passwordHash);
+  }
+  (await cookies()).set({ name: roomCookieName(room.code), value, ...roomCookieOptions() });
+  return null;
 }
 
 // ---------------------------------------------------------------------------
 // Leaders (their own row, with the token their device keeps)
 // ---------------------------------------------------------------------------
 
-type Opened = { store: RallyStore; room: RoomRow };
+type Opened = { store: RallyStore; room: RoomRow; instance: InstanceRow | null };
 
-/** The room, if it is open and this visitor unlocked it. */
+/** The room, if it is open and this visitor's cookie still opens it (their instance, if any). */
 async function openUnlocked(code: string): Promise<Opened | { error: SyncError }> {
   const found = await findOpenRoom(code);
   if ("problem" in found) return { error: found.problem };
-  if (!(await hasRoomAccess(found.room))) return { error: "locked" };
-  return found;
+  try {
+    const access = await roomAccess(found.store, found.room);
+    if (!access) return { error: "locked" };
+    return { ...found, instance: access.instance };
+  } catch {
+    return { error: "unavailable" };
+  }
 }
 
 function storeError(error: unknown, log: Logger, what: string): { ok: false; error: SyncError } {
   if (error instanceof RallyStoreError) {
     const problem = error.problem;
-    if (problem === "room_limit" || problem === "leader_limit" || problem === "total_limit") return { ok: false, error: problem };
+    if (problem === "room_limit" || problem === "leader_limit" || problem === "total_limit" || problem === "instance_limit") return { ok: false, error: problem };
     if (problem === "room_closed") return { ok: false, error: "closed" };
   }
   log.error(`${what} failed`, { error: error instanceof Error ? error.message : String(error) });
@@ -207,7 +255,16 @@ export async function joinRoom(code: string, input: LeaderInput, gameOffsetSecon
     if ((await store.leaders(room.id)).length >= MAX_LEADERS_PER_ROOM) return { ok: false, error: "leader_limit" };
     const token = newToken();
     const running = rallyRunning(room.hitAt, toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds)));
-    const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, status: joinStatus(running), tokenHash: hashToken(token) });
+    const row = await store.insertLeader({
+      roomId: room.id,
+      name: leader.name,
+      marchSeconds: leader.marchSeconds,
+      status: joinStatus(running),
+      tokenHash: hashToken(token),
+      instanceId: opened.instance?.id ?? null,
+    });
+    // From now on the coordinator sees this browser by its leader's name; a name it had as a watcher goes.
+    if (opened.instance?.name) await store.updateInstance(opened.instance.id, { name: null });
     log.info("Leader joined", { room: room.code, leader: row.id });
     return { ok: true, leaderId: row.id, token };
   } catch (error) {
@@ -266,6 +323,8 @@ export async function leaveRoom(code: string, leaderId: string, token: string): 
     const own = await ownLeader(code, leaderId, token);
     if ("error" in own) return { ok: false, error: own.error };
     await own.store.deleteLeader(own.leader.id);
+    // Back to watching: the browser keeps the leader's name, so the coordinator still knows who it is.
+    if (own.instance && !own.instance.name && own.leader.instanceId === own.instance.id) await own.store.updateInstance(own.instance.id, { name: own.leader.name });
     log.info("Leader left", { room: own.room.code, leader: own.leader.id });
     return { ok: true };
   } catch (error) {
@@ -310,19 +369,78 @@ async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]):
   );
 }
 
+/** An instance that used coordinator rights is marked as such in the coordinator's list (once). */
+async function markCoordinator(store: RallyStore, instance: InstanceRow | null): Promise<void> {
+  if (instance && !instance.coordinator) await store.updateInstance(instance.id, { coordinator: true }).catch(() => undefined);
+}
+
+/**
+ * Every browser in the room, for the coordinator: who it is (own name, else its
+ * leaders, else its tag), whether it coordinates, when it was last on screen.
+ */
+export async function listInstances(code: string, token: string): Promise<SyncResult<{ instances: InstanceView[] }>> {
+  const { log } = await context();
+  if (typeof token !== "string") return { ok: false, error: "invalid" };
+  const opened = await openUnlocked(code);
+  if ("error" in opened) return { ok: false, error: opened.error };
+  const { store, room, instance } = opened;
+  if (!tokenMatches(token, room.coordinatorHash)) return { ok: false, error: "not_coordinator" };
+  try {
+    await markCoordinator(store, instance);
+    const [rows, leaders] = await Promise.all([store.instances(room.id), store.leaders(room.id)]);
+    const instances = rows.map((row) => ({
+      id: row.id,
+      tag: row.tag,
+      name: row.name,
+      leaders: leaders.filter((l) => l.instanceId === row.id).map((l) => l.name),
+      coordinator: row.coordinator || row.id === instance?.id,
+      me: row.id === instance?.id,
+      lastSeenAt: row.lastSeenAt,
+    }));
+    return { ok: true, instances: sortInstances(instances) };
+  } catch (error) {
+    // Before migration 0014 there is nobody to list yet.
+    if (error instanceof RallyStoreError && error.problem === "not_migrated") return { ok: true, instances: [] };
+    return storeError(error, log, "Listing instances");
+  }
+}
+
+/** The visitor names their own browser in the room (or clears the name to go back to their tag). Only the coordinator sees it. */
+export async function renameMe(code: string, name: unknown): Promise<SyncResult> {
+  const { log } = await context();
+  const parsed = parseInstanceName(name);
+  if (!parsed.ok) return { ok: false, error: "invalid" };
+  const opened = await openUnlocked(code);
+  if ("error" in opened) return { ok: false, error: opened.error };
+  if (!opened.instance) return { ok: false, error: "unavailable" };
+  try {
+    await opened.store.updateInstance(opened.instance.id, { name: parsed.value });
+    log.info("Instance named", { room: opened.room.code, named: parsed.value !== null });
+    return { ok: true };
+  } catch (error) {
+    return storeError(error, log, "Naming an instance");
+  }
+}
+
 /**
  * One coordinator change. `gameOffsetSeconds` is the coordinator's game-clock
  * adjustment: typed times are game times as they are, while Re-sync, "lands
  * in" and the "already passed" check count from the coordinator's game "now".
  */
-export async function coordinate(code: string, token: string, op: CoordinatorOp, gameOffsetSeconds = 0): Promise<SyncResult<{ inviteKey?: string }>> {
+export async function coordinate(
+  code: string,
+  token: string,
+  op: CoordinatorOp,
+  gameOffsetSeconds = 0,
+): Promise<SyncResult<{ inviteKey?: string; passwordCurrent?: boolean }>> {
   const { log } = await context();
   // A direct POST can send anything; the checks below expect a token string and an op object.
   if (typeof token !== "string" || typeof op !== "object" || op === null || typeof op.type !== "string") return { ok: false, error: "invalid" };
   const opened = await openUnlocked(code);
   if ("error" in opened) return { ok: false, error: opened.error };
-  const { store, room } = opened;
+  const { store, room, instance } = opened;
   if (!tokenMatches(token, room.coordinatorHash)) return { ok: false, error: "not_coordinator" };
+  await markCoordinator(store, instance);
   // The game clock is the reference: "now" is the coordinator's game clock (server time + their adjustment).
   const now = toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds));
   const done = (fields: Record<string, unknown> = {}) => {
@@ -408,13 +526,28 @@ export async function coordinate(code: string, token: string, op: CoordinatorOp,
         if (!password.ok) return { ok: false, error: "invalid" };
         const passwordHash = await hashPassword(password.value);
         await store.updateRoom(room.id, { passwordHash });
-        // Everyone else is locked out now; the coordinator stays in.
-        (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, passwordHash), ...roomCookieOptions() });
+        // Everyone who is in stays in (cookies name instances, not the password); newcomers and old
+        // invite links need the new one. A coordinator on a pre-instance cookie gets a fresh one.
+        if (!instance) (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, passwordHash), ...roomCookieOptions() });
         done();
         return { ok: true, inviteKey: inviteKey(room.id, passwordHash) };
       }
-      case "invite":
-        return { ok: true, inviteKey: inviteKey(room.id, room.passwordHash) };
+      case "removeInstance": {
+        // Never the coordinator's own browser: that would lock them out of their own room.
+        if (typeof op.instanceId !== "string" || op.instanceId === instance?.id) return { ok: false, error: "invalid" };
+        const removed = await store.deleteInstances(room.id, { ids: [op.instanceId] });
+        return done({ removed });
+      }
+      case "removeOthers": {
+        const removed = await store.deleteInstances(room.id, { except: instance?.id ?? null });
+        return done({ removed });
+      }
+      case "invite": {
+        // Another coordinator may have changed the password since this device saved its copy and link.
+        const saved = typeof op.password === "string" && op.password ? op.password : null;
+        const passwordCurrent = saved === null ? undefined : await verifyPassword(saved, room.passwordHash);
+        return { ok: true, inviteKey: inviteKey(room.id, room.passwordHash), passwordCurrent };
+      }
       case "destroy": {
         await store.deleteRoom(room.id);
         (await cookies()).delete(roomCookieName(room.code));

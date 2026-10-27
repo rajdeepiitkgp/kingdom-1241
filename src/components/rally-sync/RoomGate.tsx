@@ -4,7 +4,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
-import { findOpenRoom, hasRoomAccess, roomState } from "@/lib/rally-sync/session";
+import { findOpenRoom, roomAccess, roomState } from "@/lib/rally-sync/session";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import { RallyRoom } from "./RallyRoom";
 import { RoomUnlock } from "./RoomUnlock";
@@ -33,9 +33,10 @@ export async function RoomGate({ code, dict, locale }: { code: string; dict: Dic
     );
   }
 
-  if (!(await hasRoomAccess(found.room))) return <RoomUnlock code={found.room.code} dict={dict} locale={locale} />;
+  const access = await roomAccess(found.store, found.room);
+  if (!access) return <RoomUnlock code={found.room.code} dict={dict} locale={locale} />;
 
-  const state = await roomState(found.store, found.room);
+  const state = await roomState(found.store, found.room, access.instance);
   const url = supabaseUrl();
   const key = supabaseAnonKey();
   // The in-memory store (local review) has no Realtime: the page polls instead.

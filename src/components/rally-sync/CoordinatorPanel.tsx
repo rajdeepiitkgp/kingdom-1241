@@ -4,12 +4,12 @@
 import clsx from "clsx";
 import { ChevronDown, Crown, RefreshCw, Shield, Swords, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, type CoordinatorOp } from "@/lib/rally-sync/actions";
 import { updateDevice } from "@/lib/rally-sync/device";
-import { IDLE_CLOSE_MS, resyncMarches, type RoomMode, type RoomView } from "@/lib/rally-sync/room";
+import { IDLE_CLOSE_MS, rallyRunning, resyncMarches, type RoomMode, type RoomView } from "@/lib/rally-sync/room";
 import {
   earliestHit,
   formatSeconds,
@@ -21,6 +21,7 @@ import {
   parseDuration,
 } from "@/lib/rally-sync/timing";
 import { useRunner } from "./hooks";
+import { InstancesPanel } from "./InstancesPanel";
 import { InvitePanel } from "./InvitePanel";
 import { type Clock, shown, type TimedLeaderView } from "./LeaderCards";
 import { ErrorLine, LeaderForm } from "./LeaderForm";
@@ -42,6 +43,7 @@ export function CoordinatorPanel({
   token,
   dict,
   locale,
+  version,
   onChanged,
 }: {
   room: RoomView;
@@ -51,12 +53,22 @@ export function CoordinatorPanel({
   token: string;
   dict: Dictionary;
   locale: string;
+  /** Changes whenever the room's state was fetched again (the instance list reloads with it). */
+  version: number | null;
   onChanged: () => void;
 }) {
   const router = useRouter();
   const { pending, run, errorFor, fail } = useRunner(onChanged);
   const [confirmDestroy, setConfirmDestroy] = useState(false);
   const [more, setMore] = useState(false);
+  const [instanceCount, setInstanceCount] = useState<number | null>(null);
+  // While a rally runs, Re-sync would replace its hit time under every leader: the first tap only arms it.
+  const [resyncArmed, setResyncArmed] = useState(false);
+  useEffect(() => {
+    if (!resyncArmed) return;
+    const timer = window.setTimeout(() => setResyncArmed(false), RESYNC_CONFIRM_MS);
+    return () => window.clearTimeout(timer);
+  }, [resyncArmed]);
   // Remounts the "add a leader" form after each add, so it starts empty again.
   const [added, setAdded] = useState(0);
   const send = (where: string, op: CoordinatorOp) => run(where, () => coordinate(room.code, token, op, clock.offsetSeconds));
@@ -66,6 +78,17 @@ export function CoordinatorPanel({
   // Re-sync starts the next rally: march times waiting for it count, leaders sitting out don't.
   const longest = Math.max(0, ...resyncMarches(leaders));
   const preview = now === null ? null : earliestHit(now, room.rallyWaitSeconds, [longest], room.bufferSeconds);
+  const running = now !== null && rallyRunning(room.hitAt, now);
+  const confirmingResync = running && resyncArmed;
+
+  function resync() {
+    if (running && !resyncArmed) {
+      setResyncArmed(true);
+      return;
+    }
+    setResyncArmed(false);
+    void send("resync", { type: "resync" });
+  }
 
   /** A one-field form (time or duration): sends the op and clears the field when it worked. */
   const fieldSubmit = (where: string, op: (text: string) => CoordinatorOp) => async (event: FormEvent<HTMLFormElement>) => {
@@ -142,9 +165,14 @@ export function CoordinatorPanel({
 
       {room.mode === "rally" ? (
         <div className="mt-4 space-y-3">
-          <button type="button" className="btn-gold w-full py-4 text-lg" onClick={() => void send("resync", { type: "resync" })} disabled={pending !== null}>
-            <RefreshCw className={clsx("size-5", pending === "resync" && "motion-safe:animate-spin")} aria-hidden />
-            {dict["sync.coord.resync"]}
+          <button
+            type="button"
+            className={clsx("w-full py-4 text-lg", confirmingResync ? "btn-primary bg-danger" : "btn-gold")}
+            onClick={resync}
+            disabled={pending !== null}
+          >
+            <RefreshCw className={clsx("size-5 shrink-0", pending === "resync" && "motion-safe:animate-spin")} aria-hidden />
+            {confirmingResync && preview !== null ? <ResyncConfirmLabel template={dict["sync.coord.resyncConfirm"]} time={`${shown(preview)} ${clock.label}`} /> : dict["sync.coord.resync"]}
           </button>
           <p className="text-xs text-ink-muted">
             {format(dict["sync.coord.resyncHint"], {
@@ -272,6 +300,10 @@ export function CoordinatorPanel({
           <InvitePanel code={room.code} token={token} dict={dict} />
         </Disclosure>
 
+        <Disclosure title={format(dict["sync.instances.title"], { n: instanceCount ?? "…" })}>
+          <InstancesPanel code={room.code} token={token} version={version} now={now} dict={dict} onCount={setInstanceCount} />
+        </Disclosure>
+
         {room.history.length > 0 && (
           <Disclosure title={format(dict["sync.history"], { n: room.history.length })}>
             <ul className="space-y-1 text-sm text-ink-muted">
@@ -370,6 +402,23 @@ function NumberInput({
       <input id={id} name={name} className="input" defaultValue={defaultValue} inputMode={numeric ? "numeric" : "text"} autoComplete="off" dir="ltr" {...keys} />
       <p className="mt-1 text-xs text-ink-faint">{hint}</p>
     </div>
+  );
+}
+
+/** How long an armed Re-sync waits for the second tap. */
+const RESYNC_CONFIRM_MS = 4000;
+
+/** The armed label with the new hit time as an unbreakable LTR piece, so "(≈ 18:53:04 UTC)" stays whole inside Arabic text. */
+function ResyncConfirmLabel({ template, time }: { template: string; time: string }) {
+  const [before, after = ""] = template.split("{time}");
+  return (
+    <span>
+      {before}
+      <span dir="ltr" className="whitespace-nowrap tabular">
+        {time}
+      </span>
+      {after}
+    </span>
   );
 }
 

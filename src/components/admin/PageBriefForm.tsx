@@ -5,6 +5,7 @@ import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveChecklistBrief, saveLeaderBrief } from "@/lib/admin/kvk-actions";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
 /** The fields of a page brief the form shows (the leader page's or the checklist's). */
 export interface PageBrief {
@@ -58,15 +59,17 @@ export function PageBriefForm({ area, locale, planId, brief }: { area: keyof typ
       <input type="hidden" name="planId" value={planId} />
 
       <Field label={page.passwordLabel} htmlFor={`${area}-password`} error={errors.password} hint={page.passwordHint}>
-        <input
+        <CodeSuggestInput
           id={`${area}-password`}
           name="password"
-          className="input md:max-w-sm"
+          className="md:max-w-sm"
           defaultValue={brief?.password ?? ""}
           required
           minLength={4}
           maxLength={64}
           autoComplete="off"
+          dir="ltr"
+          suggestLabel="Suggest" suggestHint="Fill in a random six-digit code"
         />
       </Field>
 

@@ -61,6 +61,7 @@ export const NOT_BACKED_UP: readonly string[] = [
   "kvk_unlock_throttle", // wrong-password counters, pruned after two days
   "rally_sync_rooms", // Rally Sync rooms live at most a day
   "rally_sync_leaders", // their leaders, deleted with the room
+  "rally_sync_instances", // the browsers in a room, deleted with it
 ];
 
 export type Row = Record<string, unknown>;

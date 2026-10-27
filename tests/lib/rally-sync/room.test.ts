@@ -9,18 +9,23 @@ import {
   resyncMarches,
   statusAfter,
   HISTORY_LENGTH,
+  instanceLabel,
+  INSTANCE_TAG_LENGTH,
   isRoomOpen,
   normalizeRoomCode,
   parseHistory,
+  parseInstanceName,
   parseMarch,
   parseName,
   parsePassword,
   parseSettings,
   parseTitle,
   pushHistory,
+  randomInstanceTag,
   randomRoomCode,
   ROOM_CODE_ALPHABET,
   roomClosesAt,
+  sortInstances,
   startChanged,
 } from "@/lib/rally-sync/room";
 
@@ -188,5 +193,36 @@ describe("rally sync rooms", () => {
         { marchSeconds: 300, nextMarchSeconds: null, status: "inactive" },
       ]),
     ).toEqual([120, 95]);
+  });
+});
+
+describe("instances (every browser in a room)", () => {
+  it("draws tags from the room-code alphabet", () => {
+    let i = 0;
+    const tag = randomInstanceTag(() => [255, 0, 31, 7, 200, 13][i++ % 6]);
+    expect(tag).toHaveLength(INSTANCE_TAG_LENGTH);
+    expect([...tag].every((c) => ROOM_CODE_ALPHABET.includes(c))).toBe(true);
+  });
+
+  it("calls an instance by its own name, else its leaders, else its tag", () => {
+    expect(instanceLabel({ name: "Scout", leaders: ["Rudy"], tag: "K7M4" })).toEqual({ kind: "name", text: "Scout" });
+    expect(instanceLabel({ name: null, leaders: ["Rudy", "Nova"], tag: "K7M4" })).toEqual({ kind: "leaders", text: "Rudy, Nova" });
+    expect(instanceLabel({ name: null, leaders: [], tag: "K7M4" })).toEqual({ kind: "watcher", text: "K7M4" });
+  });
+
+  it("lists the coordinator's own browser first, then the most recently seen", () => {
+    const rows = [
+      { id: "a", me: false, lastSeenAt: "2026-11-01T10:00:00Z" },
+      { id: "b", me: false, lastSeenAt: "2026-11-01T10:05:00Z" },
+      { id: "c", me: true, lastSeenAt: "2026-11-01T09:00:00Z" },
+    ];
+    expect(sortInstances(rows).map((r) => r.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("takes an optional name of up to 30 characters; empty goes back to the tag", () => {
+    expect(parseInstanceName("  Scout   two ")).toEqual({ ok: true, value: "Scout two" });
+    expect(parseInstanceName("   ")).toEqual({ ok: true, value: null });
+    expect(parseInstanceName(undefined)).toEqual({ ok: true, value: null });
+    expect(parseInstanceName("x".repeat(31))).toEqual({ ok: false });
   });
 });
