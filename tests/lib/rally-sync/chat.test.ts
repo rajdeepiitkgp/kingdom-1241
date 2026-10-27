@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { UI_STRINGS } from "@/content/seed/ui-strings";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { garrisonChat, rallyChat } from "@/lib/rally-sync/chat";
+import { counterChat, garrisonChat, rallyChat } from "@/lib/rally-sync/chat";
+import { counterOrder } from "@/lib/rally-sync/counter";
 import type { EnemyRally } from "@/lib/rally-sync/garrison";
 
 const dictionary = (lang: "en" | "de") => Object.fromEntries(Object.entries(UI_STRINGS).map(([key, text]) => [key, text[lang]])) as Dictionary;
@@ -41,7 +42,7 @@ describe("the rally chat summary", () => {
   ];
 
   it("gives the hit time, then every leader's start, earliest first, with the rally timer", () => {
-    expect(rallyChat({ mode: "rally", hitAt: at("21:45:00"), enemyHitAt: null, rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", en).split("\n")).toEqual([
+    expect(rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", en).split("\n")).toEqual([
       "Our rallies hit 21:45:00 (UTC)",
       "",
       "Start your rally (5:00 timer) at:",
@@ -50,19 +51,41 @@ describe("the rally chat summary", () => {
     ]);
   });
 
-  it("names the enemy's hit first in a counter-rally", () => {
-    const text = rallyChat({ mode: "counter", hitAt: at("21:45:00"), enemyHitAt: at("21:44:57"), rallyWaitSeconds: 60, hitSetAt: null, leaders: [] }, "game clock", en);
-    expect(text.split("\n")).toEqual(["Enemy rally hits 21:44:57 (game clock)", "Our counter-rallies hit 21:45:00"]);
-  });
-
   it("marks a leader whose start was over when the hit time was set, instead of a time that has gone", () => {
-    // The enemy lands in 4:32 and the rally timer is 5:00: Alice's start was over before the coordinator set it.
-    const text = rallyChat({ mode: "counter", hitAt: at("21:45:00"), enemyHitAt: at("21:44:57"), rallyWaitSeconds: 300, hitSetAt: at("21:39:15"), leaders }, "UTC", en);
+    // The hit was typed at 21:39:15 with a 5:00 rally timer: Alice's start was already over.
+    const text = rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: at("21:39:15"), leaders }, "UTC", en);
     expect(text.split("\n").slice(-2)).toEqual(["Alice: too late for this hit", "Bob 21:39:20"]);
   });
 
   it("uses the coordinator's language", () => {
-    const text = rallyChat({ mode: "rally", hitAt: at("21:45:00"), enemyHitAt: null, rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", dictionary("de"));
+    const text = rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", dictionary("de"));
     expect(text.split("\n").slice(0, 3)).toEqual(["Unsere Rallys treffen 21:45:00 (UTC)", "", "Starte deine Rally (5:00-Timer) um:"]);
+  });
+});
+
+describe("the counter-rally chat summary", () => {
+  it("gives the launch order with every leader's cue, one per line", () => {
+    const steps = counterOrder([{ name: "Tom", marchSeconds: 40 }, { name: "Rajx", marchSeconds: 52 }, { name: "Mira", marchSeconds: 45 }], 300);
+    expect(counterChat(steps, 300, en).split("\n")).toEqual([
+      "Counter order (5:00 timer), start when that rally shows:",
+      "1. Rajx: first, on the main alliance's go",
+      "2. Mira: Rajx 4:53",
+      "3. Tom: Rajx 4:48 / Mira 4:55",
+    ]);
+  });
+
+  it("gives the same order in seconds after the earlier rallies started, for leaders who count", () => {
+    const steps = counterOrder([{ name: "Tom", marchSeconds: 40 }, { name: "Rajx", marchSeconds: 52 }, { name: "Mira", marchSeconds: 45 }], 300);
+    expect(counterChat(steps, 300, en, "seconds").split("\n")).toEqual([
+      "Counter order, start this long after that rally started:",
+      "1. Rajx: first, on the main alliance's go",
+      "2. Mira: Rajx +7 s",
+      "3. Tom: Rajx +12 s / Mira +5 s",
+    ]);
+  });
+
+  it("counts seconds after the first start when a rally's countdown has already run out", () => {
+    const steps = counterOrder([{ name: "Ali", marchSeconds: 45 }, { name: "New", marchSeconds: 30 }], 10);
+    expect(counterChat(steps, 10, en).split("\n").at(-1)).toBe("2. New: 15 s after Ali");
   });
 });

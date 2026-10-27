@@ -48,11 +48,6 @@ export function FocusBlock({ me, room, now, clock, dict }: { me: TimedLeaderView
     <p className="mt-3 text-sm font-semibold text-ink-muted tabular" dir="ltr">
       {now !== null && <span>{format(dict["sync.hero.now"], { time: shown(now) })}</span>}
       {hitAt !== null && me && <span> · {format(dict["sync.hero.lands"], { time: shown(hitAt) })}</span>}
-      {room.mode === "counter" && room.enemyHitAt && (
-        <span className="block font-medium" dir="auto">
-          {format(dict["sync.hit.enemy"], { time: `${shown(Date.parse(room.enemyHitAt))} ${clock.label}`, offset: room.counterOffsetSeconds })}
-        </span>
-      )}
     </p>
   );
 

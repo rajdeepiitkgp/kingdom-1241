@@ -12,15 +12,17 @@ import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, typ
  * process only and vanish on restart; the limits behave like the database's
  * triggers. There is no Realtime here, so pages poll.
  *
- * Two demo rooms are always there to try (a minute after one is destroyed or closes, it comes back):
+ * Three demo rooms are always there to try (a minute after one is destroyed or closes, it comes back):
  *   /tools/rally-sync/TEST23                                     password "review123"
  *   /tools/rally-sync/TEST23#c=local-review-coordinator          … as its coordinator
  *   /tools/rally-sync/DEFEND                                     a garrison room, same password and coordinator link
+ *   /tools/rally-sync/CNTR22                                     a counter-rally room, same password and coordinator link
  */
 
 export const DEMO_ROOM = { code: "TEST23", password: "review123", coordinatorToken: "local-review-coordinator" };
 export const DEMO_GARRISON_ROOM = { ...DEMO_ROOM, code: "DEFEND" };
-const DEMO_CODES = [DEMO_ROOM.code, DEMO_GARRISON_ROOM.code];
+export const DEMO_COUNTER_ROOM = { ...DEMO_ROOM, code: "CNTR22" };
+const DEMO_CODES = [DEMO_ROOM.code, DEMO_GARRISON_ROOM.code, DEMO_COUNTER_ROOM.code];
 
 interface Memory {
   rooms: Map<string, RoomRow>;
@@ -57,18 +59,19 @@ const DEMO_ENEMIES: GarrisonState = {
 };
 
 /**
- * A demo room (outside the room limit, like a room created before it was reached): the rally room with three
- * placeholder leaders, or the garrison room with three placeholder enemy leaders.
+ * A demo room (outside the room limit, like a room created before it was reached): the rally room and the
+ * counter-rally room with three placeholder leaders, or the garrison room with three placeholder enemy leaders.
  */
 async function demoRoom(m: Memory, code: string): Promise<RoomRow> {
   const now = new Date().toISOString();
   const garrison = code === DEMO_GARRISON_ROOM.code;
+  const counter = code === DEMO_COUNTER_ROOM.code;
   const room: RoomRow = {
     ...DEFAULT_SETTINGS,
-    ...(garrison ? { mode: "garrison" as const } : {}),
+    ...(garrison ? { mode: "garrison" as const } : counter ? { mode: "counter" as const } : {}),
     id: randomUUID(),
     code,
-    title: garrison ? "Demo garrison (local review)" : "Demo room (local review)",
+    title: garrison ? "Demo garrison (local review)" : counter ? "Demo counter-rally (local review)" : "Demo room (local review)",
     passwordHash: await hashPassword(DEMO_ROOM.password),
     coordinatorHash: hashToken(DEMO_ROOM.coordinatorToken),
     channelKey: "local-review",
@@ -85,11 +88,18 @@ async function demoRoom(m: Memory, code: string): Promise<RoomRow> {
   };
   m.rooms.set(room.id, room);
   if (garrison) return room;
-  for (const [name, marchSeconds] of [
-    ["Demo leader A", 42],
-    ["Demo leader B", 95],
-    ["Demo leader C", 61],
-  ] as const) {
+  const demoLeaders = counter
+    ? [
+        ["Demo counter A", 45],
+        ["Demo counter B", 52],
+        ["Demo counter C", 40],
+      ]
+    : [
+        ["Demo leader A", 42],
+        ["Demo leader B", 95],
+        ["Demo leader C", 61],
+      ];
+  for (const [name, marchSeconds] of demoLeaders as Array<[string, number]>) {
     const leader: LeaderRow = { id: randomUUID(), roomId: room.id, name, marchSeconds, status: "active", nextMarchSeconds: null, previousMarchSeconds: null, marchChangedAt: null, tokenHash: null, instanceId: null, createdAt: now };
     m.leaders.set(leader.id, leader);
   }

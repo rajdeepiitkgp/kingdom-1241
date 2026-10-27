@@ -4,7 +4,6 @@ import {
   ceilToSecond,
   clampGameOffset,
   toGameTime,
-  counterHit,
   earliestHit,
   formatSeconds,
   isTooLate,
@@ -33,11 +32,6 @@ describe("rally sync timing", () => {
     // Buffer 0 is allowed; no leaders means only the rally timer.
     expect(earliestHit(now, 300, [95], 0)).toBe(at("2026-11-07T12:06:36Z"));
     expect(earliestHit(now, 300, [], 0)).toBe(at("2026-11-07T12:05:01Z"));
-  });
-
-  it("lands counter-rallies the offset after the enemy", () => {
-    expect(counterHit(at("2026-11-07T12:30:00Z"), 3)).toBe(at("2026-11-07T12:30:03Z"));
-    expect(counterHit(at("2026-11-07T12:30:00Z"), 0)).toBe(at("2026-11-07T12:30:00Z"));
   });
 
   it("counts down like the in-game clock: 0 during the start second", () => {

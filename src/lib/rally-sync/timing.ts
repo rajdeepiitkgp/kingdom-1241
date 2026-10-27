@@ -8,7 +8,6 @@ import { pad2 } from "@/lib/time";
  *
  *   start          = hit − rally timer − march          (per leader)
  *   earliest hit   = now + rally timer + longest march + buffer   (the coordinator's "Re-sync")
- *   counter-rally  = enemy hit + offset
  *
  * A countdown counts the way the in-game clock does: during the second that
  * shows the start time it reads 0 (GO), one second earlier 1, and so on, so
@@ -74,10 +73,6 @@ export function earliestHit(now: number, rallyWaitSeconds: number, marchSeconds:
   return ceilToSecond(now + (rallyWaitSeconds + longest + bufferSeconds) * SECOND);
 }
 
-/** Counter-rally: our rallies land `offsetSeconds` after the enemy's. */
-export function counterHit(enemyHitAt: number, offsetSeconds: number): number {
-  return enemyHitAt + offsetSeconds * SECOND;
-}
 
 /** Whole seconds until `at` as a clock shows them: 0 during the second of `at`, negative afterwards. */
 export function secondsUntil(at: number, now: number): number {

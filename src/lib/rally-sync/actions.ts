@@ -60,7 +60,7 @@ import {
 } from "./room";
 import { findOpenRoom, roomAccess } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
-import { ceilToSecond, clampGameOffset, counterHit, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, parseDuration, parseUtcClock, toGameTime } from "./timing";
+import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, parseUtcClock, toGameTime } from "./timing";
 
 /**
  * Server Actions of a Rally Sync room. Like every Server Function they can be
@@ -112,8 +112,6 @@ export type CoordinatorOp =
   | { type: "settings"; mode: RoomMode; rallyWaitSeconds: number; bufferSeconds: number; counterOffsetSeconds: number }
   | { type: "hitClock"; text: string }
   | { type: "resync" }
-  | { type: "enemyClock"; text: string }
-  | { type: "enemyIn"; text: string }
   | { type: "clearHit" }
   | { type: "addLeader"; name: string; marchSeconds: number }
   | { type: "editLeader"; leaderId: string; name: string; marchSeconds: number }
@@ -149,6 +147,8 @@ export type GarrisonOp =
 const GARRISON_WRITE_ROUNDS = 5;
 
 const GARRISON_OPS: ReadonlySet<string> = new Set(["enemySave", "enemyActive", "enemyRemove", "rallyMark", "rallyLands", "rallyNudge", "rallyRemove", "ralliesClear"]);
+/** Only rally rooms have a hit time: counter rooms give a launch order (counter.ts), garrison rooms mark enemy rallies. */
+const HIT_OPS: ReadonlySet<string> = new Set(["hitClock", "resync", "clearHit"]);
 
 const baseLog = createLogger("rally-sync");
 
@@ -386,12 +386,13 @@ export async function leaveRoom(code: string, leaderId: string, token: string): 
  * The new hit time, with the old one moved into the history. All of these are
  * game-clock times (see timing.ts): `now` is the coordinator's game "now".
  */
-function hitPatch(room: RoomRow, hitAt: number | null, now: number, enemyHitAt: number | null = null): RoomPatch {
+function hitPatch(room: RoomRow, hitAt: number | null, now: number): RoomPatch {
   const previous = room.hitAt ? { hitAt: room.hitAt, setAt: room.hitSetAt ?? room.hitAt } : null;
   return {
     hitAt: hitAt === null ? null : new Date(hitAt).toISOString(),
     hitSetAt: hitAt === null ? null : new Date(now).toISOString(),
-    enemyHitAt: enemyHitAt === null ? null : new Date(enemyHitAt).toISOString(),
+    // Only the counter-rally mode before 27 Oct 2026 set this; the column stays until a later migration drops it.
+    enemyHitAt: null,
     history: pushHistory(room.history, previous),
   };
 }
@@ -470,8 +471,8 @@ export async function renameMe(code: string, name: unknown): Promise<SyncResult>
 
 /**
  * One coordinator change. `gameOffsetSeconds` is the coordinator's game-clock
- * adjustment: typed times are game times as they are, while Re-sync, "lands
- * in" and the "already passed" check count from the coordinator's game "now".
+ * adjustment: typed times are game times as they are, while Re-sync and the
+ * "already passed" check count from the coordinator's game "now".
  */
 export async function coordinate(
   code: string,
@@ -486,6 +487,7 @@ export async function coordinate(
   if ("error" in opened) return { ok: false, error: opened.error };
   const { store, room, instance } = opened;
   if (!tokenMatches(token, room.coordinatorHash)) return { ok: false, error: "not_coordinator" };
+  if (HIT_OPS.has(op.type) && room.mode !== "rally") return { ok: false, error: "invalid" };
   await markCoordinator(store, instance);
   // The game clock is the reference: "now" is the coordinator's game clock (server time + their adjustment).
   const now = toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds));
@@ -499,13 +501,7 @@ export async function coordinate(
       case "settings": {
         const settings = parseSettings(op);
         if (!settings.ok || !canSwitchMode(room.mode, settings.value.mode)) return { ok: false, error: "invalid" };
-        const patch: RoomPatch = { ...settings.value };
-        // Counter-rally: a new offset moves our hit along with it (still the same rally, so waiting march times keep waiting).
-        if (settings.value.mode === "counter" && room.enemyHitAt && settings.value.counterOffsetSeconds !== room.counterOffsetSeconds) {
-          const enemy = Date.parse(room.enemyHitAt);
-          Object.assign(patch, hitPatch(room, counterHit(enemy, settings.value.counterOffsetSeconds), now, enemy));
-        }
-        await store.updateRoom(room.id, patch);
+        await store.updateRoom(room.id, settings.value);
         return done();
       }
       case "hitClock": {
@@ -522,18 +518,6 @@ export async function coordinate(
         await startNextRally(store, leaders);
         await store.updateRoom(room.id, hitPatch(room, earliestHit(now, room.rallyWaitSeconds, marches, room.bufferSeconds), now));
         return done({ leaders: marches.length });
-      }
-      case "enemyClock":
-      case "enemyIn": {
-        const text = String(op.text ?? "");
-        const seconds = op.type === "enemyIn" ? parseDuration(text) : null;
-        const enemy = op.type === "enemyIn" ? (seconds === null ? null : Math.round((now + seconds * 1000) / 1000) * 1000) : parseUtcClock(text, now);
-        if (enemy === null) return { ok: false, error: "invalid" };
-        const hitAt = counterHit(enemy, room.counterOffsetSeconds);
-        if (hitAt <= now) return { ok: false, error: "past" };
-        await startNextRally(store, await store.leaders(room.id));
-        await store.updateRoom(room.id, { ...hitPatch(room, ceilToSecond(hitAt), now, enemy), mode: "counter" });
-        return done();
       }
       case "clearHit": {
         await startNextRally(store, await store.leaders(room.id));

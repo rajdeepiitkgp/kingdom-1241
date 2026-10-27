@@ -8,8 +8,9 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
-import { coordinate, joinRoom, leaveRoom, renameMe, setMyActive, updateMyLeader } from "@/lib/rally-sync/actions";
+import { joinRoom, leaveRoom, renameMe, setMyActive, updateMyLeader } from "@/lib/rally-sync/actions";
 import { NOTABLE_OFFSET_MS } from "@/lib/rally-sync/clock";
+import { counterOrder } from "@/lib/rally-sync/counter";
 import { parseRoomHash, updateDevice, updateDeviceRoom } from "@/lib/rally-sync/device";
 import { playerPlan, refillCues } from "@/lib/rally-sync/garrison";
 import type { LinkStatus } from "@/lib/rally-sync/realtime";
@@ -26,10 +27,12 @@ import {
 import { CuePlayer } from "@/lib/rally-sync/sound";
 import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, soundCues, withStartTimes } from "@/lib/rally-sync/timing";
 import { CoordinatorPanel } from "./CoordinatorPanel";
+import { CounterFocus, CounterSheet } from "./Counter";
 import { GarrisonBoard } from "./Garrison";
 import { useCorrectedSecond, useDevice, useRoomSync, useRunner, useWakeLock } from "./hooks";
 import { type Clock, FocusBlock, isUrgent, LeaderRow, NextMarch, shown, type TimedLeaderView } from "./LeaderCards";
 import { ErrorLine, LeaderForm } from "./LeaderForm";
+import { LeaderList } from "./LeaderList";
 
 const noSubscribe = () => () => {};
 
@@ -90,6 +93,9 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     () => (garrison && now !== null ? playerPlan(room.garrison, now, garrisonMarch, spacingSeconds) : null),
     [garrison, room.garrison, now, garrisonMarch, spacingSeconds],
   );
+  // Counter rooms: the launch order, slowest march first (nothing about it ticks).
+  const counter = room.mode === "counter";
+  const counterSteps = counter ? counterOrder(leaders, room.rallyWaitSeconds) : [];
   // A tap's exact moment on this device's game clock (the coordinator marks enemy rallies with it).
   const exactNow = useCallback(() => Date.now() + sync.offsetMs + gameOffsetMs, [sync.offsetMs, gameOffsetMs]);
 
@@ -173,7 +179,47 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     );
   }
 
+  const myEntry = (
+    <MyEntry
+      code={code}
+      me={sync.state.me}
+      myLeader={myLeader}
+      prominent={!coordinatorToken}
+      runningHitAt={now !== null && rallyRunning(room.hitAt, now) ? room.hitAt : null}
+      clock={clock}
+      dict={dict}
+      onChanged={sync.refresh}
+    />
+  );
+  const browserName = !myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />;
+
+  // A counter-rally room: the leader's own place in the order, big, then the whole order. No hit time, countdown or sound.
+  if (counter) {
+    const myStep = counterSteps.find((s) => s.leader.id === myLeader?.id);
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        {statusBar}
+        {myStep && <CounterFocus step={myStep} dict={dict} />}
+        {myEntry}
+        {browserName}
+        {coordinatorPanel}
+        <CounterSheet
+          steps={counterSteps}
+          leaders={leaders}
+          myId={myLeader?.id ?? null}
+          rallyWaitSeconds={room.rallyWaitSeconds}
+          code={code}
+          coordinatorToken={coordinatorToken}
+          gameOffsetSeconds={clock.offsetSeconds}
+          dict={dict}
+          onChanged={sync.refresh}
+        />
+      </div>
+    );
+  }
+
   const urgent = isUrgent(myLeader, room, now);
+  const others = myLeader ? timed.filter((l) => l.id !== myLeader.id) : timed;
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -184,30 +230,27 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
         <FocusBlock me={myLeader} room={room} now={now} clock={clock} dict={dict} />
       </div>
 
-      <MyEntry
-        code={code}
-        me={sync.state.me}
-        myLeader={myLeader}
-        prominent={!coordinatorToken}
-        runningHitAt={now !== null && rallyRunning(room.hitAt, now) ? room.hitAt : null}
-        clock={clock}
-        dict={dict}
-        onChanged={sync.refresh}
-      />
+      {myEntry}
 
-      {!myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />}
+      {browserName}
 
       {coordinatorPanel}
 
       <LeaderList
-        leaders={myLeader ? timed.filter((l) => l.id !== myLeader.id) : timed}
-        others={myLeader !== null}
-        now={now}
-        room={room}
+        leaders={others}
+        title={
+          <>
+            {myLeader ? dict["sync.leaders.others"] : dict["sync.leaders.title"]}{" "}
+            <span className="tabular">{myLeader ? `(${others.length})` : `(${others.length}/${MAX_LEADERS_PER_ROOM})`}</span>
+          </>
+        }
+        empty={myLeader ? null : dict["sync.leaders.empty"]}
+        code={code}
         coordinatorToken={coordinatorToken}
         gameOffsetSeconds={clock.offsetSeconds}
         dict={dict}
         onChanged={sync.refresh}
+        row={(leader, onEdit) => <LeaderRow leader={leader} now={now} room={room} quiet={!coordinatorToken} dict={dict} onEdit={onEdit} />}
       />
     </div>
   );
@@ -355,6 +398,7 @@ function StatusBar({
           >
             <Clock3 className="size-4" aria-hidden />
           </button>
+          {room.mode !== "counter" && (
           <button
             type="button"
             className={iconButton}
@@ -365,6 +409,7 @@ function StatusBar({
           >
             {sound ? <Volume2 className="size-4" aria-hidden /> : <VolumeX className="size-4" aria-hidden />}
           </button>
+          )}
           {canWakeLock && (
             <button
               type="button"
@@ -379,7 +424,7 @@ function StatusBar({
           )}
         </div>
       </div>
-      {sound && !soundReady && <p className="mt-2 text-xs font-bold text-gold-ink">{dict["sync.sound.tap"]}</p>}
+      {sound && !soundReady && room.mode !== "counter" && <p className="mt-2 text-xs font-bold text-gold-ink">{dict["sync.sound.tap"]}</p>}
       {clockOpen && <ClockPanel now={now} clock={clock} offsetMs={offsetMs} dict={dict} />}
     </section>
   );
@@ -604,106 +649,6 @@ function MyEntry({
         <div className="mt-4 border-t border-line pt-3">
           <BrowserName code={code} me={me} leaderName={myLeader.name} dict={dict} onChanged={onChanged} />
         </div>
-      )}
-    </section>
-  );
-}
-
-/**
- * The other leaders (everyone, for a visitor who isn't leading). Quiet for
- * leaders, who only need their own time; the coordinator, who watches them
- * all, gets the stage colours and opens a row to edit it.
- */
-function LeaderList({
-  leaders,
-  others,
-  now,
-  room,
-  coordinatorToken,
-  gameOffsetSeconds,
-  dict,
-  onChanged,
-}: {
-  leaders: TimedLeaderView[];
-  others: boolean;
-  now: number | null;
-  room: RoomState["room"];
-  coordinatorToken: string | null;
-  /** The coordinator's game-clock adjustment, sent with every change like the coordinator panel does. */
-  gameOffsetSeconds: number;
-  dict: Dictionary;
-  onChanged: () => void;
-}) {
-  const [editing, setEditing] = useState<string | null>(null);
-  const { pending, run, errorFor, fail } = useRunner(onChanged);
-
-  return (
-    <section aria-labelledby="sync-leaders-title">
-      <h2 id="sync-leaders-title" className="mb-2 px-1 text-xs font-bold tracking-wider text-ink-faint uppercase">
-        {others ? dict["sync.leaders.others"] : dict["sync.leaders.title"]}{" "}
-        <span className="tabular">{others ? `(${leaders.length})` : `(${leaders.length}/${MAX_LEADERS_PER_ROOM})`}</span>
-      </h2>
-      {leaders.length === 0 ? (
-        others ? null : (
-        <p className="card-soft px-4 py-3 text-sm font-semibold text-ink-muted">{dict["sync.leaders.empty"]}</p>
-        )
-      ) : (
-        <ul className={clsx("divide-y divide-line overflow-hidden", coordinatorToken ? "card" : "card-soft")}>
-          {leaders.map((leader) => (
-            <li key={leader.id}>
-              {coordinatorToken && editing === leader.id ? (
-                <div className="p-4">
-                  <LeaderForm
-                    dict={dict}
-                    idPrefix={`sync-edit-${leader.id}`}
-                    defaults={{ name: leader.name, marchSeconds: leader.marchSeconds }}
-                    submitLabel={dict["sync.save"]}
-                    pending={pending !== null}
-                    error={errorFor(leader.id)}
-                    onInvalid={() => fail(leader.id, "invalid")}
-                    onSubmit={(input) =>
-                      void run(leader.id, () => coordinate(room.code, coordinatorToken, { type: "editLeader", leaderId: leader.id, ...input }, gameOffsetSeconds)).then((done) => {
-                        if (done) setEditing(null);
-                      })
-                    }
-                  >
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(null)}>
-                      {dict["sync.cancel"]}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      disabled={pending !== null}
-                      onClick={() =>
-                        void run(leader.id, () =>
-                          coordinate(room.code, coordinatorToken, { type: "setActive", leaderId: leader.id, active: leader.status === "inactive" }, gameOffsetSeconds),
-                        ).then((done) => {
-                          if (done) setEditing(null);
-                        })
-                      }
-                    >
-                      {dict[leader.status === "inactive" ? "sync.backIn" : "sync.sitOut"]}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm text-danger"
-                      disabled={pending !== null}
-                      onClick={() =>
-                        void run(leader.id, () => coordinate(room.code, coordinatorToken, { type: "removeLeader", leaderId: leader.id }, gameOffsetSeconds)).then((done) => {
-                          if (done) setEditing(null);
-                        })
-                      }
-                    >
-                      {dict["sync.remove"]}
-                    </button>
-                  </LeaderForm>
-                </div>
-              ) : (
-                <LeaderRow leader={leader} now={now} room={room} quiet={!coordinatorToken} dict={dict} onEdit={coordinatorToken ? () => setEditing(leader.id) : undefined} />
-              )}
-            </li>
-          ))}
-        </ul>
       )}
     </section>
   );
