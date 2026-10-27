@@ -4,6 +4,8 @@ import { isRatingKey, isTextKey, parseConfig, RATING_MAX, RATING_MIN, type Ratin
 import type {
   Alliance,
   Announcement,
+  ChecklistPhase,
+  ChecklistSection,
   CoordinatorTeam,
   EventCategory,
   FormationRole,
@@ -13,6 +15,9 @@ import type {
   Guide,
   Hero,
   HeroRarity,
+  KvkChecklistItem,
+  KvkChecklistPlanWithSecret,
+  KvkChecklistRule,
   KvkCoordinator,
   KvkEventType,
   KvkFormation,
@@ -399,6 +404,69 @@ export function mapKvkLeaderPlan(plan: Row, brief: Row, rallies: Row[], rules: R
       .sort((a, b) => a.sortOrder - b.sortOrder),
     rallies: mine
       .map(mapKvkRallyLeader)
+      .filter((r) => r.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+  };
+}
+
+const PHASES: readonly ChecklistPhase[] = ["before", "day", "during", "after"];
+const SECTIONS: readonly ChecklistSection[] = ["commander", "general"];
+
+export function mapKvkChecklistItem(row: Row): KvkChecklistItem {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    phase: oneOf(row.phase, PHASES, "before"),
+    text: loc(row.text),
+    note: loc(row.note),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+export function mapKvkChecklistRule(row: Row): KvkChecklistRule {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    section: oneOf(row.section, SECTIONS, "commander"),
+    kind: oneOf(row.kind, RULE_KINDS, "info"),
+    text: loc(row.text),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+/**
+ * The commander checklist of a plan: the plan row (title, time), its checklist
+ * brief (password, intro), its items and its commander / guideline lines (any
+ * plan's rows may be passed; they are filtered by plan_id, unpublished ones
+ * dropped). "Updated" is the latest change to the brief, an item or a line.
+ */
+export function mapKvkChecklistPlan(plan: Row, brief: Row, items: Row[], rules: Row[] = []): KvkChecklistPlanWithSecret {
+  const planId = str(plan.id);
+  const myItems = items.filter((r) => str(r.plan_id) === planId);
+  const myRules = rules.filter((r) => str(r.plan_id) === planId);
+  const updatedAt = [brief, ...myItems, ...myRules]
+    .map((r) => iso(r.updated_at, ""))
+    .filter(Boolean)
+    .reduce((latest, value) => (value > latest ? value : latest), new Date(0).toISOString());
+  return {
+    planId,
+    slug: str(plan.slug),
+    eventType: oneOf(plan.event_type, EVENT_TYPES, "kvk"),
+    title: loc(plan.title),
+    opponent: strOrNull(plan.opponent),
+    battleAt: plan.battle_at ? iso(plan.battle_at, "") || null : null,
+    battleEndAt: plan.battle_end_at ? iso(plan.battle_end_at, "") || null : null,
+    intro: loc(brief.intro),
+    updatedAt,
+    password: str(brief.password),
+    items: myItems
+      .map(mapKvkChecklistItem)
+      .filter((i) => i.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+    rules: myRules
+      .map(mapKvkChecklistRule)
       .filter((r) => r.published)
       .sort((a, b) => a.sortOrder - b.sortOrder),
   };

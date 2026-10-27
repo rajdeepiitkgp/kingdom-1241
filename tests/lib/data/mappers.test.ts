@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { mapAlliance, mapAnnouncement, mapEvent, mapGiftCode, mapGuide, mapHero, mapKvkFormation, mapKvkLeaderPlan, mapKvkPlan, mapRule, mapRuleTopic, mapSettings, settingsToRows } from "@/lib/data/mappers";
+import {
+  mapAlliance,
+  mapAnnouncement,
+  mapEvent,
+  mapGiftCode,
+  mapGuide,
+  mapHero,
+  mapKvkChecklistPlan,
+  mapKvkFormation,
+  mapKvkLeaderPlan,
+  mapKvkPlan,
+  mapRule,
+  mapRuleTopic,
+  mapSettings,
+  settingsToRows,
+} from "@/lib/data/mappers";
 import { SEED_SETTINGS } from "@/content/seed/settings";
 
 describe("settingsToRows", () => {
@@ -109,6 +124,37 @@ describe("content mappers", () => {
     expect(alliance.description).toEqual({});
     expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({ code: "KS2026", active: false, expiresAt: null, addedAt: "2026-10-01T00:00:00.000Z" });
     expect(mapGiftCode({ id: "c2", code: "X", expires_at: "2026-11-01T00:00:00Z" })).toMatchObject({ active: true, expiresAt: "2026-11-01T00:00:00.000Z" });
+  });
+});
+
+describe("mapKvkChecklistPlan", () => {
+  const plan = { id: "p1", slug: "oct", title: { en: "Castle Battle" }, event_type: "kvk", battle_at: "2026-11-07T12:00:00Z", password: "plan-pw" };
+  const brief = { id: "c1", plan_id: "p1", password: "boss-pw", intro: { en: "<p>Commander</p>" }, updated_at: "2026-10-23T10:00:00Z" };
+
+  it("uses the checklist's password and keeps only this plan's shown items and lines in order", () => {
+    const items = [
+      { id: "i2", plan_id: "p1", phase: "day", text: { en: "Second" }, sort_order: 1, updated_at: "2026-10-25T08:00:00Z" },
+      { id: "i1", plan_id: "p1", phase: "someday", text: { en: "First" }, note: { en: "R4s" }, sort_order: 0 },
+      { id: "ix", plan_id: "p2", text: { en: "Other plan" }, sort_order: 0 },
+      { id: "ih", plan_id: "p1", text: { en: "Hidden" }, published: false, sort_order: 2 },
+    ];
+    const rules = [
+      { id: "r2", plan_id: "p1", section: "general", kind: "dont", text: { en: "No passwords in public" }, sort_order: 1 },
+      { id: "r1", plan_id: "p1", section: "odd", kind: "odd", text: { en: "One voice" }, sort_order: 0 },
+    ];
+    const mapped = mapKvkChecklistPlan(plan, brief, items, rules);
+    expect(mapped.password).toBe("boss-pw");
+    expect(mapped.planId).toBe("p1");
+    expect(mapped.battleAt).toBe("2026-11-07T12:00:00.000Z");
+    expect(mapped.items.map((i) => i.id)).toEqual(["i1", "i2"]);
+    // Unknown phases fall back to "before"; the note is kept.
+    expect(mapped.items[0]).toMatchObject({ phase: "before", note: { en: "R4s" } });
+    expect(mapped.items[1].phase).toBe("day");
+    expect(mapped.rules.map((r) => [r.id, r.section, r.kind])).toEqual([
+      ["r1", "commander", "info"],
+      ["r2", "general", "dont"],
+    ]);
+    expect(mapped.updatedAt).toBe("2026-10-25T08:00:00.000Z");
   });
 });
 

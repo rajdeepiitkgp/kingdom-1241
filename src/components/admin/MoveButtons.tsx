@@ -24,7 +24,7 @@ export function MoveButtons({
 }: {
   locale: string;
   planId: string;
-  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders";
+  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders" | "kvk_checklist_items" | "kvk_checklist_rules";
   id: string;
   /** 0-based position in the list. */
   position: number;

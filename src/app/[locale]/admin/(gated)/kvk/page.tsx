@@ -88,6 +88,9 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
                   <Link href={adminPath(locale, `/kvk/${plan.id}/leaders`)} className="btn-ghost btn-sm">
                     Rally leaders
                   </Link>
+                  <Link href={adminPath(locale, `/kvk/${plan.id}/checklist`)} className="btn-ghost btn-sm">
+                    Checklist
+                  </Link>
                   <form action={duplicatePlan}>
                     <input type="hidden" name="locale" value={locale} />
                     <input type="hidden" name="id" value={plan.id} />
@@ -99,7 +102,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
                     <DeleteForm
                       action={deletePlan}
                       hidden={{ locale, id: plan.id }}
-                      confirmText={`Delete "${title}" with all its instructions, coordinators, formations, rally leaders and player feedback? This cannot be undone.`}
+                      confirmText={`Delete "${title}" with all its instructions, coordinators, formations, rally leaders, checklist and player feedback? This cannot be undone.`}
                     />
                   )}
                 </div>

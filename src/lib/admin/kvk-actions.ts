@@ -8,6 +8,7 @@ import { CACHE_TAGS, getEnabledLocales } from "@/lib/data";
 import { markdownToHtml } from "@/lib/html";
 import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
+import type { KvkArea } from "@/lib/kvk/access";
 import type { Logger } from "@/lib/log";
 import { battleMinutes } from "@/lib/kvk/battle-window";
 import { latestPetsOffset } from "@/lib/kvk/leaders";
@@ -20,13 +21,17 @@ import {
   isMoveDirection,
   MAX_FORMATIONS,
   moveInList,
+  type OtherPasswords,
+  parseChecklistItemForm,
+  parseChecklistRuleForm,
   parseCoordinatorForm,
   parseFormationForm,
-  parseLeaderBriefForm,
   parseLeaderRuleForm,
+  parsePageBriefForm,
   parsePlanForm,
   parseRallyLeaderForm,
   parseRuleForm,
+  passwordClash,
 } from "./kvk-forms";
 import { isEditableTextColumn, pendingColumns, TEXT_LIMITS, withLanguage } from "./translation";
 
@@ -47,18 +52,20 @@ function withoutRowMeta(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([key]) => !ROW_META.has(key)));
 }
 
-/** The plan's editor, or with `page` one of its sub-pages ("/leaders"). */
+/** The plan's editor, or with `page` one of its sub-pages ("/leaders", "/checklist"). */
 function editorPath(locale: string, planId: string, anchor?: string, query?: string, page = ""): string {
   return adminPath(locale, `/kvk/${planId}${page}${query ? `?${query}` : ""}${anchor ? `#${anchor}` : ""}`);
 }
 
 const LEADERS_PAGE = "/leaders";
+const CHECKLIST_PAGE = "/checklist";
 
 /** Players see the change on their next request; the editors re-render in place. */
 function expirePlanCaches(locale: string, planId: string) {
   updateTag(CACHE_TAGS.kvk);
   revalidatePath(editorPath(locale, planId));
   revalidatePath(editorPath(locale, planId, undefined, undefined, LEADERS_PAGE));
+  revalidatePath(editorPath(locale, planId, undefined, undefined, CHECKLIST_PAGE));
 }
 
 // ---------------------------------------------------------------------------
@@ -85,9 +92,8 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   const parsed = parsePlanForm(formData, { now: new Date(), previousBattleAt: existing?.battle_at ?? null });
   if (!parsed.ok) return invalid(parsed.errors);
   const input = parsed.value;
-  if (id && input.password === (await leaderPassword(id))) {
-    return invalid({ password: "This is the rally leaders' password. Use a different one, or every player could open the leaders' page." });
-  }
+  const clash = id ? passwordClash(input.password, await pagePasswords(id, ["leaders", "checklist"])) : null;
+  if (clash) return invalid({ password: clash });
 
   // A changed English intro drops the other languages (HTML and Markdown sources alike);
   // the pipeline refills the HTML, and sources are re-derived from it when edited.
@@ -193,8 +199,18 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
   }
   const newId = String(copy.data.id);
 
-  // The leader page comes along (its brief is one row per plan; a missing table before migration 0010 just copies nothing).
-  for (const table of ["kvk_rules", "kvk_coordinators", "kvk_formations", "kvk_leader_briefs", "kvk_leader_rules", "kvk_rally_leaders"] as const) {
+  // The leader page and the checklist come along (each brief is one row per plan; a table missing before its migration just copies nothing).
+  for (const table of [
+    "kvk_rules",
+    "kvk_coordinators",
+    "kvk_formations",
+    "kvk_leader_briefs",
+    "kvk_leader_rules",
+    "kvk_rally_leaders",
+    "kvk_checklist_briefs",
+    "kvk_checklist_items",
+    "kvk_checklist_rules",
+  ] as const) {
     const { data: rows } = await admin.from(table).select("*").eq("plan_id", id);
     if (!rows || rows.length === 0) continue;
     // Rally start times belong to the old battle, like its battle time.
@@ -211,7 +227,14 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
 // Child rows: rules, coordinators, formations
 // ---------------------------------------------------------------------------
 
-type ChildTable = "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders";
+type ChildTable =
+  | "kvk_rules"
+  | "kvk_coordinators"
+  | "kvk_formations"
+  | "kvk_leader_rules"
+  | "kvk_rally_leaders"
+  | "kvk_checklist_items"
+  | "kvk_checklist_rules";
 /** `page`: the editor sub-page the rows are edited on (the plan's editor when empty). */
 const CHILD_TABLES: Record<ChildTable, { anchor: string; action: string; page: string }> = {
   kvk_rules: { anchor: "rules", action: "kvk_rule", page: "" },
@@ -219,6 +242,8 @@ const CHILD_TABLES: Record<ChildTable, { anchor: string; action: string; page: s
   kvk_formations: { anchor: "formations", action: "kvk_formation", page: "" },
   kvk_leader_rules: { anchor: "leader-rules", action: "kvk_leader_rule", page: LEADERS_PAGE },
   kvk_rally_leaders: { anchor: "rallies", action: "kvk_rally_leader", page: LEADERS_PAGE },
+  kvk_checklist_items: { anchor: "checklist-items", action: "kvk_checklist_item", page: CHECKLIST_PAGE },
+  kvk_checklist_rules: { anchor: "checklist-rules", action: "kvk_checklist_rule", page: CHECKLIST_PAGE },
 };
 
 function isChildTable(value: string): value is ChildTable {
@@ -394,30 +419,59 @@ export async function deleteFormation(formData: FormData): Promise<void> {
 // Rally-leader page: its brief (own password, instructions) and its rallies
 // ---------------------------------------------------------------------------
 
-/** The leaders' password of a plan, or null (no brief yet, or the table isn't there before migration 0010). */
-async function leaderPassword(planId: string): Promise<string | null> {
-  const { data } = await createAdminClient().from("kvk_leader_briefs").select("password").eq("plan_id", planId).maybeSingle();
-  return typeof data?.password === "string" ? data.password.trim() : null;
+/** The locked pages next to the battle plan, each with a brief row holding its own password and instructions. */
+type BriefArea = Exclude<KvkArea, "plan">;
+const BRIEFS: Record<BriefArea, { table: "kvk_leader_briefs" | "kvk_checklist_briefs"; audit: string; name: string }> = {
+  leaders: { table: "kvk_leader_briefs", audit: "kvk_leader_brief", name: "Leader page" },
+  checklist: { table: "kvk_checklist_briefs", audit: "kvk_checklist_brief", name: "Checklist page" },
+};
+
+/**
+ * The passwords of the given locked pages of a plan, so a new one never repeats
+ * another page's (null where a page has none yet, or its table isn't there
+ * before its migration).
+ */
+async function pagePasswords(planId: string, areas: readonly KvkArea[]): Promise<OtherPasswords> {
+  const admin = createAdminClient();
+  const entries = await Promise.all(
+    areas.map(async (area) => {
+      const { data } =
+        area === "plan"
+          ? await admin.from("kvk_plans").select("password").eq("id", planId).maybeSingle()
+          : await admin.from(BRIEFS[area].table).select("password").eq("plan_id", planId).maybeSingle();
+      return [area, typeof data?.password === "string" ? data.password : null] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function saveLeaderBrief(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  return savePageBrief("leaders", formData);
+}
+
+export async function saveChecklistBrief(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  return savePageBrief("checklist", formData);
+}
+
+/** A locked page's own password (never another page's of the same battle) and its instructions. */
+async function savePageBrief(area: BriefArea, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
   const log = await actionLogger();
   const locale = localeField(formData);
   const planId = uuidField(formData, "planId");
-  if (!planId) return PLAN_GONE;
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
+  const { table, audit: auditAction, name } = BRIEFS[area];
   const admin = createAdminClient();
-  const { data: plan } = await admin.from("kvk_plans").select("password").eq("id", planId).maybeSingle();
-  if (!plan) return PLAN_GONE;
 
-  const parsed = parseLeaderBriefForm(formData, String(plan.password ?? ""));
+  const others = (["plan", "leaders", "checklist"] as const).filter((other) => other !== area);
+  const parsed = parsePageBriefForm(formData, await pagePasswords(planId, others));
   if (!parsed.ok) return invalid(parsed.errors);
   const input = parsed.value;
 
   type ExistingBrief = { id: string; intro: Localized; intro_source: Localized | null };
-  const { data: existingRow, error: readError } = await admin.from("kvk_leader_briefs").select("id, intro, intro_source").eq("plan_id", planId).maybeSingle();
-  if (readError) return failed(log, "Reading the leader page", readError);
+  const { data: existingRow, error: readError } = await admin.from(table).select("id, intro, intro_source").eq("plan_id", planId).maybeSingle();
+  if (readError) return failed(log, `Reading the ${name.toLowerCase()}`, readError);
   const existing = existingRow as ExistingBrief | null;
 
   // As for the plan intro: a changed English text drops the other languages, the pipeline refills them.
@@ -427,16 +481,16 @@ export async function saveLeaderBrief(_previous: ActionState, formData: FormData
   const row = { password: input.password, intro, intro_source: introSource, published: input.published };
 
   const result = existing
-    ? await admin.from("kvk_leader_briefs").update(row).eq("id", existing.id).select("id").single()
-    : await admin.from("kvk_leader_briefs").insert({ ...row, plan_id: planId }).select("id").single();
-  if (result.error) return failed(log, "Saving the leader page", result.error);
+    ? await admin.from(table).update(row).eq("id", existing.id).select("id").single()
+    : await admin.from(table).insert({ ...row, plan_id: planId }).select("id").single();
+  if (result.error) return failed(log, `Saving the ${name.toLowerCase()}`, result.error);
 
-  await audit(access.user, existing ? "kvk_leader_brief.update" : "kvk_leader_brief.create", "kvk_leader_briefs", String(result.data.id), {
+  await audit(access.user, `${auditAction}.${existing ? "update" : "create"}`, table, String(result.data.id), {
     planId,
     published: input.published,
   });
   expirePlanCaches(locale, planId);
-  return { status: "saved", message: "Leader page saved." };
+  return { status: "saved", message: `${name} saved.` };
 }
 
 export async function saveRallyLeader(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -509,6 +563,54 @@ export async function deleteLeaderRule(formData: FormData): Promise<void> {
   return deleteChild("kvk_leader_rules", "kvk_leader_rule.delete", formData);
 }
 
+// ---------------------------------------------------------------------------
+// Commander checklist: its items and its commander / guideline lines
+// ---------------------------------------------------------------------------
+
+export async function saveChecklistItem(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
+  const parsed = parseChecklistItemForm(formData);
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
+  const row = {
+    phase: parsed.value.phase,
+    text: localizedUpdate(await existingLocalized("kvk_checklist_items", id, "text"), parsed.value.text),
+    note: localizedUpdate(await existingLocalized("kvk_checklist_items", id, "note"), parsed.value.note),
+    published: parsed.value.published,
+  };
+  return saveChild(log, access.user, "kvk_checklist_items", id ? "kvk_checklist_item.update" : "kvk_checklist_item.create", localeField(formData), planId, id, row);
+}
+
+export async function deleteChecklistItem(formData: FormData): Promise<void> {
+  return deleteChild("kvk_checklist_items", "kvk_checklist_item.delete", formData);
+}
+
+export async function saveChecklistRule(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
+  const parsed = parseChecklistRuleForm(formData);
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
+  const row = {
+    section: parsed.value.section,
+    kind: parsed.value.kind,
+    text: localizedUpdate(await existingLocalized("kvk_checklist_rules", id, "text"), parsed.value.text),
+    published: parsed.value.published,
+  };
+  return saveChild(log, access.user, "kvk_checklist_rules", id ? "kvk_checklist_rule.update" : "kvk_checklist_rule.create", localeField(formData), planId, id, row);
+}
+
+export async function deleteChecklistRule(formData: FormData): Promise<void> {
+  return deleteChild("kvk_checklist_rules", "kvk_checklist_rule.delete", formData);
+}
+
 const MOVE_FAILED = "The row could not be moved. Reload the page and try again.";
 
 /**
@@ -574,7 +676,7 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
 
   const current = (row[column] ?? {}) as Localized;
   const update: Record<string, unknown> =
-    column === "intro" && (table === "kvk_plans" || table === "kvk_retrospectives" || table === "kvk_leader_briefs")
+    column === "intro" && (table === "kvk_plans" || table === "kvk_retrospectives" || table === "kvk_leader_briefs" || table === "kvk_checklist_briefs")
       ? {
           intro: withLanguage(current, lang, value ? markdownToHtml(value) : ""),
           intro_source: withLanguage((row.intro_source ?? {}) as Localized, lang, value),

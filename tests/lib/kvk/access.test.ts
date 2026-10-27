@@ -54,6 +54,14 @@ describe("area access tokens (one password and cookie per locked page)", () => {
     expect(isValidAreaToken("leaders", undefined, "plan-1", "rally", secret)).toBe(false);
   });
 
+  it("gives the checklist its own token, apart from the plan's and the leaders'", () => {
+    const checklist = areaAccessToken("checklist", "plan-1", "castle", secret);
+    expect(checklist).not.toBe(areaAccessToken("plan", "plan-1", "castle", secret));
+    expect(checklist).not.toBe(areaAccessToken("leaders", "plan-1", "castle", secret));
+    expect(isValidAreaToken("checklist", areaAccessToken("leaders", "plan-1", "castle", secret), "plan-1", "castle", secret)).toBe(false);
+    expect(isValidAreaToken("checklist", checklist, "plan-1", "castle", secret)).toBe(true);
+  });
+
   it("uses a separate cookie per page", () => {
     expect(new Set(Object.values(KVK_AREA_COOKIES)).size).toBe(Object.keys(KVK_AREA_COOKIES).length);
     expect(KVK_AREA_COOKIES.plan).toBe("kd1241_kvk");

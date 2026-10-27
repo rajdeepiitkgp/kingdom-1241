@@ -4,17 +4,18 @@ import { KeyRound, LockKeyhole } from "lucide-react";
 import { useActionState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { KvkArea } from "@/lib/kvk/access";
-import { unlockKvk, unlockLeaders, type UnlockState } from "@/lib/kvk/actions";
+import { unlockChecklist, unlockKvk, unlockLeaders, type UnlockState } from "@/lib/kvk/actions";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 
 const INITIAL: UnlockState = { status: "idle" };
 
 /** Each locked page has its own password, checked by its own action. */
-const ACTIONS = { plan: unlockKvk, leaders: unlockLeaders } satisfies Record<KvkArea, unknown>;
+const ACTIONS = { plan: unlockKvk, leaders: unlockLeaders, checklist: unlockChecklist } satisfies Record<KvkArea, unknown>;
 const TEXTS = {
   plan: { body: "kvk.locked.body", unavailable: "kvk.unavailable" },
   leaders: { body: "leaders.locked.body", unavailable: "leaders.unavailable" },
+  checklist: { body: "checklist.locked.body", unavailable: "checklist.unavailable" },
 } as const satisfies Record<KvkArea, unknown>;
 
 /** Password form. On success the Server Action sets the cookie and the page re-renders unlocked. */

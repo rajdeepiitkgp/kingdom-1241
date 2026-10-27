@@ -305,6 +305,12 @@ function contextFor(table: string): string {
       return "A short instruction for the players who lead rallies or garrisons on KvK battle day.";
     case "kvk_rally_leaders":
       return "Which rally a player leads on KvK battle day (e.g. the castle, first wave), where on the map they teleport or stand, and a short note about it.";
+    case "kvk_checklist_briefs":
+      return "The brief for the battle commander and the coordinators who run the kingdom's side of a KvK or castle battle.";
+    case "kvk_checklist_items":
+      return "One task on the battle commander's checklist for a KvK or castle battle (to be ticked off), and an optional short note on who does it or how.";
+    case "kvk_checklist_rules":
+      return "A short order for the battle commander, or a general guideline for the coordinators, on KvK battle day.";
     default:
       return "";
   }

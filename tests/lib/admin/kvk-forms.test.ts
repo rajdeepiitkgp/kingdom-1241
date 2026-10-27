@@ -4,11 +4,14 @@ import {
   nextFreeLabel,
   parseCoordinatorForm,
   parseFormationForm,
-  parseLeaderBriefForm,
+  parseChecklistItemForm,
+  parseChecklistRuleForm,
   parseLeaderRuleForm,
+  parsePageBriefForm,
   parsePlanForm,
   parseRallyLeaderForm,
   parseRuleForm,
+  passwordClash,
 } from "@/lib/admin/kvk-forms";
 
 function form(entries: Record<string, string>): FormData {
@@ -153,24 +156,65 @@ describe("moveInList", () => {
   });
 });
 
-describe("parseLeaderBriefForm", () => {
-  it("accepts the leaders' own password and instructions", () => {
-    const result = parseLeaderBriefForm(form({ password: " rally-1241 ", introSource: "Start on the call.", published: "on" }), "1241");
+describe("parsePageBriefForm", () => {
+  it("accepts the page's own password and instructions", () => {
+    const result = parsePageBriefForm(form({ password: " rally-1241 ", introSource: "Start on the call.", published: "on" }), { plan: "1241" });
     expect(result).toEqual({ ok: true, value: { password: "rally-1241", introSource: "Start on the call.", published: true } });
   });
 
-  it("refuses a short password and the battle plan's password", () => {
-    const short = parseLeaderBriefForm(form({ password: "abc" }), "1241");
+  it("refuses a short password and another page's password", () => {
+    const short = parsePageBriefForm(form({ password: "abc" }), { plan: "1241" });
     expect(short.ok).toBe(false);
     if (!short.ok) expect(short.errors.password).toMatch(/4 characters/);
-    const same = parseLeaderBriefForm(form({ password: "1241" }), " 1241 ");
-    expect(same.ok).toBe(false);
-    if (!same.ok) expect(same.errors.password).toMatch(/different password/);
+    const plan = parsePageBriefForm(form({ password: "1241" }), { plan: " 1241 ", checklist: "boss" });
+    expect(plan.ok).toBe(false);
+    if (!plan.ok) expect(plan.errors.password).toMatch(/battle plan's password/);
+    const checklist = parsePageBriefForm(form({ password: "boss" }), { plan: "1241", checklist: "boss" });
+    expect(checklist.ok).toBe(false);
+    if (!checklist.ok) expect(checklist.errors.password).toMatch(/commander checklist's password/);
   });
 
   it("is unpublished without the checkbox", () => {
-    const result = parseLeaderBriefForm(form({ password: "leaders" }));
+    const result = parsePageBriefForm(form({ password: "leaders" }));
     expect(result.ok && result.value.published).toBe(false);
+  });
+});
+
+describe("passwordClash", () => {
+  it("names the page that already uses the password, ignoring surrounding spaces", () => {
+    expect(passwordClash("rally", { leaders: " rally " })).toMatch(/rally leaders' password/);
+    expect(passwordClash("rally", { plan: "1241", leaders: "other", checklist: null })).toBeNull();
+    expect(passwordClash("", { plan: "" })).toBeNull();
+  });
+});
+
+describe("parseChecklistItemForm", () => {
+  it("reads the phase, the task and an optional note", () => {
+    const result = parseChecklistItemForm(form({ phase: "day", text: " Move players to [TMP] ", note: "R4s of each alliance", published: "on" }));
+    expect(result).toEqual({ ok: true, value: { phase: "day", text: "Move players to [TMP]", note: "R4s of each alliance", published: true } });
+  });
+
+  it("falls back to 'before' for an unknown phase and refuses an empty or long task", () => {
+    const odd = parseChecklistItemForm(form({ phase: "someday", text: "Task" }));
+    expect(odd.ok && odd.value.phase).toBe("before");
+    const empty = parseChecklistItemForm(form({ text: "  " }));
+    expect(!empty.ok && empty.errors.text).toMatch(/Write the task/);
+    const long = parseChecklistItemForm(form({ text: "x".repeat(401), note: "y".repeat(201) }));
+    expect(long.ok).toBe(false);
+    if (!long.ok) {
+      expect(long.errors.text).toMatch(/400/);
+      expect(long.errors.note).toMatch(/200/);
+    }
+  });
+});
+
+describe("parseChecklistRuleForm", () => {
+  it("adds the section to a rule line", () => {
+    const result = parseChecklistRuleForm(form({ section: "general", kind: "dont", text: "Don't share passwords", published: "on" }));
+    expect(result).toEqual({ ok: true, value: { section: "general", kind: "dont", text: "Don't share passwords", published: true } });
+    const fallback = parseChecklistRuleForm(form({ section: "nonsense", text: "Hold" }));
+    expect(fallback.ok && fallback.value.section).toBe("commander");
+    expect(parseChecklistRuleForm(form({ text: "" })).ok).toBe(false);
   });
 });
 

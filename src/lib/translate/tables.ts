@@ -76,6 +76,16 @@ export const TRANSLATABLE_TABLES: TranslatableTable[] = [
       { name: "note", html: false },
     ],
   },
+  { table: "kvk_checklist_briefs", primaryKey: "id", columns: [{ name: "intro", html: true }] },
+  {
+    table: "kvk_checklist_items",
+    primaryKey: "id",
+    columns: [
+      { name: "text", html: false },
+      { name: "note", html: false },
+    ],
+  },
+  { table: "kvk_checklist_rules", primaryKey: "id", columns: [{ name: "text", html: false }] },
   {
     table: "kvk_retrospectives",
     primaryKey: "id",

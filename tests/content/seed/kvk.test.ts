@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSeedContent } from "@/content/seed";
 import { SEED_HEROES } from "@/content/seed/heroes";
-import { SEED_KVK_PLAN, SEED_LEADER_BRIEF } from "@/content/seed/kvk";
+import { SEED_CHECKLIST, SEED_KVK_PLAN, SEED_LEADER_BRIEF } from "@/content/seed/kvk";
 import { isValidRatio } from "@/lib/kvk/formations";
 
 /** The seed must be something the site can show on first deploy without surprises. */
@@ -58,5 +58,19 @@ describe("seed rally-leader page", () => {
     expect(kvkLeaderPlan.rules).toHaveLength(SEED_LEADER_BRIEF.rules.length);
     // Placeholders stay recognisable as placeholders.
     for (const r of SEED_LEADER_BRIEF.rules) expect(r.text).toMatch(/placeholder/i);
+  });
+});
+
+describe("seed commander checklist", () => {
+  it("belongs to the placeholder plan, has its own password and stays recognisable as a placeholder", () => {
+    const { kvkPlan, kvkLeaderPlan, kvkChecklistPlan } = buildSeedContent();
+    expect(kvkChecklistPlan.planId).toBe(kvkPlan.id);
+    expect(kvkChecklistPlan.password).not.toBe("");
+    expect(new Set([kvkPlan.password, kvkLeaderPlan.password, kvkChecklistPlan.password]).size).toBe(3);
+    expect(kvkChecklistPlan.items).toHaveLength(SEED_CHECKLIST.items.length);
+    expect(kvkChecklistPlan.rules).toHaveLength(SEED_CHECKLIST.rules.length);
+    expect(new Set(kvkChecklistPlan.items.map((i) => i.id)).size).toBe(kvkChecklistPlan.items.length);
+    for (const line of [...SEED_CHECKLIST.items, ...SEED_CHECKLIST.rules]) expect(line.text).toMatch(/placeholder/i);
+    expect(SEED_CHECKLIST.introMarkdown).toMatch(/placeholder/i);
   });
 });

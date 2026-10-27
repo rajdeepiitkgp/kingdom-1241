@@ -1,4 +1,6 @@
-import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
+import type { ChecklistPhase, ChecklistSection, CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
+import type { KvkArea } from "@/lib/kvk/access";
+import { CHECKLIST_PHASES, CHECKLIST_SECTIONS } from "@/lib/kvk/checklist";
 import {
   boolField,
   intField,
@@ -179,21 +181,44 @@ export function parseFormationForm(fd: FormData, heroSlugs: readonly string[]): 
   };
 }
 
-export interface LeaderBriefInput {
+/** The passwords of a battle's other locked pages; a page's own password must differ from each of them. */
+export type OtherPasswords = Partial<Record<KvkArea, string | null>>;
+
+const PAGE_PASSWORD_NAMES: Record<KvkArea, string> = {
+  plan: "battle plan's",
+  leaders: "rally leaders'",
+  checklist: "commander checklist's",
+};
+
+/** The form error when `password` is already another page's password of the same battle, or null. */
+export function passwordClash(password: string, others: OtherPasswords): string | null {
+  const mine = password.trim();
+  for (const [area, other] of Object.entries(others) as Array<[KvkArea, string | null | undefined]>) {
+    if (mine && other && mine === other.trim()) {
+      return `This is already the ${PAGE_PASSWORD_NAMES[area]} password. Each page needs its own, or one password would open both.`;
+    }
+  }
+  return null;
+}
+
+export interface PageBriefInput {
   password: string;
   /** Markdown written by the admin; rendered to sanitised HTML on save. */
   introSource: string;
   published: boolean;
 }
 
-/** The rally-leader page's settings: its own password (never the battle plan's) and the leaders' instructions. */
-export function parseLeaderBriefForm(fd: FormData, planPassword?: string | null): FormResult<LeaderBriefInput> {
+/**
+ * The settings of a locked page next to the battle plan (rally leaders,
+ * commander checklist): its own password, never one of the other pages', and
+ * the instructions above its content.
+ */
+export function parsePageBriefForm(fd: FormData, others: OtherPasswords = {}): FormResult<PageBriefInput> {
   const errors: Record<string, string> = {};
   const password = parsePassword(textField(fd, "password"));
+  const clash = passwordClash(password.value, others);
   if (password.error) errors.password = password.error;
-  else if (planPassword && password.value === planPassword.trim()) {
-    errors.password = "Use a different password from the battle plan's, or every player could open the leaders' page.";
-  }
+  else if (clash) errors.password = clash;
   const introSource = textField(fd, "introSource");
   if (introSource.length > 20_000) errors.introSource = "Keep the instructions under 20 000 characters.";
   if (Object.keys(errors).length > 0) return { ok: false, errors };
@@ -211,6 +236,39 @@ export function parseLeaderRuleForm(fd: FormData): FormResult<LeaderRuleInput> {
   const rule = parseRuleForm(fd);
   if (!rule.ok) return rule;
   return { ok: true, value: { ...rule.value, audience: oneOfField(fd, "audience", LEADER_AUDIENCES, "all") } };
+}
+
+export interface ChecklistItemInput {
+  phase: ChecklistPhase;
+  text: string;
+  note: string;
+  published: boolean;
+}
+
+/** One task on the commander checklist: when it is due, what to do and an optional note (who, where, how). */
+export function parseChecklistItemForm(fd: FormData): FormResult<ChecklistItemInput> {
+  const errors: Record<string, string> = {};
+  const text = textField(fd, "text");
+  if (!text) errors.text = "Write the task.";
+  else if (text.length > 400) errors.text = "Keep a task under 400 characters.";
+  const note = textField(fd, "note");
+  if (note.length > 200) errors.note = "Keep the note under 200 characters.";
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return {
+    ok: true,
+    value: { phase: oneOfField(fd, "phase", CHECKLIST_PHASES, "before"), text, note, published: boolField(fd, "published") },
+  };
+}
+
+export interface ChecklistRuleInput extends RuleInput {
+  section: ChecklistSection;
+}
+
+/** A line of the checklist page: a rule line plus where it belongs (the commander's orders or the general guidelines). */
+export function parseChecklistRuleForm(fd: FormData): FormResult<ChecklistRuleInput> {
+  const rule = parseRuleForm(fd);
+  if (!rule.ok) return rule;
+  return { ok: true, value: { ...rule.value, section: oneOfField(fd, "section", CHECKLIST_SECTIONS, "commander") } };
 }
 
 /** Pets: minutes after the battle start, up to a day (the database limit; the battle length limits it further). */
