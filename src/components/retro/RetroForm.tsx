@@ -359,7 +359,8 @@ export function RetroForm({
       <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
         <button type="submit" className="btn-primary" disabled={pending || waiting || closed}>
           {pending ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Send className="size-5 rtl:-scale-x-100" aria-hidden />}
-          {pending ? dict["retro.sending"] : dict["retro.submit"]}
+          {/* Text in its own element: browser translation replaces bare text nodes, and React's icon swap must not depend on them. */}
+          <span>{pending ? dict["retro.sending"] : dict["retro.submit"]}</span>
         </button>
       </div>
     </form>

@@ -282,7 +282,7 @@ export function FormationBoard({
                   <footer className="mt-auto flex justify-end">
                     <button type="button" className="btn-ghost btn-sm" onClick={() => copy(f)}>
                       {copied === f.id ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-                      {copied === f.id ? dict["common.copied"] : dict["common.copy"]}
+                      <span>{copied === f.id ? dict["common.copied"] : dict["common.copy"]}</span>
                     </button>
                   </footer>
                 </article>
