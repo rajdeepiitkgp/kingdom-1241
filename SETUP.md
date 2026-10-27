@@ -204,7 +204,7 @@ Kingdom 1241 alternates two events every two weeks — the **internal castle bat
 
 **Guessing protection.** The password stays simple on purpose, so guessing is slowed instead: an address that enters five wrong passwords within 15 minutes is locked out for an hour, doubling with every further lockout up to a day (the form shows a countdown); addresses are stored only as hashes. Wrong tries from *all* addresses are also counted per hour, and past 30 the site writes a "kvk.bruteforce" entry to the admin overview's change log and, if `ALERT_DISCORD_WEBHOOK_URL` is set (Discord → Server settings → Integrations → Webhooks → New webhook → copy URL, then add the variable in Vercel), posts an alert to that channel. That layer never locks anyone out: when it fires, change the password. `KVK_SESSION_SECRET` (or `TRANSLATE_WEBHOOK_SECRET`) is required in production; the app refuses to sign cookies with a development fallback there.
 
-**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down; the editor only accepts a future time when you change it, and a duplicated plan starts without one), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
+**Edit the plan** (`kvk_plans`): `event_type` (`castle_battle` or `kvk`), `title` and `intro` (HTML, translated automatically), `opponent` (KvK only), `battle_at` (UTC — the page converts it to each player's local time and counts down; the editor only accepts a future time when you change it, and a duplicated plan starts without one), `battle_end_at` (optional; the editor's *Standard window* button fills the usual 12:00–17:00 UTC castle battle), `min_hero_stars` (default 4), `min_skill_level` (the required level of the hero's Top Expedition Skill — the top-right skill with the flag icon; default 5).
 
 **Instructions** (`kvk_rules`): one row per bullet; `kind` is `do`, `dont` or `info`; `sort_order` orders them (the arrows in the editor).
 
@@ -294,6 +294,8 @@ If only Vercel is gone, steps 6 and 9 (the environment variables and nothing els
 **Fix a translation by hand.** Edit the language's value in the JSON. It stays until the English text of that row changes, which re-translates every language.
 
 **After a battle.** Admin → the plan → *Player feedback* → tick *Open*, save; a day or two later read the results under *Feedback*, export the CSV, then untick *Open* (or let the closing time do it). § 9a.
+
+**KvK prep days** (`/kvk/prep`, public). Nothing to do per round: the page moves to the next round by itself (every 28 days from Sunday 1 Nov 2026). The schedule, the item × day table, the points and the tips are code (`src/lib/kvk/prep.ts`, texts `prep.*` in `src/content/seed/ui-strings.ts`), so a change is a PR; after a wording change run Maintenance → `sync-ui`, then `translate`. If the game ever shifts a round, change `FIRST_PREP_ROUND` in the same file.
 
 **Restore content.** From the weekly backup, § 10.
 

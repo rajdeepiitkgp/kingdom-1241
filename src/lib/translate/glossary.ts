@@ -157,6 +157,76 @@ export const GLOSSARY: GlossaryEntry[] = [
     translations: { de: "Truegold", pl: "Truegold", ko: "트루골드", ar: "الذهب الحقيقي" },
   },
   {
+    term: "Tempered Truegold",
+    translations: { de: "gehärtetes Truegold", pl: "hartowany Truegold", ko: "강화 트루골드", ar: "الذهب الحقيقي المُقسّى" },
+  },
+  {
+    term: "Truegold Dust",
+    translations: { de: "Truegold-Staub", pl: "Pył Truegold", ko: "트루골드 가루", ar: "غبار الذهب الحقيقي" },
+  },
+  {
+    term: "Watchtower",
+    translations: { de: "Wachturm", pl: "Strażnica", ko: "망루", ar: "برج المراقبة" },
+    note: "Building that gives the daily intel missions.",
+  },
+  {
+    term: "Intel mission",
+    translations: { de: "Aufklärungsmission", pl: "Misja wywiadowcza", ko: "첩보 임무", ar: "مهمة استخبارات" },
+  },
+  {
+    term: "Governor Charm",
+    translations: { de: "Gouverneurs-Charm", pl: "Amulet gubernatora", ko: "영주 부적", ar: "تميمة الحاكم" },
+  },
+  {
+    term: "Governor Gear",
+    translations: { de: "Gouverneursausrüstung", pl: "Ekwipunek gubernatora", ko: "영주 장비", ar: "عتاد الحاكم" },
+  },
+  {
+    term: "Hero Roulette",
+    translations: { de: "Helden-Roulette", pl: "Ruletka bohaterów", ko: "영웅 룰렛", ar: "روليت الأبطال" },
+  },
+  {
+    term: "Hero Shard",
+    translations: { de: "Heldensplitter", pl: "Odłamek bohatera", ko: "영웅 조각", ar: "شظية البطل" },
+  },
+  {
+    term: "Widget",
+    translations: { de: "Widget", pl: "Widżet", ko: "위젯", ar: "أداة (Widget)" },
+  },
+  {
+    term: "Master Emblem",
+    translations: { de: "Meister-Emblem", pl: "Emblemat mistrza", ko: "마스터 엠블럼", ar: "شعار المعلّم" },
+  },
+  {
+    term: "Master's Manuscript",
+    translations: { de: "Meister-Manuskript", pl: "Manuskrypt mistrza", ko: "마스터의 원고", ar: "مخطوطة المعلّم" },
+  },
+  {
+    term: "Taming Mark",
+    translations: { de: "Zähmungsmarke", pl: "Znak oswajania", ko: "길들이기 표식", ar: "علامة الترويض" },
+    note: "Pet upgrade item.",
+  },
+  {
+    term: "War Academy",
+    translations: { de: "Kriegsakademie", pl: "Akademia Wojenna", ko: "전쟁 아카데미", ar: "أكاديمية الحرب" },
+  },
+  { term: "Master Pan", keep: true, note: "A name in the game; keep it." },
+  {
+    term: "Bison",
+    translations: { de: "Bison", pl: "Bizon", ko: "들소", ar: "البيسون" },
+    note: "A pet whose skill speeds up gathering.",
+  },
+  {
+    term: "Alliance RSS node",
+    translations: { de: "Allianz-Ressourcenfeld", pl: "Węzeł surowców sojuszu", ko: "연맹 자원지", ar: "عقدة موارد التحالف" },
+    note: "A protected resource tile the alliance places (one resource type per day): nobody can attack marches gathering there, they gather up to full capacity, and players recall them before the 00:00 UTC reset to get the rewards.",
+  },
+  {
+    term: "Invasion",
+    translations: { de: "Invasion", pl: "Inwazja", ko: "침공", ar: "الغزو" },
+    note: "The KvK phase on Saturday when kingdoms can attack each other.",
+  },
+  {
     term: "State Medal",
     translations: { de: "Staatsmedaille", pl: "Medal Państwowy", ko: "국가 메달", ar: "وسام الدولة" },
   },

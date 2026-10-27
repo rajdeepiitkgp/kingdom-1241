@@ -2,10 +2,10 @@ import { DAY, HOUR } from "@/lib/time";
 
 /**
  * The kingdom's usual battle window (pure, unit-tested). Castle battles and KvK
- * generally run 12:00–19:00 UTC; the editor offers it in one click and every
+ * generally run 12:00–17:00 UTC (five hours); the editor offers it in one click and every
  * plan can still set its own times.
  */
-export const STANDARD_BATTLE = { startHourUtc: 12, endHourUtc: 19 } as const;
+export const STANDARD_BATTLE = { startHourUtc: 12, endHourUtc: 17 } as const;
 
 /** Length of the standard window in minutes (used while a plan has no times yet). */
 export const STANDARD_BATTLE_MINUTES = (STANDARD_BATTLE.endHourUtc - STANDARD_BATTLE.startHourUtc) * 60;

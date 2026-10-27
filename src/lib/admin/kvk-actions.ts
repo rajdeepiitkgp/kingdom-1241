@@ -505,7 +505,7 @@ export async function saveRallyLeader(_previous: ActionState, formData: FormData
     admin.from("alliances").select("tag"),
     admin.from("kvk_plans").select("*").eq("id", planId).maybeSingle(),
   ]);
-  // The pets boost must end inside the battle (the standard 12:00–19:00 UTC length while the plan has no times).
+  // The pets boost must end inside the battle (the standard 12:00–17:00 UTC length while the plan has no times).
   const length = battleMinutes(plan?.battle_at ?? null, plan?.battle_end_at ?? null);
   const parsed = parseRallyLeaderForm(
     formData,
