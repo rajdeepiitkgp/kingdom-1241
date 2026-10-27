@@ -12,6 +12,7 @@ import { STANDARD_BATTLE, standardWindow } from "@/lib/kvk/battle-window";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
 export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: string }) {
   const [state, action] = useActionState<ActionState, FormData>(savePlan, IDLE_STATE);
@@ -82,7 +83,17 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           <input id="minSkillLevel" name="minSkillLevel" type="number" min={0} max={5} className="input" defaultValue={plan?.minSkillLevel ?? 5} required />
         </Field>
         <Field label="Shared password" htmlFor="password" error={errors.password} hint="Changing it logs every player out of the plan page.">
-          <input id="password" name="password" className="input" defaultValue={plan?.password ?? ""} required minLength={4} maxLength={64} autoComplete="off" />
+          <CodeSuggestInput
+            id="password"
+            name="password"
+            defaultValue={plan?.password ?? ""}
+            required
+            minLength={4}
+            maxLength={64}
+            autoComplete="off"
+            dir="ltr"
+            suggestLabel="Suggest" suggestHint="Fill in a random six-digit code"
+          />
         </Field>
         <Field label="Slug (name in the database)" htmlFor="slug" error={errors.slug} hint="Leave empty to derive it from the title.">
           <input id="slug" name="slug" className="input" defaultValue={plan?.slug ?? ""} maxLength={60} dir="ltr" />

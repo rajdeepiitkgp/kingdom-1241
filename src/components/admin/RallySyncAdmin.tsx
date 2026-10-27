@@ -14,6 +14,7 @@ import { formatSeconds, parseDuration } from "@/lib/rally-sync/timing";
 import { formatUtcTime } from "@/lib/time";
 import { useDevice } from "../rally-sync/hooks";
 import { Field, Notice } from "./ui";
+import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
 const MODE_LABELS: Record<RoomMode, string> = { rally: "Rally (we attack)", counter: "Counter-rally (land right after the enemy)" };
 
@@ -80,7 +81,16 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
             <input id="rs-title" name="title" className="input" maxLength={TITLE_MAX} placeholder="Castle — first wave" autoComplete="off" />
           </Field>
           <Field label={`Password (${PASSWORD_MIN}+ characters)`} htmlFor="rs-password" error={errors.password} hint="Share it with the room ID, or send the invite link instead.">
-            <input id="rs-password" name="password" className="input" minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} required autoComplete="off" />
+            <CodeSuggestInput
+              id="rs-password"
+              name="password"
+              minLength={PASSWORD_MIN}
+              maxLength={PASSWORD_MAX}
+              required
+              autoComplete="off"
+              dir="ltr"
+              suggestLabel="Suggest" suggestHint="Fill in a random six-digit code"
+            />
           </Field>
           <Field label="Mode" htmlFor="rs-mode">
             <select id="rs-mode" name="mode" className="input select-chevron" defaultValue={last.mode}>
