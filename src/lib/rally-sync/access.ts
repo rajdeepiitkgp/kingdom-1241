@@ -85,8 +85,8 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function tokenMatches(token: string | undefined | null, hash: string | null): boolean {
-  return Boolean(token && hash) && safeEqual(hashToken(token as string), hash as string);
+export function tokenMatches(token: unknown, hash: string | null): boolean {
+  return typeof token === "string" && token !== "" && Boolean(hash) && safeEqual(hashToken(token), hash as string);
 }
 
 /** The Realtime topic suffix of a room. */
