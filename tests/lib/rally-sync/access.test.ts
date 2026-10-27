@@ -68,3 +68,12 @@ describe("rally sync access", () => {
     expect(newChannelKey()).toMatch(/^[0-9a-f]{32}$/);
   });
 });
+
+describe("tokenMatches with a hand-crafted request", () => {
+  it("refuses anything that isn't a token string instead of throwing", () => {
+    const hash = hashToken("secret-token");
+    expect(tokenMatches("secret-token", hash)).toBe(true);
+    for (const value of [undefined, null, 42, {}, ["secret-token"], ""]) expect(tokenMatches(value, hash)).toBe(false);
+    expect(tokenMatches("secret-token", null)).toBe(false);
+  });
+});

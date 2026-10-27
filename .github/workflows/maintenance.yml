@@ -53,24 +53,14 @@ jobs:
     name: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune' || 'backup') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # Secrets are handed to the steps that use them, never to the whole job: `npm ci`
+    # runs install scripts of every dependency, and none of them may see a key.
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      TRANSLATION_PROVIDER: ${{ vars.TRANSLATION_PROVIDER }}
-      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
-      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
-      SITE_URL: ${{ secrets.SITE_URL }}
-      TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
-      KVK_SEED_PASSWORD: ${{ secrets.KVK_SEED_PASSWORD }}
-      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # --- Node tasks (the scripts in scripts/) ---------------------------------
 
@@ -86,28 +76,55 @@ jobs:
 
       - name: Seed database
         if: env.TASK == 'seed'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          KVK_SEED_PASSWORD: ${{ secrets.KVK_SEED_PASSWORD }}
         run: npm run db:seed
 
       - name: Sync interface strings
         if: env.TASK == 'sync-ui'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: npm run db:seed -- --sync-ui
 
       - name: Translate content
         if: env.TASK == 'translate'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          TRANSLATION_PROVIDER: ${{ vars.TRANSLATION_PROVIDER }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
         run: npm run translate
 
       - name: Translate (dry run)
         if: env.TASK == 'translate-dry-run'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          TRANSLATION_PROVIDER: ${{ vars.TRANSLATION_PROVIDER }}
         run: npm run translate -- --dry-run
 
       # Battle feedback past its retention period (kvk_retrospectives.retention_days
       # after the battle) is deleted and the form closed; one audit_log entry per battle.
       - name: Prune expired feedback
         if: env.TASK == 'prune'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: npm run prune
 
       - name: Prune expired feedback (dry run)
         if: env.TASK == 'prune-dry-run'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: npm run prune -- --dry-run
 
       # The file is encrypted with BACKUP_PASSPHRASE before it leaves the runner:
@@ -115,6 +132,10 @@ jobs:
       # an artifact. Restore: SETUP.md § 10.
       - name: Back up content
         if: env.TASK == 'backup'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: npm run backup
 
       - name: Keep the backup for 90 days
@@ -131,6 +152,9 @@ jobs:
 
       - name: Refresh site cache
         if: env.TASK == 'revalidate'
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
         run: |
           curl --fail --silent --show-error -X POST "$SITE_URL/api/revalidate" \
             -H "Authorization: Bearer $TRANSLATE_WEBHOOK_SECRET" \
@@ -145,6 +169,10 @@ jobs:
 
       - name: Link project
         if: env.TASK == 'webhooks' || env.TASK == 'config-push'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       # Runs supabase/webhooks.sql with the real site URL and secret filled in
@@ -152,6 +180,12 @@ jobs:
       # new content table or a secret change; it replaces the triggers in place.
       - name: Install translation webhooks
         if: env.TASK == 'webhooks'
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           test -n "$SITE_URL" || { echo "SITE_URL secret is missing"; exit 1; }
           test -n "$TRANSLATE_WEBHOOK_SECRET" || { echo "TRANSLATE_WEBHOOK_SECRET secret is missing"; exit 1; }
@@ -167,4 +201,8 @@ jobs:
       # as the Discord provider, stay as they are in the dashboard.
       - name: Push Supabase config
         if: env.TASK == 'config-push'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: supabase config push --yes

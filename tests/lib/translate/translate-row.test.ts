@@ -79,10 +79,21 @@ describe("translateRows", () => {
   });
 
   it("merges fresh translations into the current row instead of replacing it", async () => {
-    const rows = { a: { id: "a", name: { en: "Bear Hunt", ko: "hand-edited" }, summary: { en: "" }, source_hash: null } };
+    const upToDate = encodeColumnHashes(columnHashes({ name: "Bear Hunt", summary: "" }));
+    const rows = { a: { id: "a", name: { en: "Bear Hunt", ko: "hand-edited" }, summary: { en: "" }, source_hash: upToDate } };
     const { client } = fakeSupabase(rows);
-    await translateRows(client, "events", [rows.a], ["de"]);
+    await translateRows(client, "events", [rows.a], ["de", "ko"]);
     expect(rows.a.name).toEqual({ en: "Bear Hunt", ko: "hand-edited", de: "[de] Bear Hunt" });
+  });
+
+  it("drops translations of an older English that the run could not redo", async () => {
+    const old = encodeColumnHashes(columnHashes({ name: "Old name", summary: "" }));
+    const rows = { a: { id: "a", name: { en: "Bear Hunt", de: "Alter Name", ko: "옛 이름" }, summary: { en: "" }, source_hash: old } };
+    const { client } = fakeSupabase(rows);
+    // Only German is asked for (`--locale de`): the Korean text belongs to the old English.
+    await translateRows(client, "events", [rows.a], ["de", "ko"], { onlyLocales: ["de"] });
+    expect(rows.a.name).toEqual({ en: "Bear Hunt", de: "[de] Bear Hunt" });
+    expect(rows.a.source_hash).toBe(encodeColumnHashes(columnHashes({ name: "Bear Hunt", summary: "" })));
   });
 
   it("re-translates only the column whose English changed", async () => {
@@ -157,17 +168,26 @@ describe("translateRows", () => {
     expect(results.find((r) => r.id === "empty")?.reason).toBe("no English source text");
   });
 
-  it("does not mark a row up to date when a language fails", async () => {
-    translateFields.mockImplementationOnce(async () => {
-      throw new Error("429 rate limited");
+  it("retries only the language that failed, and stops writing while it keeps failing", async () => {
+    translateFields.mockImplementation(async (fields, locale) => {
+      if (locale === "de") throw new Error("the model refused");
+      return fakeTranslate(fields, locale);
     });
     const rows = { a: { id: "a", name: { en: "Bear Hunt" }, summary: { en: "" }, source_hash: null } };
-    const { client } = fakeSupabase(rows);
+    const { client, updates } = fakeSupabase(rows);
 
-    const result = await translateRows(client, "events", [rows.a], ["de", "pl"]);
-    expect(result[0].translated).toEqual(["pl"]);
-    expect(result[0].reason).toBe("partial");
-    expect(rows.a.source_hash).toBeNull();
+    const first = await translateRows(client, "events", [rows.a], ["de", "pl"]);
+    expect(first[0].translated).toEqual(["pl"]);
+    expect(first[0].reason).toBe("partial");
+    expect(rows.a.name).toEqual({ en: "Bear Hunt", pl: "[pl] Bear Hunt" });
+
+    // The write fires the webhook again: only German is asked for, it fails, and nothing is written (no loop).
+    translateFields.mockClear();
+    const second = await translateRows(client, "events", [{ ...rows.a }], ["de", "pl"]);
+    expect(translateFields).toHaveBeenCalledTimes(1);
+    expect(translateFields.mock.calls[0][1]).toBe("de");
+    expect(second[0].skipped).toBe(true);
+    expect(updates).toHaveLength(1);
   });
 
   it("only translates the localized settings rows", async () => {

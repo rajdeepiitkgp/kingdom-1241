@@ -5,8 +5,8 @@ import { systemAudit } from "@/lib/admin/audit";
 import { notifyCouncil } from "@/lib/alerts";
 import { getActiveChecklistPlan, getActiveKvkPlan, getActiveLeaderPlan } from "@/lib/data";
 import { areaAccessToken, KVK_AREA_COOKIES, KVK_COOKIE_MAX_AGE, type KvkArea, passwordMatches } from "@/lib/kvk/access";
-import { ADDRESS_POLICY, addressScope, countFailure, PLAN_ALERT, planScope, recordFailure, retryAfter, shouldAlert, triesLeft } from "@/lib/kvk/throttle";
-import { addressHash, clearThrottle, countRecentAddresses, loadThrottle, saveThrottle } from "@/lib/kvk/throttle-store";
+import { ADDRESS_POLICY, addressScope, countFailure, PLAN_ALERT, planScope, retryAfter, shouldAlert, triesLeft } from "@/lib/kvk/throttle";
+import { addressHash, clearThrottle, countRecentAddresses, takeTry, updateThrottle } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
 
 /**
@@ -92,27 +92,27 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
 
   const now = Date.now();
   const scopes = { address: addressScope(page.planId, addressHash(requestHeaders), area), plan: planScope(page.planId, area) };
-  const [addressState, planState] = await loadThrottle([scopes.address, scopes.plan]);
-  const wait = retryAfter(addressState, now);
-  if (wait > 0) {
-    log.info("Unlock refused: address locked", { reqId, area, plan: page.slug, waitMs: wait });
-    return { status: "throttled", retryAt: now + wait };
+  // The try is counted before the password is checked, so parallel requests can't outrun the lockout.
+  const attempt = await takeTry(scopes.address, now, ADDRESS_POLICY);
+  if (!attempt.allowed) {
+    log.info("Unlock refused: address locked", { reqId, area, plan: page.slug, waitMs: attempt.retryAt - now });
+    return { status: "throttled", retryAt: attempt.retryAt };
   }
 
   if (!passwordMatches(password, page.password)) {
-    const nextAddress = recordFailure(addressState, now, ADDRESS_POLICY);
-    const nextPlan = countFailure(planState, now, PLAN_ALERT);
-    const alert = shouldAlert(nextPlan, PLAN_ALERT);
-    if (alert) nextPlan.alertedAt = now;
-    await saveThrottle([
-      { scope: scopes.address, state: nextAddress },
-      { scope: scopes.plan, state: nextPlan },
-    ]);
-    const lock = retryAfter(nextAddress, now);
-    log.info("Unlock failed: wrong password", { reqId, area, plan: page.slug, addressFailures: nextAddress.failures, planFailures: nextPlan.failures, lockMs: lock });
-    if (alert) await reportBruteForce(area, page, nextPlan.failures, nextPlan.windowStartedAt);
+    let alert = false;
+    const plan = await updateThrottle(scopes.plan, (state) => {
+      const next = countFailure(state, now, PLAN_ALERT);
+      alert = shouldAlert(next, PLAN_ALERT);
+      if (alert) next.alertedAt = now;
+      return next;
+    });
+    const planFailures = plan.status === "ok" ? (plan.after?.failures ?? 0) : 0;
+    const lock = retryAfter(attempt.state, now);
+    log.info("Unlock failed: wrong password", { reqId, area, plan: page.slug, addressFailures: attempt.state?.failures, planFailures, lockMs: lock });
+    if (plan.status === "ok" && alert) await reportBruteForce(area, page, planFailures, plan.after?.windowStartedAt ?? now);
     if (lock > 0) return { status: "throttled", retryAt: now + lock };
-    return { status: "wrong", triesLeft: triesLeft(nextAddress, now, ADDRESS_POLICY) };
+    return { status: "wrong", triesLeft: triesLeft(attempt.state, now, ADDRESS_POLICY) };
   }
 
   (await cookies()).set({
@@ -124,7 +124,7 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
     path: "/",
     maxAge: KVK_COOKIE_MAX_AGE,
   });
-  if (addressState) await clearThrottle(scopes.address);
+  if (attempt.state) await clearThrottle(scopes.address);
   log.info("Unlocked", { reqId, area, plan: page.slug });
   return { status: "ok" };
 }

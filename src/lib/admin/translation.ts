@@ -31,7 +31,7 @@ const EDITABLE_TEXT_COLUMNS: Record<string, readonly string[]> = {
 export const TEXT_LIMITS: Record<string, number> = { title: 120, intro: 20000, text: 400, note: 200, target: 120, position: 120 };
 
 export function isEditableTextColumn(table: string, column: string): boolean {
-  return (EDITABLE_TEXT_COLUMNS[table] ?? []).includes(column);
+  return Object.hasOwn(EDITABLE_TEXT_COLUMNS, table) && EDITABLE_TEXT_COLUMNS[table].includes(column);
 }
 
 /**

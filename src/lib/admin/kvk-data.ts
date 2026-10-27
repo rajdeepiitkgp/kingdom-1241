@@ -1,10 +1,10 @@
 import { mapKvkChecklistItem, mapKvkChecklistRule, mapKvkCoordinator, mapKvkFormation, mapKvkLeaderRule, mapKvkPlan, mapKvkRallyLeader, mapKvkRule } from "@/lib/data/mappers";
 import type { KvkChecklistItem, KvkChecklistRule, KvkEventType, KvkLeaderRule, KvkPlanWithSecret, KvkRallyLeader } from "@/lib/data/types";
-import { pick, type Localized } from "@/lib/i18n/localized";
+import type { Localized } from "@/lib/i18n/localized";
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { htmlToEditableText, isUuid } from "./forms";
+import { isUuid, shownIntroSource } from "./forms";
 import { pendingColumns } from "./translation";
 
 /**
@@ -140,8 +140,6 @@ export interface AdminLeaderPlan {
   minSkillLevel: number;
   battleAt: string | null;
   battleEndAt: string | null;
-  /** The battle plan's password, so the form can refuse the same one for the leaders. */
-  planPassword: string;
   brief: {
     id: string;
     password: string;
@@ -179,7 +177,6 @@ export async function getLeaderPlanForEditing(planId: string): Promise<AdminLead
     minSkillLevel: mapped.minSkillLevel,
     battleAt: mapped.battleAt,
     battleEndAt: mapped.battleEndAt,
-    planPassword: mapped.password,
   };
 
   const [brief, rallies, rules] = await Promise.all([
@@ -309,6 +306,6 @@ function introSourcesOf(row: Record<string, unknown>): { introSource: string; in
     row.intro_source && typeof row.intro_source === "object"
       ? Object.fromEntries(Object.entries(row.intro_source as Record<string, unknown>).filter(([, v]) => typeof v === "string") as [string, string][])
       : {};
-  const introSource = introSources.en?.trim() ? introSources.en : htmlToEditableText(pick(localizedOf(row.intro), "en"));
+  const introSource = shownIntroSource(introSources, localizedOf(row.intro));
   return { introSource, introSources };
 }

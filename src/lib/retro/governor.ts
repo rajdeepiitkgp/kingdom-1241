@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { HOUR } from "@/lib/time";
-import { isGovernorId } from "./form";
+import { clipText, isGovernorId } from "./form";
 
 /**
  * Governor ID verification through MightPulse (parsing and signing are pure
@@ -41,7 +41,7 @@ export function parseMightPulsePlayer(json: unknown, governorId: string): Govern
   const allianceTag = alliance ? (str(alliance.abbr) ?? str(alliance.tag)) : null;
   return {
     governorId,
-    name: name.slice(0, 40),
+    name: clipText(name, 40),
     allianceTag: allianceTag ? allianceTag.toUpperCase().slice(0, 8) : null,
     kingdom: int(player.kid) ?? int(player.kingdom),
   };

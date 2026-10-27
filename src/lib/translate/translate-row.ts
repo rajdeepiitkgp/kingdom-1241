@@ -46,6 +46,22 @@ type Row = Record<string, any>;
 /** Characters of English source per provider request. */
 const BATCH_CHAR_BUDGET = 9000;
 const BATCH_MAX_ROWS = 40;
+/**
+ * Languages translated at the same time. One after another, a long guide in
+ * nine languages could outlast the webhook route's time limit and lose every
+ * translation of the run; a few at a time stays inside it and inside the
+ * provider's rate limits.
+ */
+const PARALLEL_LOCALES = 3;
+
+/** Runs `task` for every item, at most `limit` at a time. */
+async function eachLimited<T>(items: readonly T[], limit: number, task: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await task(items[next++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
 
 function asLocalized(value: unknown): Localized {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -75,6 +91,8 @@ interface RowState {
   needs: Map<string, Set<string>>;
   /** locale → columns translated in this run. */
   done: Map<string, Set<string>>;
+  /** Columns whose English changed since their translations were made. */
+  stale: Set<string>;
   chars: number;
 }
 
@@ -108,7 +126,7 @@ function prepareRow(config: TranslatableTable, row: Row, targets: string[], forc
 
   chars = 0;
   for (const column of new Set([...needs.values()].flatMap((set) => [...set]))) chars += source[column].length;
-  return { id, columns, source, hashes, stored, needs, done: new Map(), chars };
+  return { id, columns, source, hashes, stored, needs, done: new Map(), stale, chars };
 }
 
 /**
@@ -154,7 +172,7 @@ export async function translateRows(
   const context = contextFor(table);
   const failures = new Map<string, string>();
 
-  for (const locale of targets) {
+  await eachLimited(targets, PARALLEL_LOCALES, async (locale) => {
     const needing = pending.filter((s) => s.needs.has(locale));
     for (const batch of chunk(needing)) {
       // Field keys are opaque ("f0", "f1", ...) so the model never sees ids.
@@ -187,7 +205,7 @@ export async function translateRows(
         for (const state of batch) failures.set(state.id, message);
       }
     }
-  }
+  });
 
   for (const state of pending) {
     const translatedLocales = [...state.done.keys()];
@@ -215,20 +233,28 @@ export async function translateRows(
     }
 
     const update: Row = {};
-    const stored = { ...state.stored };
+    // Start from what is stored now: a run that finished meanwhile may have handled other columns.
+    const stored = storedColumnHashes(current.source_hash, currentSource);
     let partial = false;
     for (const column of config.columns) {
       const name = column.name;
       const fresh: Localized = {};
       for (const [locale, cols] of state.done) if (cols.has(name)) fresh[locale] = state.columns[name][locale];
-      update[name] = { ...asLocalized(current[name]), ...fresh };
+      const kept = asLocalized(current[name]);
       const neededBy = [...state.needs.entries()].filter(([, cols]) => cols.has(name)).map(([locale]) => locale);
-      if (neededBy.length === 0) continue; // untouched column keeps its stored hash
-      if (neededBy.every((locale) => state.done.get(locale)?.has(name))) stored[name] = state.hashes[name];
-      else {
-        // A language failed: the column stays due, and the next run picks it up.
-        delete stored[name];
-        partial = true;
+      if (neededBy.some((locale) => !state.done.get(locale)?.has(name))) partial = true;
+      if (state.stale.has(name) && stored[name] !== state.hashes[name]) {
+        // The English changed: every translation this run didn't redo (a language
+        // that failed, or one outside --locale) is outdated. It is dropped, so the
+        // page falls back to English, and the column is marked as handled. The
+        // missing languages are picked up by the next run on their own, so a
+        // language that keeps failing costs one request per run, not a full
+        // re-translation of every language and a webhook loop.
+        update[name] = { [DEFAULT_LOCALE]: kept[DEFAULT_LOCALE] ?? state.source[name], ...fresh };
+        stored[name] = state.hashes[name];
+      } else {
+        // Only missing languages were due: add what arrived; the stored hash stays.
+        update[name] = { ...kept, ...fresh };
       }
     }
     update.source_hash = Object.keys(stored).length > 0 ? encodeColumnHashes(stored) : null;

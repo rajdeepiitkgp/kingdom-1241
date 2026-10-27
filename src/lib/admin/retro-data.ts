@@ -2,6 +2,7 @@ import { checkAccess } from "@/lib/auth/server";
 import { mapRetroBattle, mapRetroResponse, mapRetrospective } from "@/lib/data/mappers";
 import type { RetroBattle, RetroResponse, Retrospective } from "@/lib/data/types";
 import { createLogger } from "@/lib/log";
+import { MAX_RESPONSES_LIMIT } from "@/lib/retro/questions";
 import { pruneAt } from "@/lib/retro/retention";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUuid } from "./forms";
@@ -104,6 +105,9 @@ export async function getRetrospectiveByPlan(planId: string): Promise<AdminRetro
   return toAdmin(retro as Row, plan as Row, counts.get(String(retro.id)) ?? 0);
 }
 
+/** Rows per request; must not exceed the API's max_rows (supabase/config.toml). */
+const RESPONSE_PAGE = 1000;
+
 /** All answers of a retrospective, newest first. `identity` is honoured for the owner only. */
 export async function listResponses(retroId: string, options: { identity: boolean }): Promise<RetroResponse[]> {
   if (!isUuid(retroId)) return [];
@@ -111,15 +115,25 @@ export async function listResponses(retroId: string, options: { identity: boolea
   if (!access) return [];
   const identity = options.identity && access.isOwner;
   const columns = identity ? "*" : "id, retrospective_id, alliance_tag, verified, ratings, went_well, went_wrong, suggestions, texts_en, translated_at, locale, created_at";
-  const { data, error } = await createAdminClient()
-    .from("kvk_retro_responses")
-    .select(columns)
-    .eq("retrospective_id", retroId)
-    .order("created_at", { ascending: false })
-    .limit(2000);
-  if (error) {
-    log.error("Could not load feedback", { retro: retroId, error: error.message });
-    return [];
+  // The API returns at most RESPONSE_PAGE rows per request (max_rows in supabase/config.toml), while a
+  // form may take up to MAX_RESPONSES_LIMIT answers: read page by page, or the page, the CSV and the
+  // analysis would silently miss everything past the first thousand.
+  const rows: Row[] = [];
+  for (let from = 0; from < MAX_RESPONSES_LIMIT * 2; from += RESPONSE_PAGE) {
+    const { data, error } = await createAdminClient()
+      .from("kvk_retro_responses")
+      .select(columns)
+      .eq("retrospective_id", retroId)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, from + RESPONSE_PAGE - 1);
+    if (error) {
+      log.error("Could not load feedback", { retro: retroId, error: error.message });
+      return [];
+    }
+    const page = (data ?? []) as unknown as Row[];
+    rows.push(...page);
+    if (page.length < RESPONSE_PAGE) break;
   }
-  return ((data ?? []) as unknown as Row[]).map((row) => mapRetroResponse(row, identity));
+  return rows.map((row) => mapRetroResponse(row, identity));
 }

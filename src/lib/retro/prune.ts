@@ -26,6 +26,8 @@ interface RetroRow {
   open: boolean;
   created_at: string;
   retention_days: number;
+  /** Set while a stored AI summary exists. */
+  analysis_at?: string | null;
 }
 
 interface PlanRow {
@@ -49,7 +51,7 @@ export function dueRetrospectives(retros: readonly RetroRow[], plans: readonly P
 
 export async function pruneExpiredResponses(admin: SupabaseClient, now: Date, options: PruneOptions = {}): Promise<PruneResult[]> {
   const log = options.log ?? (() => {});
-  const { data: retros, error } = await admin.from("kvk_retrospectives").select("id, plan_id, open, created_at, retention_days");
+  const { data: retros, error } = await admin.from("kvk_retrospectives").select("id, plan_id, open, created_at, retention_days, analysis_at");
   if (error) throw new Error(`kvk_retrospectives: ${error.message}`);
   if (!retros || retros.length === 0) {
     log("No retrospectives.");
@@ -79,8 +81,12 @@ export async function pruneExpiredResponses(admin: SupabaseClient, now: Date, op
       const { error: deleteError } = await admin.from("kvk_retro_responses").delete().eq("retrospective_id", retro.id);
       if (deleteError) throw new Error(`deleting ${retro.plan.slug}: ${deleteError.message}`);
     }
-    if (retro.open) {
-      const { error: closeError } = await admin.from("kvk_retrospectives").update({ open: false }).eq("id", retro.id);
+    // The stored AI summary quotes answers verbatim, so it is due with them; the form closes too.
+    if (retro.open || retro.analysis_at) {
+      const { error: closeError } = await admin
+        .from("kvk_retrospectives")
+        .update({ analysis: null, analysis_at: null, analysis_count: null, ...(retro.open ? { open: false } : {}) })
+        .eq("id", retro.id);
       if (closeError) throw new Error(`closing ${retro.plan.slug}: ${closeError.message}`);
     }
     if (deleted > 0 || retro.open) {

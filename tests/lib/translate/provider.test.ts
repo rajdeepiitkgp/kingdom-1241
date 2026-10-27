@@ -69,4 +69,19 @@ describe("withRetry", () => {
     ).rejects.toThrow("invalid request");
     expect(badCalls).toBe(1);
   });
+
+  it("does not mistake ordinary words in a message for a rate limit", async () => {
+    let calls = 0;
+    await expect(
+      withRetry(
+        async () => {
+          calls += 1;
+          throw new Error("the players were frustrated about the separate rallies");
+        },
+        4,
+        1,
+      ),
+    ).rejects.toThrow("frustrated");
+    expect(calls).toBe(1);
+  });
 });

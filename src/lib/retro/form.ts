@@ -42,6 +42,11 @@ function text(fd: FormData, name: string): string {
 }
 
 /** Digits only, spaces and the usual separators dropped ("12 345 678" → "12345678"). */
+/** The first `max` characters of `text`, never cutting an emoji in half (a lone surrogate would make the database refuse the JSON). */
+export function clipText(text: string, max: number): string {
+  return text.length <= max ? text : Array.from(text).slice(0, max).join("");
+}
+
 export function normalizeGovernorId(raw: string): string {
   return raw.replace(/[\s.\-_]/g, "");
 }

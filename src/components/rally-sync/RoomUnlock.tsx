@@ -28,16 +28,21 @@ export function RoomUnlock({ code, dict, locale }: { code: string; dict: Diction
     if (coordinator) updateDeviceRoom(code, (room) => ({ ...room, coordinator }));
     if (!invite) return;
     let cancelled = false;
-    void unlockRoomWithKey(code, invite).then((result) => {
-      if (cancelled) return;
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      if (!result.ok) {
-        setFailed(result.error);
-        return;
-      }
-      updateDeviceRoom(code, (room) => ({ ...room, invite }));
-      router.refresh();
-    });
+    unlockRoomWithKey(code, invite)
+      .then((result) => {
+        if (cancelled) return;
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        if (!result.ok) {
+          setFailed(result.error);
+          return;
+        }
+        updateDeviceRoom(code, (room) => ({ ...room, invite }));
+        router.refresh();
+      })
+      .catch(() => {
+        // Offline or a server error: the password form instead of a spinner that never ends (the link stays in the address bar for a reload).
+        if (!cancelled) setFailed("unavailable");
+      });
     return () => {
       cancelled = true;
     };
@@ -54,7 +59,7 @@ export function RoomUnlock({ code, dict, locale }: { code: string; dict: Diction
 
   return (
     <div className="mx-auto max-w-xl space-y-3">
-      {failed && <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["sync.linkExpired"]}</p>}
+      {failed && failed !== "unavailable" && <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["sync.linkExpired"]}</p>}
       <JoinRoomForm dict={dict} locale={locale} fixedCode={code} />
     </div>
   );

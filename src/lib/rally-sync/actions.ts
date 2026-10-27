@@ -3,9 +3,10 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { localeField } from "@/lib/admin/forms";
 import { localePath } from "@/lib/i18n/paths";
-import { ADDRESS_POLICY, recordFailure, retryAfter, triesLeft } from "@/lib/kvk/throttle";
-import { addressHash, clearThrottle, loadThrottle, saveThrottle } from "@/lib/kvk/throttle-store";
+import { ADDRESS_POLICY, retryAfter, triesLeft } from "@/lib/kvk/throttle";
+import { addressHash, clearThrottle, loadThrottle, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId, type Logger } from "@/lib/log";
 import { hashPassword, hashToken, inviteKey, isValidInviteKey, newToken, roomAccessToken, roomCookieName, roomCookieOptions, tokenMatches, verifyPassword } from "./access";
 import {
@@ -85,67 +86,75 @@ export type CoordinatorOp =
 
 const baseLog = createLogger("rally-sync");
 
-async function context(): Promise<{ log: Logger; address: string; throttleScope: string }> {
+async function context(): Promise<{ log: Logger; address: string }> {
   const requestHeaders = await headers();
-  const address = addressHash(requestHeaders);
-  return { log: baseLog.child({ reqId: requestId(requestHeaders) }), address, throttleScope: `sync:ip:${address}` };
+  return { log: baseLog.child({ reqId: requestId(requestHeaders) }), address: addressHash(requestHeaders) };
 }
+
+/**
+ * Throttle scopes of one address: wrong passwords (and invite keys) count per
+ * room, so opening one room never resets the count of another; codes that
+ * match no open room count on their own.
+ */
+const roomScope = (roomId: string, address: string) => `sync:ip:${roomId}:${address}`;
+const codeScope = (address: string) => `sync:code:${address}`;
 
 // ---------------------------------------------------------------------------
 // Unlocking (password form, invite link)
 // ---------------------------------------------------------------------------
 
-/** Room code + password (the Join form and the room's lock). Wrong codes count like wrong passwords, so codes can't be probed. */
+/** Room code + password (the Join form and the room's lock). Wrong codes are counted too, and lock the address like wrong passwords. */
 export async function unlockRoom(_previous: UnlockRoomState, formData: FormData): Promise<UnlockRoomState> {
-  const { log, throttleScope } = await context();
+  const { log, address } = await context();
   const code = normalizeRoomCode(formData.get("code"));
   const password = String(formData.get("password") ?? "");
-  const locale = String(formData.get("locale") ?? "en");
+  const locale = localeField(formData);
   if (!code || !password.trim()) return { status: "error", error: "invalid" };
 
   // The in-memory store (local review) has no throttle table to write to.
   const throttling = rallyStore()?.kind === "supabase";
-  const [found, [state]] = await Promise.all([findOpenRoom(code), throttling ? loadThrottle([throttleScope]) : Promise.resolve([null])]);
+  const [found, [codeState]] = await Promise.all([findOpenRoom(code), throttling ? loadThrottle([codeScope(address)]) : Promise.resolve([null])]);
   const now = Date.now();
-  const wait = retryAfter(state, now);
-  if (wait > 0) return { status: "error", error: "throttled", retryAt: now + wait };
+  const codeWait = retryAfter(codeState, now);
+  if (codeWait > 0) return { status: "error", error: "throttled", retryAt: now + codeWait };
 
   if ("problem" in found && (found.problem === "unavailable" || found.problem === "closed")) return { status: "error", error: found.problem };
   const room = "room" in found ? found.room : null;
+  // Every try is counted before anything is checked, so parallel requests can't outrun the lockout.
+  const scope = room ? roomScope(room.id, address) : codeScope(address);
+  const attempt = throttling ? await takeTry(scope, now, ADDRESS_POLICY) : ({ allowed: true, state: null } as const);
+  if (!attempt.allowed) return { status: "error", error: "throttled", retryAt: attempt.retryAt };
+
   if (!room || !(await verifyPassword(password, room.passwordHash))) {
-    const next = recordFailure(state, now, ADDRESS_POLICY);
-    if (throttling) await saveThrottle([{ scope: throttleScope, state: next }]);
-    log.info("Room unlock failed", { room: code, reason: room ? "password" : "code", failures: next.failures });
-    const lock = retryAfter(next, now);
+    log.info("Room unlock failed", { room: code, reason: room ? "password" : "code", failures: attempt.state?.failures });
+    const lock = retryAfter(attempt.state, now);
     if (lock > 0) return { status: "error", error: "throttled", retryAt: now + lock };
-    return { status: "error", error: "wrong", triesLeft: triesLeft(next, now, ADDRESS_POLICY) };
+    return { status: "error", error: "wrong", triesLeft: triesLeft(attempt.state, now, ADDRESS_POLICY) };
   }
 
   (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, room.passwordHash), ...roomCookieOptions() });
-  if (state && throttling) await clearThrottle(throttleScope);
+  if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "password" });
   redirect(localePath(locale, `/tools/rally-sync/${room.code}`));
 }
 
 /** The key from an invite link (`#k=…`): sets the room cookie like a correct password. */
 export async function unlockRoomWithKey(code: string, key: string): Promise<SyncResult> {
-  const { log, throttleScope } = await context();
+  const { log, address } = await context();
   const found = await findOpenRoom(code);
   if ("problem" in found) return { ok: false, error: found.problem };
   const { store, room } = found;
-  const throttling = store.kind === "supabase";
-  const [state] = throttling ? await loadThrottle([throttleScope]) : [null];
+  const scope = roomScope(room.id, address);
   const now = Date.now();
-  const wait = retryAfter(state, now);
-  if (wait > 0) return { ok: false, error: "throttled", retryAt: now + wait };
+  const attempt = store.kind === "supabase" ? await takeTry(scope, now, ADDRESS_POLICY) : ({ allowed: true, state: null } as const);
+  if (!attempt.allowed) return { ok: false, error: "throttled", retryAt: attempt.retryAt };
 
   if (!isValidInviteKey(typeof key === "string" ? key : "", room.id, room.passwordHash)) {
-    const next = recordFailure(state, now, ADDRESS_POLICY);
-    if (throttling) await saveThrottle([{ scope: throttleScope, state: next }]);
-    log.info("Room unlock failed", { room: room.code, reason: "invite key", failures: next.failures });
+    log.info("Room unlock failed", { room: room.code, reason: "invite key", failures: attempt.state?.failures });
     return { ok: false, error: "wrong" };
   }
   (await cookies()).set({ name: roomCookieName(room.code), value: roomAccessToken(room.id, room.passwordHash), ...roomCookieOptions() });
+  if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "invite link" });
   return { ok: true };
 }
@@ -182,7 +191,8 @@ function parseLeader(input: LeaderInput): LeaderInput | null {
 
 /** A leader's entry saved by the leader or the coordinator (the rules are in leaderEdit); `now` is on the game clock. */
 function editPatch(room: RoomRow, leader: LeaderRow, input: LeaderInput, now: number, byCoordinator: boolean) {
-  return leaderEdit(leader, input, { running: rallyRunning(room.hitAt, now), byCoordinator, at: new Date().toISOString() });
+  // `at` is on the game clock like the room's hitSetAt, which startChanged compares it with.
+  return leaderEdit(leader, input, { running: rallyRunning(room.hitAt, now), byCoordinator, at: new Date(now).toISOString() });
 }
 
 /** Joining as a rally leader. During a running rally (on the joiner's game clock) they are in from the next one. */
@@ -307,6 +317,8 @@ async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]):
  */
 export async function coordinate(code: string, token: string, op: CoordinatorOp, gameOffsetSeconds = 0): Promise<SyncResult<{ inviteKey?: string }>> {
   const { log } = await context();
+  // A direct POST can send anything; the checks below expect a token string and an op object.
+  if (typeof token !== "string" || typeof op !== "object" || op === null || typeof op.type !== "string") return { ok: false, error: "invalid" };
   const opened = await openUnlocked(code);
   if ("error" in opened) return { ok: false, error: opened.error };
   const { store, room } = opened;

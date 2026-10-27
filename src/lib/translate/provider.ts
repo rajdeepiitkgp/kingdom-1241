@@ -111,7 +111,8 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 4, baseDelay
       const status = (error as { status?: number } | null)?.status;
       const retryable =
         status === 408 || status === 429 || (typeof status === "number" && status >= 500) ||
-        /429|rate|quota|503|502|overloaded|timeout|ECONNRESET|fetch failed/i.test(message);
+        // Whole words only: a bare /rate/ also matched "separate" or "frustrated" in an error that quoted a reply.
+        /\b(?:429|502|503)\b|rate.?limit|quota|overloaded|timed? ?out|ECONNRESET|fetch failed/i.test(message);
       if (!retryable || attempt === attempts - 1) throw error;
       const delay = baseDelayMs * 2 ** attempt;
       log.warn("Translation request failed, retrying", { attempt: attempt + 1, of: attempts, delayMs: delay, error: message.slice(0, 200) });

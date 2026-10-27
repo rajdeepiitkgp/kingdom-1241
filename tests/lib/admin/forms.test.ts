@@ -3,10 +3,12 @@ import {
   boolField,
   htmlToEditableText,
   intField,
+  introSourceUnchanged,
   isUuid,
   localeField,
   localizedUpdate,
   oneOfField,
+  shownIntroSource,
   slugify,
   toUtcInputValue,
   utcDateTimeField,
@@ -92,5 +94,19 @@ describe("uuidField / localeField", () => {
     expect(localeField(fd({ locale: "../../etc" }))).toBe("en");
     expect(localeField(fd({}))).toBe("en");
     expect(localeField(fd({ lang: "ar" }), "lang")).toBe("ar");
+  });
+});
+
+describe("intro sources", () => {
+  it("shows the stored Markdown, else text derived from the HTML", () => {
+    expect(shownIntroSource({ en: "**Hold** the line" }, { en: "<p><strong>Hold</strong> the line</p>" })).toBe("**Hold** the line");
+    expect(shownIntroSource(null, { en: "<p><strong>Hold</strong> the line</p>" })).toBe("**Hold** the line");
+    expect(shownIntroSource({ en: "  " }, { en: "<p>Seed</p>" })).toBe("Seed");
+    expect(shownIntroSource(null, null)).toBe("");
+  });
+
+  it("treats the text the editor showed as unchanged, whatever line endings the browser sends", () => {
+    expect(introSourceUnchanged("Line one\r\nLine two\r\n", "Line one\nLine two")).toBe(true);
+    expect(introSourceUnchanged("Line one\nLine 2", "Line one\nLine two")).toBe(false);
   });
 });

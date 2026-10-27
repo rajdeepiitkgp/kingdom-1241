@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADDRESS_POLICY, addressScope, addressScopePrefix, countFailure, PLAN_ALERT, planScope, recordFailure, retryAfter, shouldAlert, triesLeft, type ThrottleState } from "@/lib/kvk/throttle";
+import { ADDRESS_POLICY, addressScope, addressScopePrefix, chargeTry, countFailure, laterStamp, PLAN_ALERT, planScope, recordFailure, retryAfter, shouldAlert, triesLeft, type ThrottleState } from "@/lib/kvk/throttle";
 import { HOUR, MINUTE } from "@/lib/time";
 
 function fail(times: number, start: number, gap = 1000): ThrottleState {
@@ -74,5 +74,31 @@ describe("scopes", () => {
     expect(scope.startsWith(addressScopePrefix("p1"))).toBe(false);
     expect(scope.startsWith(addressScopePrefix("p1", "leaders"))).toBe(false);
     expect(scope.startsWith(addressScopePrefix("p1", "checklist"))).toBe(true);
+  });
+});
+
+describe("counting a try before the password is checked", () => {
+  it("counts the try as wrong up front and refuses while locked", () => {
+    const first = chargeTry(null, t0);
+    expect(first).toEqual({ next: expect.objectContaining({ failures: 1, lockedUntil: null }) });
+
+    // The fifth try is still checked, and is the one that locks the address.
+    const fifth = chargeTry(fail(4, t0), t0 + 5000);
+    expect("next" in fifth && retryAfter(fifth.next, t0 + 5000)).toBe(HOUR);
+    if (!("next" in fifth)) throw new Error("the fifth try must be allowed");
+
+    // Everything after it is refused without being checked.
+    expect(chargeTry(fifth.next, t0 + 6000)).toEqual({ retryAt: t0 + 5000 + HOUR });
+  });
+});
+
+describe("compare-and-swap stamps", () => {
+  it("is now, unless the last write was at or after now: then a millisecond later", () => {
+    expect(laterStamp(null, t0)).toBe(new Date(t0).toISOString());
+    expect(laterStamp(new Date(t0 - 5000).toISOString(), t0)).toBe(new Date(t0).toISOString());
+    expect(laterStamp(new Date(t0).toISOString(), t0)).toBe(new Date(t0 + 1).toISOString());
+    // Postgres returns microseconds and an offset; the stamp still moves forward.
+    expect(Date.parse(laterStamp("2026-11-01T10:00:00.123456+00:00", t0 + 123))).toBeGreaterThan(Date.parse("2026-11-01T10:00:00.123Z"));
+    expect(laterStamp("not a date", t0)).toBe(new Date(t0).toISOString());
   });
 });

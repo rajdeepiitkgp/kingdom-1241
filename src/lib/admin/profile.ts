@@ -47,3 +47,10 @@ export function formatGameName(gameName: string | null | undefined, allianceTag:
   if (!gameName) return null;
   return allianceTag ? `[${allianceTag}] ${gameName}` : gameName;
 }
+
+/** True when another account already goes by this in-game name (case and spacing ignored), so audit entries can't be made to look like a colleague's. */
+export function gameNameTaken(gameName: string, ownId: string, profiles: ReadonlyArray<{ id: string; game_name: string | null }>): boolean {
+  const key = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
+  const wanted = key(gameName);
+  return profiles.some((profile) => profile.id !== ownId && typeof profile.game_name === "string" && key(profile.game_name) === wanted);
+}

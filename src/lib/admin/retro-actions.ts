@@ -8,7 +8,7 @@ import { CACHE_TAGS } from "@/lib/data";
 import { markdownToHtml } from "@/lib/html";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { type Localized, pick } from "@/lib/i18n/localized";
-import { elapsedMs } from "@/lib/log";
+import { elapsedMs, type Logger } from "@/lib/log";
 import { retroAiConfigured } from "@/lib/retro/ai";
 import { translateAndAnalyse } from "@/lib/retro/analyse";
 import type { AnalysisContext } from "@/lib/retro/analysis";
@@ -17,7 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { localeField, localizedUpdate, uuidField } from "./forms";
+import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, uuidField } from "./forms";
 import { getRetrospectiveByPlan, listResponses } from "./retro-data";
 import { parseRetroSettingsForm } from "./retro-forms";
 
@@ -49,13 +49,16 @@ export async function saveRetrospective(_previous: ActionState, formData: FormDa
   const admin = createAdminClient();
   const [{ data: plan }, { data: existing, error: readError }] = await Promise.all([
     admin.from("kvk_plans").select("id, slug").eq("id", planId).maybeSingle(),
-    admin.from("kvk_retrospectives").select("id, title, intro, intro_source").eq("plan_id", planId).maybeSingle(),
+    admin.from("kvk_retrospectives").select("id, title, intro, intro_source, open").eq("plan_id", planId).maybeSingle(),
   ]);
   if (!plan) return PLAN_GONE;
   if (readError) return failed(log, "Reading the retrospective", readError);
 
   // A changed English text drops the other languages; the pipeline refills them (as for the plan intro).
-  const intro = localizedUpdate((existing?.intro as Localized | null) ?? null, markdownToHtml(input.introSource));
+  const intro =
+    existing && introSourceUnchanged(input.introSource, shownIntroSource(existing.intro_source as Localized | null, existing.intro as Localized | null))
+      ? (existing.intro as Localized)
+      : localizedUpdate((existing?.intro as Localized | null) ?? null, markdownToHtml(input.introSource));
   const introSource: Localized =
     existing && intro === existing.intro ? { ...((existing.intro_source as Localized | null) ?? {}), en: input.introSource } : { en: input.introSource };
   const row = {
@@ -70,18 +73,21 @@ export async function saveRetrospective(_previous: ActionState, formData: FormDa
     retention_days: input.retentionDays,
   };
 
-  if (input.open) {
-    // Only one form can be open (unique partial index): close the others first.
-    const { error } = await admin.from("kvk_retrospectives").update({ open: false }).eq("open", true).neq("plan_id", planId);
-    if (error) return failed(log, "Closing the other feedback forms", error);
-  }
-
+  // Only one form can be open (unique partial index). The form is saved first and
+  // opened afterwards, so a save that fails never leaves the open form closed.
+  const opening = input.open && !existing?.open;
   const result = existing
-    ? await admin.from("kvk_retrospectives").update(row).eq("id", existing.id).select("id").single()
-    : await admin.from("kvk_retrospectives").insert(row).select("id").single();
+    ? await admin.from("kvk_retrospectives").update({ ...row, open: input.open && !opening }).eq("id", existing.id).select("id").single()
+    : await admin.from("kvk_retrospectives").insert({ ...row, open: false }).select("id").single();
   if (result.error) return failed(log, "Saving the retrospective", result.error);
 
   const retroId = String(result.data.id);
+  if (opening) {
+    const { error: closeError } = await admin.from("kvk_retrospectives").update({ open: false }).eq("open", true).neq("id", retroId);
+    if (closeError) return failed(log, "Closing the other feedback forms", closeError);
+    const { error: openError } = await admin.from("kvk_retrospectives").update({ open: true }).eq("id", retroId);
+    if (openError) return failed(log, "Opening the feedback form", openError);
+  }
   await audit(access.user, existing ? "retro.update" : "retro.create", "kvk_retrospectives", retroId, {
     slug: String(plan.slug),
     open: input.open,
@@ -93,6 +99,12 @@ export async function saveRetrospective(_previous: ActionState, formData: FormDa
   revalidatePath(adminPath(locale, `/kvk/${planId}`));
   revalidatePath(resultsPath(locale, planId));
   return { status: "saved", message: input.open ? "Saved. The feedback form is open for players." : "Saved. The feedback form is closed." };
+}
+
+/** Removes the stored AI summary, which quotes answers verbatim, once answers are gone. */
+async function clearAnalysis(retroId: string, log: Logger): Promise<void> {
+  const { error } = await createAdminClient().from("kvk_retrospectives").update({ analysis: null, analysis_at: null, analysis_count: null }).eq("id", retroId);
+  if (error) log.error("Clearing the feedback summary failed", { retro: retroId, error: error.message });
 }
 
 /** One answer (e.g. abusive text). Moderators and admins. */
@@ -110,6 +122,8 @@ export async function deleteResponse(formData: FormData): Promise<void> {
       log.error("Deleting a feedback response failed", { id, error: error.message });
       redirect(resultsPath(locale, planId, "error=delete"));
     }
+    // The stored summary may quote the deleted answer: it goes too, and the next "Translate and analyse" writes a fresh one.
+    if (data?.retrospective_id) await clearAnalysis(String(data.retrospective_id), log);
     await audit(access.user, "retro.delete_response", "kvk_retro_responses", id, { planId, retroId: data?.retrospective_id ?? null });
   }
   redirect(resultsPath(locale, planId, "deleted=1"));
@@ -134,6 +148,7 @@ export async function deleteAllResponses(formData: FormData): Promise<void> {
     log.error("Deleting all feedback failed", { retro: retroId, error: error.message });
     redirect(resultsPath(locale, planId, "error=delete"));
   }
+  await clearAnalysis(retroId, log);
   await audit(access.user, "retro.delete_all", "kvk_retro_responses", retroId, { planId, deleted: count ?? 0, summary: `${count ?? 0} responses deleted` });
   redirect(resultsPath(locale, planId, "cleared=1"));
 }
