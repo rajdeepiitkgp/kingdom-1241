@@ -29,7 +29,8 @@ export function sanitizeRichText(html: string): string {
       "*": ["dir", "lang"],
     },
     allowedSchemes: ["http", "https", "mailto"],
-    allowedSchemesByTag: { img: ["https", "http", "data"] },
+    // Images over https only: no plain-http hosts (mixed content) and no inline data: blobs.
+    allowedSchemesByTag: { img: ["https"] },
     transformTags: {
       a: (tagName, attribs) => ({
         tagName,

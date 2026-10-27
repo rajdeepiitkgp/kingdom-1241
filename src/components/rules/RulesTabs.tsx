@@ -18,7 +18,14 @@ function subscribeHash(onChange: () => void) {
   window.addEventListener("hashchange", onChange);
   return () => window.removeEventListener("hashchange", onChange);
 }
-const readHash = () => decodeURIComponent(window.location.hash.replace(/^#/, ""));
+const readHash = () => {
+  const raw = window.location.hash.replace(/^#/, "");
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw; // a malformed escape such as "#%" must not break the page
+  }
+};
 const readServerHash = () => "";
 
 export function RulesTabs({ topics, dict }: { topics: RulesTabTopic[]; dict: Dictionary }) {
