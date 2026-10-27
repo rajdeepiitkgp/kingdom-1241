@@ -33,6 +33,9 @@
   --success-soft: #dcf7ea;
   --danger: #e5564f;
   --danger-soft: #ffe3e1;
+  /* Text on SOLID danger / success (Rally Sync's countdown blocks). */
+  --on-danger: #ffffff;
+  --on-success: #04261a;
 
   --shadow-color: 214 70% 40%;
   --radius-card: 1.5rem;
@@ -62,6 +65,8 @@
   --success-soft: #153a2c;
   --danger: #ff7b73;
   --danger-soft: #45201f;
+  --on-danger: #2a0605;
+  --on-success: #04261a;
 
   --shadow-color: 220 60% 3%;
 }
@@ -91,6 +96,8 @@
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-on-danger: var(--on-danger);
+  --color-on-success: var(--on-success);
 
   --font-sans: "Nunito Variable", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-korean: "Noto Sans KR Variable", "Nunito Variable", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
@@ -102,7 +109,28 @@
   --radius-card: var(--radius-card);
 
   --shadow-soft: 0 10px 30px -12px hsl(var(--shadow-color) / 0.25), 0 2px 6px -2px hsl(var(--shadow-color) / 0.12);
+  /* Rally Sync: the last seconds pulse once per tick (the block is re-keyed every second); GO flashes. */
+  --animate-rally-pulse: rally-pulse 1s ease-out both;
+  --animate-rally-flash: rally-flash 0.5s ease-in-out infinite alternate;
+
   --shadow-lift: 0 18px 40px -16px hsl(var(--shadow-color) / 0.35), 0 4px 10px -4px hsl(var(--shadow-color) / 0.15);
+}
+
+@keyframes rally-pulse {
+  from {
+    transform: scale(1.05);
+    filter: brightness(1.25);
+  }
+  to {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes rally-flash {
+  to {
+    filter: brightness(1.3);
+  }
 }
 
 /* ---------------------------------------------------------------------------

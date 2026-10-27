@@ -30,11 +30,11 @@ describe("activeChildHref", () => {
     expect(activeChildHref("/kvk/feedback", kvk)).toBe("/kvk");
     expect(activeChildHref("/events", kvk)).toBeNull();
   });
-  it("every dropdown page sits inside its section, with unique hrefs", () => {
+  it("every dropdown page sits inside its section (or is marked as a shortcut to another), with unique hrefs", () => {
     for (const item of NAV_ITEMS) {
       if (!item.children) continue;
       expect(new Set(item.children.map((c) => c.href)).size).toBe(item.children.length);
-      for (const child of item.children) expect(isActivePath(child.href, item.href), child.href).toBe(true);
+      for (const child of item.children) expect(isActivePath(child.href, item.href), child.href).toBe(!child.shortcut);
     }
   });
 });
