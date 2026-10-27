@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADDRESS_POLICY, addressScope, countFailure, PLAN_ALERT, planScope, recordFailure, retryAfter, shouldAlert, triesLeft, type ThrottleState } from "@/lib/kvk/throttle";
+import { ADDRESS_POLICY, addressScope, addressScopePrefix, countFailure, PLAN_ALERT, planScope, recordFailure, retryAfter, shouldAlert, triesLeft, type ThrottleState } from "@/lib/kvk/throttle";
 import { HOUR, MINUTE } from "@/lib/time";
 
 function fail(times: number, start: number, gap = 1000): ThrottleState {
@@ -58,5 +58,13 @@ describe("scopes", () => {
   it("name the plan and the hashed address", () => {
     expect(planScope("p1")).toBe("plan:p1");
     expect(addressScope("p1", "abcd")).toBe("ip:p1:abcd");
+  });
+
+  it("keep the leader page's guesses apart from the battle plan's", () => {
+    expect(planScope("p1", "leaders")).toBe("plan:leaders:p1");
+    expect(addressScope("p1", "abcd", "leaders")).toBe("ip:leaders:p1:abcd");
+    // The plan's alert counts addresses by prefix; a leader-page scope must not match it.
+    expect(addressScope("p1", "abcd", "leaders").startsWith(addressScopePrefix("p1"))).toBe(false);
+    expect(addressScope("p1", "abcd", "leaders").startsWith(addressScopePrefix("p1", "leaders"))).toBe(true);
   });
 });

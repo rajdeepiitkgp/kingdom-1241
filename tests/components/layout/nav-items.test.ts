@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isActivePath, NAV_ITEMS } from "@/components/layout/nav-items";
+import { activeChildHref, isActivePath, NAV_ITEMS } from "@/components/layout/nav-items";
 
 describe("isActivePath", () => {
   it("matches home only exactly", () => {
@@ -16,5 +16,23 @@ describe("isActivePath", () => {
   it("has unique hrefs and icons in the navigation", () => {
     expect(new Set(NAV_ITEMS.map((i) => i.href)).size).toBe(NAV_ITEMS.length);
     expect(new Set(NAV_ITEMS.map((i) => i.labelKey)).size).toBe(NAV_ITEMS.length);
+  });
+});
+
+describe("activeChildHref", () => {
+  const kvk = ["/kvk", "/kvk/leaders"];
+  it("picks the most specific page of a dropdown", () => {
+    expect(activeChildHref("/kvk", kvk)).toBe("/kvk");
+    expect(activeChildHref("/kvk/leaders", kvk)).toBe("/kvk/leaders");
+    // The feedback form belongs to the battle plan.
+    expect(activeChildHref("/kvk/feedback", kvk)).toBe("/kvk");
+    expect(activeChildHref("/events", kvk)).toBeNull();
+  });
+  it("every dropdown page sits inside its section, with unique hrefs", () => {
+    for (const item of NAV_ITEMS) {
+      if (!item.children) continue;
+      expect(new Set(item.children.map((c) => c.href)).size).toBe(item.children.length);
+      for (const child of item.children) expect(isActivePath(child.href, item.href), child.href).toBe(true);
+    }
   });
 });

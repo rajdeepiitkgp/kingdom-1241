@@ -3,15 +3,23 @@
 import { KeyRound, LockKeyhole } from "lucide-react";
 import { useActionState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
-import { unlockKvk, type UnlockState } from "@/lib/kvk/actions";
+import type { KvkArea } from "@/lib/kvk/access";
+import { unlockKvk, unlockLeaders, type UnlockState } from "@/lib/kvk/actions";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 
 const INITIAL: UnlockState = { status: "idle" };
 
+/** Each locked page has its own password, checked by its own action. */
+const ACTIONS = { plan: unlockKvk, leaders: unlockLeaders } satisfies Record<KvkArea, unknown>;
+const TEXTS = {
+  plan: { body: "kvk.locked.body", unavailable: "kvk.unavailable" },
+  leaders: { body: "leaders.locked.body", unavailable: "leaders.unavailable" },
+} as const satisfies Record<KvkArea, unknown>;
+
 /** Password form. On success the Server Action sets the cookie and the page re-renders unlocked. */
-export function UnlockCard({ dict }: { dict: Dictionary }) {
-  const [state, formAction, pending] = useActionState(unlockKvk, INITIAL);
+export function UnlockCard({ dict, area = "plan" }: { dict: Dictionary; area?: KvkArea }) {
+  const [state, formAction, pending] = useActionState(ACTIONS[area], INITIAL);
   const now = useNow(1000);
   // After too many wrong passwords the server names a moment; the form waits for it with a countdown.
   const waitMs = state.status === "throttled" && state.retryAt && now ? Math.max(0, state.retryAt - now.getTime()) : 0;
@@ -20,7 +28,7 @@ export function UnlockCard({ dict }: { dict: Dictionary }) {
     state.status === "wrong"
       ? dict["kvk.wrongPassword"]
       : state.status === "unavailable"
-        ? dict["kvk.unavailable"]
+        ? dict[TEXTS[area].unavailable]
         : waiting
           ? format(dict["kvk.throttled"], { time: now ? formatDuration(waitMs, dict, true) : "…" })
           : null;
@@ -37,7 +45,7 @@ export function UnlockCard({ dict }: { dict: Dictionary }) {
         <LockKeyhole className="size-8" />
       </span>
       <h2 className="mt-4 text-xl font-black text-ink">{dict["kvk.locked.title"]}</h2>
-      <p className="mt-1 text-sm font-semibold text-ink-muted">{dict["kvk.locked.body"]}</p>
+      <p className="mt-1 text-sm font-semibold text-ink-muted">{dict[TEXTS[area].body]}</p>
 
       <label htmlFor="kvk-password" className="label mt-5 text-start">
         {dict["kvk.password"]}

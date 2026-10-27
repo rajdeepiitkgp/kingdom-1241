@@ -65,6 +65,17 @@ export const TRANSLATABLE_TABLES: TranslatableTable[] = [
   { table: "kvk_rules", primaryKey: "id", columns: [{ name: "text", html: false }] },
   { table: "kvk_coordinators", primaryKey: "id", columns: [{ name: "note", html: false }] },
   { table: "kvk_formations", primaryKey: "id", columns: [{ name: "note", html: false }] },
+  { table: "kvk_leader_briefs", primaryKey: "id", columns: [{ name: "intro", html: true }] },
+  { table: "kvk_leader_rules", primaryKey: "id", columns: [{ name: "text", html: false }] },
+  {
+    table: "kvk_rally_leaders",
+    primaryKey: "id",
+    columns: [
+      { name: "target", html: false },
+      { name: "position", html: false },
+      { name: "note", html: false },
+    ],
+  },
   {
     table: "kvk_retrospectives",
     primaryKey: "id",

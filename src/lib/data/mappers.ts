@@ -16,7 +16,11 @@ import type {
   KvkCoordinator,
   KvkEventType,
   KvkFormation,
+  KvkLeaderPlanWithSecret,
+  KvkLeaderRule,
+  LeaderAudience,
   KvkPlanWithSecret,
+  KvkRallyLeader,
   KvkRule,
   KvkRuleKind,
   OpenRetrospective,
@@ -317,6 +321,86 @@ export function mapKvkPlan(row: Row, rules: Row[], coordinators: Row[], formatio
     rules: rules.filter(ofPlan).map(mapKvkRule).filter((r) => r.published).sort(byOrder),
     coordinators: coordinators.filter(ofPlan).map(mapKvkCoordinator).filter((c) => c.published).sort(byOrder),
     formations: formations.filter(ofPlan).map(mapKvkFormation).filter((f) => f.published).sort(byOrder),
+  };
+}
+
+const AUDIENCES: readonly LeaderAudience[] = ["all", "rally", "garrison"];
+
+export function mapKvkLeaderRule(row: Row): KvkLeaderRule {
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    audience: oneOf(row.audience, AUDIENCES, "all"),
+    kind: oneOf(row.kind, RULE_KINDS, "info"),
+    text: loc(row.text),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+export function mapKvkRallyLeader(row: Row): KvkRallyLeader {
+  const slot = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
+  return {
+    id: str(row.id),
+    planId: str(row.plan_id),
+    target: loc(row.target),
+    side: oneOf(row.side, SIDES, "attack"),
+    team: oneOf(row.team, TEAMS, "kvk"),
+    name: str(row.name),
+    allianceTag: strOrNull(row.alliance_tag),
+    position: loc(row.position),
+    startAt: row.start_at ? iso(row.start_at, "") || null : null,
+    petsOffsetMinutes: petsOffset(row.pets_offset_minutes),
+    heroSlugs: [slot(row.hero_1), slot(row.hero_2), slot(row.hero_3)],
+    infantry: pct(row.infantry_pct),
+    cavalry: pct(row.cavalry_pct),
+    archers: pct(row.archers_pct),
+    note: loc(row.note),
+    sortOrder: num(row.sort_order, 0),
+    published: row.published !== false,
+  };
+}
+
+function petsOffset(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 1440 ? n : null;
+}
+
+/**
+ * The leader page of a plan: the plan row (title, time), its leader brief
+ * (password, intro), its leader rules and rally rows (any plan's rows may be
+ * passed; they are filtered by plan_id, unpublished ones dropped). "Updated"
+ * is the latest change to the brief, a rule or a rally.
+ */
+export function mapKvkLeaderPlan(plan: Row, brief: Row, rallies: Row[], rules: Row[] = []): KvkLeaderPlanWithSecret {
+  const planId = str(plan.id);
+  const mine = rallies.filter((r) => str(r.plan_id) === planId);
+  const myRules = rules.filter((r) => str(r.plan_id) === planId);
+  const updatedAt = [brief, ...mine, ...myRules]
+    .map((r) => iso(r.updated_at, ""))
+    .filter(Boolean)
+    .reduce((latest, value) => (value > latest ? value : latest), new Date(0).toISOString());
+  return {
+    planId,
+    slug: str(plan.slug),
+    eventType: oneOf(plan.event_type, EVENT_TYPES, "kvk"),
+    title: loc(plan.title),
+    opponent: strOrNull(plan.opponent),
+    battleAt: plan.battle_at ? iso(plan.battle_at, "") || null : null,
+    battleEndAt: plan.battle_end_at ? iso(plan.battle_end_at, "") || null : null,
+    minSkillLevel: stars(plan.min_skill_level, 5),
+    intro: loc(brief.intro),
+    updatedAt,
+    password: str(brief.password),
+    rules: myRules
+      .map(mapKvkLeaderRule)
+      .filter((r) => r.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+    rallies: mine
+      .map(mapKvkRallyLeader)
+      .filter((r) => r.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
   };
 }
 

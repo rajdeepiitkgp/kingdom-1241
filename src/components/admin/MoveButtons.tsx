@@ -24,12 +24,12 @@ export function MoveButtons({
 }: {
   locale: string;
   planId: string;
-  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations";
+  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders";
   id: string;
   /** 0-based position in the list. */
   position: number;
   count: number;
-  /** What the row is, for the button names ("instruction", "coordinator", "formation"). */
+  /** What the row is, for the button names ("instruction", "coordinator", "formation", "rally"). */
   label: string;
   className?: string;
 }) {

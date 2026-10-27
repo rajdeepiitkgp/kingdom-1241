@@ -26,11 +26,13 @@ async function main() {
     { settingsToRows },
     { createAdminClient },
     { sourceHash },
+    { kvkLeaderBriefId },
   ] = await Promise.all([
     import("@/content/seed"),
     import("@/lib/data/mappers"),
     import("@/lib/supabase/admin"),
     import("@/lib/translate/hash"),
+    import("@/content/seed/kvk"),
   ]);
 
   const supabase = createAdminClient();
@@ -319,6 +321,58 @@ async function main() {
         published: f.published,
       })),
     );
+
+    // The rally-leader page of the placeholder plan, with its own password.
+    const leaders = seed.kvkLeaderPlan;
+    await upsertMissing("kvk_leader_briefs", "id", [
+      {
+        id: kvkLeaderBriefId,
+        plan_id: leaders.planId,
+        password: leaders.password,
+        intro: leaders.intro,
+        published: true,
+      },
+    ]);
+
+    await upsertMissing(
+      "kvk_leader_rules",
+      "id",
+      leaders.rules.map((r) => ({
+        id: r.id,
+        plan_id: r.planId,
+        audience: r.audience,
+        kind: r.kind,
+        text: r.text,
+        sort_order: r.sortOrder,
+        published: r.published,
+      })),
+    );
+
+    await upsertMissing(
+      "kvk_rally_leaders",
+      "id",
+      leaders.rallies.map((r) => ({
+        id: r.id,
+        plan_id: r.planId,
+        target: r.target,
+        side: r.side,
+        team: r.team,
+        name: r.name,
+        alliance_tag: r.allianceTag,
+        position: r.position,
+        start_at: r.startAt,
+        pets_offset_minutes: r.petsOffsetMinutes,
+        hero_1: r.heroSlugs[0],
+        hero_2: r.heroSlugs[1],
+        hero_3: r.heroSlugs[2],
+        infantry_pct: r.infantry,
+        cavalry_pct: r.cavalry,
+        archers_pct: r.archers,
+        note: r.note,
+        sort_order: r.sortOrder,
+        published: r.published,
+      })),
+    );
   }
 
   console.log(summary.join("\n"));
@@ -327,6 +381,9 @@ async function main() {
   );
   console.log(
     'KvK: the placeholder battle plan uses the password from KVK_SEED_PASSWORD (default "1241") — change it in the kvk_plans table.',
+  );
+  console.log(
+    'KvK: its rally-leader page uses KVK_SEED_LEADER_PASSWORD (default "1241-leaders") — change it under Admin → Battle plans → Rally leaders.',
   );
 }
 

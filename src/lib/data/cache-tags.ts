@@ -50,6 +50,9 @@ export function cacheTagForTable(table: string): CacheTag | null {
     case "kvk_rules":
     case "kvk_coordinators":
     case "kvk_formations":
+    case "kvk_leader_briefs":
+    case "kvk_leader_rules":
+    case "kvk_rally_leaders":
       return CACHE_TAGS.kvk;
     case "kvk_retrospectives":
       return CACHE_TAGS.retro;

@@ -17,6 +17,7 @@ import { deleteCoordinator, deleteFormation, deleteRule } from "@/lib/admin/kvk-
 import { LanguagePicker } from "@/components/admin/LanguagePicker";
 import { MoveButtons } from "@/components/admin/MoveButtons";
 import { PendingRefresher } from "@/components/admin/PendingRefresher";
+import { PlanEditorTabs } from "@/components/admin/PlanEditorTabs";
 import { TranslationForm } from "@/components/admin/TranslationForm";
 import { getPlanForEditing, type AdminKvkPlan } from "@/lib/admin/kvk-data";
 import { type AdminRetrospective, getRetrospectiveByPlan } from "@/lib/admin/retro-data";
@@ -129,6 +130,7 @@ async function PlanEditor({
           </div>
         }
       />
+      <PlanEditorTabs locale={locale} planId={plan.id} current="plan" />
       <LanguagePicker languages={enabled} current={lang} href={editorHref} />
       {notice && (
         <p role="status" className="rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger">

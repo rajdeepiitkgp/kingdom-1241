@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSeedContent } from "@/content/seed";
 import { SEED_HEROES } from "@/content/seed/heroes";
-import { SEED_KVK_PLAN } from "@/content/seed/kvk";
+import { SEED_KVK_PLAN, SEED_LEADER_BRIEF } from "@/content/seed/kvk";
 import { isValidRatio } from "@/lib/kvk/formations";
 
 /** The seed must be something the site can show on first deploy without surprises. */
@@ -40,5 +40,23 @@ describe("seed battle plan", () => {
     expect(kvkPlan.formations).toHaveLength(SEED_KVK_PLAN.formations.length);
     expect(kvkPlan.intro.en).toContain("<p>");
     expect(heroes.every((h) => h.iconUrl?.startsWith("/heroes/"))).toBe(true);
+  });
+});
+
+describe("seed rally-leader page", () => {
+  it("names known heroes, uses valid ratios and has its own password", () => {
+    const slugs = new Set(SEED_HEROES.map((h) => h.slug));
+    for (const rally of SEED_LEADER_BRIEF.rallies) {
+      expect(isValidRatio(rally), `ratio of ${rally.target}`).toBe(true);
+      for (const slug of rally.heroes) if (slug) expect(slugs.has(slug), `unknown hero ${slug}`).toBe(true);
+    }
+    const { kvkPlan, kvkLeaderPlan } = buildSeedContent();
+    expect(kvkLeaderPlan.planId).toBe(kvkPlan.id);
+    expect(kvkLeaderPlan.password).not.toBe("");
+    expect(kvkLeaderPlan.password).not.toBe(kvkPlan.password);
+    expect(kvkLeaderPlan.rallies).toHaveLength(SEED_LEADER_BRIEF.rallies.length);
+    expect(kvkLeaderPlan.rules).toHaveLength(SEED_LEADER_BRIEF.rules.length);
+    // Placeholders stay recognisable as placeholders.
+    for (const r of SEED_LEADER_BRIEF.rules) expect(r.text).toMatch(/placeholder/i);
   });
 });

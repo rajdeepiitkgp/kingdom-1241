@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapAlliance, mapAnnouncement, mapEvent, mapGiftCode, mapGuide, mapHero, mapKvkFormation, mapKvkPlan, mapRule, mapRuleTopic, mapSettings, settingsToRows } from "@/lib/data/mappers";
+import { mapAlliance, mapAnnouncement, mapEvent, mapGiftCode, mapGuide, mapHero, mapKvkFormation, mapKvkLeaderPlan, mapKvkPlan, mapRule, mapRuleTopic, mapSettings, settingsToRows } from "@/lib/data/mappers";
 import { SEED_SETTINGS } from "@/content/seed/settings";
 
 describe("settingsToRows", () => {
@@ -109,5 +109,65 @@ describe("content mappers", () => {
     expect(alliance.description).toEqual({});
     expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({ code: "KS2026", active: false, expiresAt: null, addedAt: "2026-10-01T00:00:00.000Z" });
     expect(mapGiftCode({ id: "c2", code: "X", expires_at: "2026-11-01T00:00:00Z" })).toMatchObject({ active: true, expiresAt: "2026-11-01T00:00:00.000Z" });
+  });
+});
+
+describe("mapKvkLeaderPlan", () => {
+  const plan = { id: "p1", slug: "oct", title: { en: "Castle Battle" }, event_type: "castle_battle", battle_at: "2026-10-25T14:00:00Z", min_skill_level: 4, password: "plan-pw" };
+  const brief = { id: "b1", plan_id: "p1", password: "leader-pw", intro: { en: "<p>Leaders</p>" }, updated_at: "2026-10-23T10:00:00Z" };
+
+  it("uses the leaders' password, never the plan's, and keeps only this plan's shown rallies in order", () => {
+    const rallies = [
+      { id: "r2", plan_id: "p1", target: { en: "Second" }, name: "B", sort_order: 1, infantry_pct: 50, archers_pct: 50, updated_at: "2026-10-24T09:00:00Z" },
+      { id: "r1", plan_id: "p1", target: { en: "First" }, name: "A", side: "defense", team: "tmp", position: { en: "Front" }, start_at: "2026-10-25T14:05:00Z", pets_offset_minutes: 120, hero_1: "amane", hero_2: " ", sort_order: 0, infantry_pct: 100 },
+      { id: "rx", plan_id: "p2", name: "Other plan", sort_order: 0 },
+      { id: "rh", plan_id: "p1", name: "Hidden", published: false, sort_order: 2 },
+    ];
+    const mapped = mapKvkLeaderPlan(plan, brief, rallies);
+    expect(mapped.password).toBe("leader-pw");
+    expect(mapped.slug).toBe("oct");
+    expect(mapped.eventType).toBe("castle_battle");
+    expect(mapped.minSkillLevel).toBe(4);
+    expect(mapped.rallies.map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(mapped.rallies[0]).toMatchObject({
+      side: "defense",
+      team: "tmp",
+      position: { en: "Front" },
+      startAt: "2026-10-25T14:05:00.000Z",
+      petsOffsetMinutes: 120,
+      heroSlugs: ["amane", null, null],
+      infantry: 100,
+    });
+    // Defaults: attack, [KvK], no start time, no pets.
+    expect(mapped.rallies[1]).toMatchObject({ side: "attack", team: "kvk", startAt: null, petsOffsetMinutes: null });
+    // "Updated" is the latest change to the brief or a rally.
+    expect(mapped.updatedAt).toBe("2026-10-24T09:00:00.000Z");
+  });
+
+  it("keeps this plan's shown leader rules in order, with their audience", () => {
+    const rules = [
+      { id: "l2", plan_id: "p1", audience: "garrison", kind: "do", text: { en: "Hold" }, sort_order: 1 },
+      { id: "l1", plan_id: "p1", audience: "bogus", text: { en: "March time" }, sort_order: 0 },
+      { id: "lx", plan_id: "p2", text: { en: "Other" } },
+      { id: "lh", plan_id: "p1", text: { en: "Hidden" }, published: false },
+    ];
+    const mapped = mapKvkLeaderPlan(plan, brief, [], rules);
+    expect(mapped.rules.map((r) => [r.id, r.audience, r.kind])).toEqual([
+      ["l1", "all", "info"],
+      ["l2", "garrison", "do"],
+    ]);
+  });
+
+  it("drops a pets offset outside 0–1440 minutes", () => {
+    const mapped = mapKvkLeaderPlan(plan, brief, [{ id: "r", plan_id: "p1", pets_offset_minutes: 5000 }]);
+    expect(mapped.rallies[0].petsOffsetMinutes).toBeNull();
+  });
+
+  it("tolerates a half-filled brief", () => {
+    const mapped = mapKvkLeaderPlan({ id: "p1" }, {}, []);
+    expect(mapped.password).toBe("");
+    expect(mapped.intro).toEqual({});
+    expect(mapped.rallies).toEqual([]);
+    expect(mapped.battleAt).toBeNull();
   });
 });

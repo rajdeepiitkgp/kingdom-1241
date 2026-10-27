@@ -1,17 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { HeroAvatar, TROOP_ICONS } from "@/components/kvk/HeroAvatar";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveFormation } from "@/lib/admin/kvk-actions";
 import { FORMATION_LABELS } from "@/lib/admin/kvk-forms";
-import type { FormationSide, Hero, KvkFormation, TroopType } from "@/lib/data/types";
+import type { FormationSide, Hero, KvkFormation } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
+import { HeroSlotFields, type HeroSlots, RatioFields, type Ratio } from "./HeroRatioFields";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-
-const TROOPS: TroopType[] = ["infantry", "cavalry", "archers"];
-type Slots = [string | null, string | null, string | null];
 
 export function FormationForm({
   locale,
@@ -29,11 +26,11 @@ export function FormationForm({
   skillLevel: number;
   defaultLabel: string;
 }) {
-  const [slots, setSlots] = useState<Slots>(formation?.heroSlugs ?? [null, null, null]);
+  const [slots, setSlots] = useState<HeroSlots>(formation?.heroSlugs ?? [null, null, null]);
   // Attackers rally, defenders garrison: the role words follow the side.
   const [side, setSide] = useState<FormationSide>(formation?.side ?? "any");
   const roleWord = side === "attack" ? "Rally" : side === "defense" ? "Garrison" : "Rally or garrison";
-  const [ratio, setRatio] = useState<Record<TroopType, number>>({
+  const [ratio, setRatio] = useState<Ratio>({
     infantry: formation?.infantry ?? 50,
     cavalry: formation?.cavalry ?? 0,
     archers: formation?.archers ?? 50,
@@ -57,12 +54,8 @@ export function FormationForm({
     setSeenLabel(defaultLabel);
     setLabel(defaultLabel);
   }
-  const sum = ratio.infantry + ratio.cavalry + ratio.archers;
   const prefix = formation ? `formation-${formation.id}` : "formation-new";
   const errors = state.errors ?? {};
-  const heroBySlug = new Map(heroes.map((h) => [h.slug, h]));
-  const byTroop = TROOPS.map((type) => ({ type, heroes: heroes.filter((h) => h.troopType === type) }));
-  const setSlot = (index: number, slug: string | null) => setSlots(slots.map((s, i) => (i === index ? slug : s)) as Slots);
 
   return (
     <form action={action} className="min-w-0 flex-1 space-y-4">
@@ -100,63 +93,8 @@ export function FormationForm({
         </label>
       </div>
 
-      {/* The portraits follow the dropdowns, so admins see what players will see. */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {slots.map((slug, index) => (
-          <div key={index} className="flex items-end gap-3 rounded-2xl bg-card p-2 pe-3">
-            <HeroAvatar
-              hero={slug ? (heroBySlug.get(slug) ?? null) : null}
-              locale="en"
-              skillLevel={skillLevel}
-              anyLabel="Any hero"
-              skillTitle="Top expedition skill level"
-            />
-            <Field className="flex-1" label={`Hero ${index + 1}`} htmlFor={`${prefix}-hero${index + 1}`} error={errors[`hero${index + 1}`]}>
-              <select
-                id={`${prefix}-hero${index + 1}`}
-                name={`hero${index + 1}`}
-                className="input select-chevron"
-                value={slug ?? ""}
-                onChange={(event) => setSlot(index, event.target.value || null)}
-              >
-                <option value="">Any hero</option>
-                {byTroop.map((group) => (
-                  <optgroup key={group.type} label={`${TROOP_ICONS[group.type]} ${group.type}`}>
-                    {group.heroes.map((hero) => (
-                      <option key={hero.slug} value={hero.slug}>
-                        {pick(hero.name, "en")}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </Field>
-          </div>
-        ))}
-      </div>
-      {errors.heroes && <p className="text-xs font-bold text-danger">{errors.heroes}</p>}
-
-      <div className="grid grid-cols-3 gap-2 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-        {TROOPS.map((type) => (
-          <Field key={type} label={`${TROOP_ICONS[type]} ${type} %`} htmlFor={`${prefix}-${type}`}>
-            <input
-              id={`${prefix}-${type}`}
-              name={type}
-              type="number"
-              min={0}
-              max={100}
-              className="input"
-              value={ratio[type]}
-              onChange={(event) => setRatio({ ...ratio, [type]: Number(event.target.value) || 0 })}
-              required
-            />
-          </Field>
-        ))}
-        <p className={`pb-3 text-sm font-bold ${sum === 100 ? "text-success" : "text-danger"}`} aria-live="polite">
-          = {sum}% {sum === 100 ? "✓" : "(must be 100)"}
-        </p>
-      </div>
-      {errors.ratio && <p className="text-xs font-bold text-danger">{errors.ratio}</p>}
+      <HeroSlotFields prefix={prefix} slots={slots} onChange={setSlots} heroes={heroes} skillLevel={skillLevel} errors={errors} />
+      <RatioFields prefix={prefix} ratio={ratio} onChange={setRatio} error={errors.ratio} />
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto] md:items-end">
         <Field label="Note (English)" htmlFor={`${prefix}-note`}>

@@ -224,6 +224,74 @@ export interface KvkPlanWithSecret extends KvkPlan {
   password: string;
 }
 
+/** Who a leader instruction is for: every leader, or only rally leads / garrison leads. */
+export type LeaderAudience = "all" | "rally" | "garrison";
+
+export interface KvkLeaderRule {
+  id: string;
+  planId: string;
+  audience: LeaderAudience;
+  kind: KvkRuleKind;
+  text: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+/** One rally on the rally-leader page: who leads it, where, when, with which of their own heroes and troop ratio. */
+export interface KvkRallyLeader {
+  id: string;
+  planId: string;
+  /** Which rally ("Castle — first wave"). */
+  target: Localized;
+  side: FormationSide;
+  /** Battle alliance on the day ([KvK] rallies, [TMP] counter-rallies). */
+  team: CoordinatorTeam;
+  /** In-game name of the leader. */
+  name: string;
+  /** Home alliance (EOL, ULU, …). */
+  allianceTag: string | null;
+  /** Where to teleport / stand ("In front of the castle"). */
+  position: Localized;
+  /** When to start the rally (UTC ISO), or null. */
+  startAt: string | null;
+  /** When to activate pets, in minutes after the battle start (0 = at the start), or null for no pets. */
+  petsOffsetMinutes: number | null;
+  /** The leader's own three heroes; `null` = their choice. */
+  heroSlugs: [string | null, string | null, string | null];
+  infantry: number;
+  cavalry: number;
+  archers: number;
+  note: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+/**
+ * The rally-leader page of the active battle plan: its own instructions and
+ * roster behind its own password (kvk_leader_briefs + kvk_rally_leaders).
+ */
+export interface KvkLeaderPlan {
+  /** The battle plan this page belongs to (the access cookie is bound to it). */
+  planId: string;
+  slug: string;
+  eventType: KvkEventType;
+  title: Localized;
+  opponent: string | null;
+  battleAt: string | null;
+  battleEndAt: string | null;
+  minSkillLevel: number;
+  /** Sanitised HTML. */
+  intro: Localized;
+  updatedAt: string;
+  rules: KvkLeaderRule[];
+  rallies: KvkRallyLeader[];
+}
+
+/** The leader page plus its password — server only, never passed to components. */
+export interface KvkLeaderPlanWithSecret extends KvkLeaderPlan {
+  password: string;
+}
+
 // ---------------------------------------------------------------------------
 // Battle retrospective (feedback form per battle plan)
 // ---------------------------------------------------------------------------

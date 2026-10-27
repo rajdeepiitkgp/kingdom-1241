@@ -1,16 +1,13 @@
-import { ArrowRight, Ban, Castle, CircleCheck, Info, MessageSquareHeart, Swords } from "lucide-react";
+import { ArrowRight, MessageSquareHeart } from "lucide-react";
 import Link from "next/link";
-import { prepareRichText, RichText } from "@/components/content/RichText";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import type { Alliance, CoordinatorTeam, Hero, KvkPlan, KvkRuleKind } from "@/lib/data/types";
+import type { Alliance, CoordinatorTeam, Hero, KvkPlan } from "@/lib/data/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
-import { hasBattleTokens } from "@/lib/kvk/battle-tokens";
-import { BattleCountdown } from "./BattleCountdown";
+import { BattleHeader } from "./BattleHeader";
 import { FormationBoard } from "./FormationBoard";
 import { HeroAvatar } from "./HeroAvatar";
-import { LiveIntro } from "./LiveIntro";
-import { LockButton } from "./LockButton";
+import { RuleIcon } from "./RuleIcon";
 
 /**
  * The unlocked battle plan. Server Component: only the interactive bits
@@ -33,7 +30,6 @@ export function BattlePlan({
   /** Link to the open feedback form, when there is one. */
   feedbackHref?: string | null;
 }) {
-  const intro = pick(plan.intro, locale);
   const updated = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(plan.updatedAt),
   );
@@ -43,36 +39,17 @@ export function BattlePlan({
 
   return (
     <div className="space-y-10">
-      {/* Plan header */}
-      <section className="card relative overflow-hidden p-5 md:p-7">
-        <div className="pointer-events-none absolute -inset-e-12 -top-12 size-44 rounded-full bg-gold/25 blur-2xl" aria-hidden />
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className={plan.eventType === "kvk" ? "chip bg-danger-soft text-danger" : "chip bg-gold-soft text-gold-strong"}>
-              {plan.eventType === "kvk" ? <Swords className="size-3.5" aria-hidden /> : <Castle className="size-3.5" aria-hidden />}
-              {dict[`kvk.event.${plan.eventType}`]}
-            </p>
-            <h2 className="mt-2 text-2xl/tight font-black text-ink md:text-3xl" dir="auto">
-              {pick(plan.title, locale)}
-            </h2>
-            {plan.opponent && (
-              <p className="mt-1 text-sm font-bold text-ink-muted">
-                {dict["kvk.opponent"]}: <span className="text-ink">{plan.opponent}</span>
-              </p>
-            )}
-          </div>
-          <LockButton label={dict["kvk.lock"]} />
-        </div>
-        <p className="relative mt-2 text-xs font-semibold text-ink-faint">{dict["kvk.cycle"]}</p>
-        {plan.battleAt && <BattleCountdown battleAt={plan.battleAt} battleEndAt={plan.battleEndAt} dict={dict} locale={locale} />}
-        {/* {{when}} / {{date}} / {{time}} / {{utc}} in the intro are filled in per visitor (see battle-tokens.ts). */}
-        {intro &&
-          (hasBattleTokens(intro) ? (
-            <LiveIntro html={prepareRichText(intro)} battleAt={plan.battleAt} locale={locale} className="mt-5" />
-          ) : (
-            <RichText html={intro} className="mt-5" />
-          ))}
-      </section>
+      <BattleHeader
+        eventType={plan.eventType}
+        title={plan.title}
+        opponent={plan.opponent}
+        battleAt={plan.battleAt}
+        battleEndAt={plan.battleEndAt}
+        intro={plan.intro}
+        area="plan"
+        dict={dict}
+        locale={locale}
+      />
 
       {/* Battle feedback (retrospective), while a form is open */}
       {feedbackHref && (
@@ -206,28 +183,4 @@ export function BattlePlan({
       </p>
     </div>
   );
-}
-
-function RuleIcon({ kind }: { kind: KvkRuleKind }) {
-  const common = "mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl";
-  switch (kind) {
-    case "do":
-      return (
-        <span className={`${common} bg-success-soft text-success`} aria-hidden>
-          <CircleCheck className="size-5" />
-        </span>
-      );
-    case "dont":
-      return (
-        <span className={`${common} bg-danger-soft text-danger`} aria-hidden>
-          <Ban className="size-5" />
-        </span>
-      );
-    default:
-      return (
-        <span className={`${common} bg-primary-soft text-primary`} aria-hidden>
-          <Info className="size-5" />
-        </span>
-      );
-  }
 }

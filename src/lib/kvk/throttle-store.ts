@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import { DAY } from "@/lib/time";
-import { kvkSessionSecret } from "./access";
-import type { ThrottleState } from "./throttle";
+import { type KvkArea, kvkSessionSecret } from "./access";
+import { addressScopePrefix, type ThrottleState } from "./throttle";
 
-/** Storage for the unlock throttle (table kvk_unlock_throttle; server only). */
+/**
+ * Storage for the unlock throttle (table kvk_unlock_throttle; server only).
+ * Without a database (local design work on the seed plan) nothing is counted.
+ */
 
 const log = createLogger("kvk");
 
@@ -39,6 +43,7 @@ function toState(row: Row): ThrottleState {
 
 /** States for the given scopes, in the same order; null for unknown scopes or when the table is unreachable. */
 export async function loadThrottle(scopes: string[]): Promise<(ThrottleState | null)[]> {
+  if (!isSupabaseAdminConfigured()) return scopes.map(() => null);
   const { data, error } = await createAdminClient().from("kvk_unlock_throttle").select(COLUMNS).in("scope", scopes);
   if (error) {
     log.error("Could not read the unlock throttle", { error: error.message });
@@ -49,6 +54,7 @@ export async function loadThrottle(scopes: string[]): Promise<(ThrottleState | n
 }
 
 export async function saveThrottle(entries: Array<{ scope: string; state: ThrottleState }>): Promise<void> {
+  if (!isSupabaseAdminConfigured()) return;
   const admin = createAdminClient();
   const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : null);
   const rows = entries.map(({ scope, state }) => ({
@@ -71,16 +77,18 @@ export async function saveThrottle(entries: Array<{ scope: string; state: Thrott
 }
 
 export async function clearThrottle(scope: string): Promise<void> {
+  if (!isSupabaseAdminConfigured()) return;
   const { error } = await createAdminClient().from("kvk_unlock_throttle").delete().eq("scope", scope);
   if (error) log.warn("Could not clear a throttle scope", { error: error.message });
 }
 
-/** How many different addresses guessed wrong for this plan since `since` (for the alert). */
-export async function countRecentAddresses(planId: string, since: number): Promise<number> {
+/** How many different addresses guessed wrong for this page of the plan since `since` (for the alert). */
+export async function countRecentAddresses(planId: string, since: number, area: KvkArea = "plan"): Promise<number> {
+  if (!isSupabaseAdminConfigured()) return 0;
   const { count, error } = await createAdminClient()
     .from("kvk_unlock_throttle")
     .select("scope", { count: "exact", head: true })
-    .like("scope", `ip:${planId}:%`)
+    .like("scope", `${addressScopePrefix(planId, area)}%`)
     .gte("updated_at", new Date(since).toISOString());
   if (error) log.warn("Could not count guessing addresses", { error: error.message });
   return count ?? 0;

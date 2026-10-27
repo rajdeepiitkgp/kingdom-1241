@@ -1,4 +1,4 @@
-import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind } from "@/lib/data/types";
+import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
 
 /**
  * Seed battle plan for the password-locked KvK page.
@@ -98,12 +98,67 @@ Make the formations below, but only with heroes whose Top Expedition Skill (the 
   ],
 };
 
+/**
+ * Seed rally-leader page for the same placeholder plan: its own password
+ * (KVK_SEED_LEADER_PASSWORD, default "1241-leaders") and PLACEHOLDER rallies
+ * for the council to replace in the admin area.
+ */
+export interface SeedRallyLeader {
+  target: string;
+  side: FormationSide;
+  team: CoordinatorTeam;
+  name: string;
+  allianceTag: string | null;
+  position: string;
+  /** Minutes after the battle start; null = no pets. */
+  petsOffsetMinutes: number | null;
+  heroes: [string | null, string | null, string | null];
+  infantry: number;
+  cavalry: number;
+  archers: number;
+  note: string;
+}
+
+export const SEED_LEADER_BRIEF: {
+  introMarkdown: string;
+  rules: Array<{ audience: LeaderAudience; kind: KvkRuleKind; text: string }>;
+  rallies: SeedRallyLeader[];
+} = {
+  introMarkdown: `Rally leaders: your card below says which rally you lead, where to stand, when to start and when to use your pets. Read your card and the instructions before the battle starts.
+
+> Kingdom council: this is placeholder text. Write the leaders' instructions and assign the rallies under Admin → Battle plans → Rally leaders.`,
+  // Generic placeholders for the council to replace with the kingdom's own plan.
+  rules: [
+    { audience: "all", kind: "do", text: "Before the battle, send a test march to the castle and note your march time (placeholder)." },
+    { audience: "all", kind: "do", text: "Teleport to the position on your card before the battle starts (placeholder)." },
+    { audience: "all", kind: "do", text: "Activate your pets exactly at the time on your card: the boost lasts two hours, and the activations are spread so the kingdom has a boost through the whole battle (placeholder)." },
+    { audience: "all", kind: "info", text: "All times are UTC (server time); your card also shows them in your own time zone (placeholder)." },
+    { audience: "rally", kind: "do", text: "Open your rally at the start time on your card; if your coordinator calls a change, follow the call (placeholder)." },
+    { audience: "rally", kind: "dont", text: "Don't launch before the rally has filled unless your coordinator says so (placeholder)." },
+    { audience: "garrison", kind: "do", text: "Lead the garrison with your strongest defence heroes and keep it refilled with your joiners (placeholder)." },
+  ],
+  rallies: [
+    { target: "Castle — first wave", side: "attack", team: "kvk", name: "Rally leader (placeholder)", allianceTag: "NAM", position: "In front of the castle (placeholder)", petsOffsetMinutes: 0, heroes: ["amane", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
+    { target: "Castle — second wave", side: "attack", team: "kvk", name: "Rally leader (placeholder)", allianceTag: "ULU", position: "Left side of the castle (placeholder)", petsOffsetMinutes: 120, heroes: ["chenko", null, null], infantry: 50, cavalry: 0, archers: 50, note: "" },
+    { target: "Counter-rally on the castle", side: "attack", team: "tmp", name: "Counter-rally leader (placeholder)", allianceTag: "EOL", position: "Right side of the castle (placeholder)", petsOffsetMinutes: 240, heroes: ["chenko", null, null], infantry: 50, cavalry: 15, archers: 35, note: "" },
+    { target: "Castle garrison", side: "defense", team: "kvk", name: "Garrison leader (placeholder)", allianceTag: "EOL", position: "Inside the castle (placeholder)", petsOffsetMinutes: 0, heroes: ["hilde", null, null], infantry: 60, cavalry: 40, archers: 0, note: "" },
+  ],
+};
+
 /** Stable ids for the child rows, so re-seeding never duplicates them. */
 export const kvkRuleId = (index: number) => `d2000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 export const kvkCoordinatorId = (index: number) => `d3000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 export const kvkFormationId = (index: number) => `d4000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+export const kvkLeaderBriefId = "d5000000-0000-4000-8000-000000000001";
+export const kvkLeaderRuleId = (index: number) => `d7000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+export const kvkRallyLeaderId = (index: number) => `d6000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 
 /** Password used when seeding / when Supabase isn't configured. Change it in the table! */
 export function seedKvkPassword(): string {
   return process.env.KVK_SEED_PASSWORD?.trim() || "1241";
+}
+
+/** The rally-leader page's own seed password. Change it in the admin area! */
+export function seedLeaderPassword(): string {
+  return process.env.KVK_SEED_LEADER_PASSWORD?.trim() || "1241-leaders";
 }

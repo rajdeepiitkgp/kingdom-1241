@@ -9,12 +9,25 @@ import { markdownToHtml } from "@/lib/html";
 import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
 import type { Logger } from "@/lib/log";
+import { battleMinutes } from "@/lib/kvk/battle-window";
+import { latestPetsOffset } from "@/lib/kvk/leaders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
 import { localeField, localizedUpdate, textField, uuidField } from "./forms";
-import { isMoveDirection, MAX_FORMATIONS, moveInList, parseCoordinatorForm, parseFormationForm, parsePlanForm, parseRuleForm } from "./kvk-forms";
+import {
+  isMoveDirection,
+  MAX_FORMATIONS,
+  moveInList,
+  parseCoordinatorForm,
+  parseFormationForm,
+  parseLeaderBriefForm,
+  parseLeaderRuleForm,
+  parsePlanForm,
+  parseRallyLeaderForm,
+  parseRuleForm,
+} from "./kvk-forms";
 import { isEditableTextColumn, pendingColumns, TEXT_LIMITS, withLanguage } from "./translation";
 
 /**
@@ -34,14 +47,18 @@ function withoutRowMeta(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([key]) => !ROW_META.has(key)));
 }
 
-function editorPath(locale: string, planId: string, anchor?: string, query?: string): string {
-  return adminPath(locale, `/kvk/${planId}${query ? `?${query}` : ""}${anchor ? `#${anchor}` : ""}`);
+/** The plan's editor, or with `page` one of its sub-pages ("/leaders"). */
+function editorPath(locale: string, planId: string, anchor?: string, query?: string, page = ""): string {
+  return adminPath(locale, `/kvk/${planId}${page}${query ? `?${query}` : ""}${anchor ? `#${anchor}` : ""}`);
 }
 
-/** Players see the change on their next request; the editor re-renders in place. */
+const LEADERS_PAGE = "/leaders";
+
+/** Players see the change on their next request; the editors re-render in place. */
 function expirePlanCaches(locale: string, planId: string) {
   updateTag(CACHE_TAGS.kvk);
   revalidatePath(editorPath(locale, planId));
+  revalidatePath(editorPath(locale, planId, undefined, undefined, LEADERS_PAGE));
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +85,9 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   const parsed = parsePlanForm(formData, { now: new Date(), previousBattleAt: existing?.battle_at ?? null });
   if (!parsed.ok) return invalid(parsed.errors);
   const input = parsed.value;
+  if (id && input.password === (await leaderPassword(id))) {
+    return invalid({ password: "This is the rally leaders' password. Use a different one, or every player could open the leaders' page." });
+  }
 
   // A changed English intro drops the other languages (HTML and Markdown sources alike);
   // the pipeline refills the HTML, and sources are re-derived from it when edited.
@@ -173,10 +193,12 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
   }
   const newId = String(copy.data.id);
 
-  for (const table of ["kvk_rules", "kvk_coordinators", "kvk_formations"] as const) {
+  // The leader page comes along (its brief is one row per plan; a missing table before migration 0010 just copies nothing).
+  for (const table of ["kvk_rules", "kvk_coordinators", "kvk_formations", "kvk_leader_briefs", "kvk_leader_rules", "kvk_rally_leaders"] as const) {
     const { data: rows } = await admin.from(table).select("*").eq("plan_id", id);
     if (!rows || rows.length === 0) continue;
-    const copies = rows.map((row) => ({ ...withoutRowMeta(row as Record<string, unknown>), plan_id: newId }));
+    // Rally start times belong to the old battle, like its battle time.
+    const copies = rows.map((row) => ({ ...withoutRowMeta(row as Record<string, unknown>), plan_id: newId, ...(table === "kvk_rally_leaders" ? { start_at: null } : {}) }));
     const { error: copyError } = await admin.from(table).insert(copies);
     if (copyError) log.error("Copying plan rows failed", { table, from: id, to: newId, error: copyError.message });
   }
@@ -189,11 +211,14 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
 // Child rows: rules, coordinators, formations
 // ---------------------------------------------------------------------------
 
-type ChildTable = "kvk_rules" | "kvk_coordinators" | "kvk_formations";
-const CHILD_TABLES: Record<ChildTable, { anchor: string; action: string }> = {
-  kvk_rules: { anchor: "rules", action: "kvk_rule" },
-  kvk_coordinators: { anchor: "coordinators", action: "kvk_coordinator" },
-  kvk_formations: { anchor: "formations", action: "kvk_formation" },
+type ChildTable = "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders";
+/** `page`: the editor sub-page the rows are edited on (the plan's editor when empty). */
+const CHILD_TABLES: Record<ChildTable, { anchor: string; action: string; page: string }> = {
+  kvk_rules: { anchor: "rules", action: "kvk_rule", page: "" },
+  kvk_coordinators: { anchor: "coordinators", action: "kvk_coordinator", page: "" },
+  kvk_formations: { anchor: "formations", action: "kvk_formation", page: "" },
+  kvk_leader_rules: { anchor: "leader-rules", action: "kvk_leader_rule", page: LEADERS_PAGE },
+  kvk_rally_leaders: { anchor: "rallies", action: "kvk_rally_leader", page: LEADERS_PAGE },
 };
 
 function isChildTable(value: string): value is ChildTable {
@@ -255,24 +280,24 @@ async function saveChild(
 }
 
 async function deleteChild(table: ChildTable, action: string, formData: FormData): Promise<void> {
-  const { anchor } = CHILD_TABLES[table];
+  const { anchor, page } = CHILD_TABLES[table];
   const locale = localeField(formData);
   const planId = uuidField(formData, "planId");
   const id = uuidField(formData, "id");
   if (!planId) redirect(adminPath(locale, "/kvk"));
   const access = await checkAccess("moderator");
-  if ("denied" in access) redirect(editorPath(locale, planId, anchor, "error=forbidden"));
+  if ("denied" in access) redirect(editorPath(locale, planId, anchor, "error=forbidden", page));
   if (id) {
     const log = await actionLogger();
     const { error } = await createAdminClient().from(table).delete().eq("id", id).eq("plan_id", planId);
     if (error) {
       log.error(`Deleting from ${table} failed`, { id, error: error.message });
-      redirect(editorPath(locale, planId, anchor, "error=delete"));
+      redirect(editorPath(locale, planId, anchor, "error=delete", page));
     }
     await audit(access.user, action, table, id, { planId });
     updateTag(CACHE_TAGS.kvk);
   }
-  redirect(editorPath(locale, planId, anchor));
+  redirect(editorPath(locale, planId, anchor, undefined, page));
 }
 
 async function existingLocalized(table: string, id: string | null, column: string): Promise<Localized | null> {
@@ -365,6 +390,125 @@ export async function deleteFormation(formData: FormData): Promise<void> {
   return deleteChild("kvk_formations", "kvk_formation.delete", formData);
 }
 
+// ---------------------------------------------------------------------------
+// Rally-leader page: its brief (own password, instructions) and its rallies
+// ---------------------------------------------------------------------------
+
+/** The leaders' password of a plan, or null (no brief yet, or the table isn't there before migration 0010). */
+async function leaderPassword(planId: string): Promise<string | null> {
+  const { data } = await createAdminClient().from("kvk_leader_briefs").select("password").eq("plan_id", planId).maybeSingle();
+  return typeof data?.password === "string" ? data.password.trim() : null;
+}
+
+export async function saveLeaderBrief(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const locale = localeField(formData);
+  const planId = uuidField(formData, "planId");
+  if (!planId) return PLAN_GONE;
+  const admin = createAdminClient();
+  const { data: plan } = await admin.from("kvk_plans").select("password").eq("id", planId).maybeSingle();
+  if (!plan) return PLAN_GONE;
+
+  const parsed = parseLeaderBriefForm(formData, String(plan.password ?? ""));
+  if (!parsed.ok) return invalid(parsed.errors);
+  const input = parsed.value;
+
+  type ExistingBrief = { id: string; intro: Localized; intro_source: Localized | null };
+  const { data: existingRow, error: readError } = await admin.from("kvk_leader_briefs").select("id, intro, intro_source").eq("plan_id", planId).maybeSingle();
+  if (readError) return failed(log, "Reading the leader page", readError);
+  const existing = existingRow as ExistingBrief | null;
+
+  // As for the plan intro: a changed English text drops the other languages, the pipeline refills them.
+  const intro = localizedUpdate(existing?.intro, markdownToHtml(input.introSource));
+  const introSource =
+    existing && intro === existing.intro ? { ...(existing.intro_source ?? {}), en: input.introSource } : { en: input.introSource };
+  const row = { password: input.password, intro, intro_source: introSource, published: input.published };
+
+  const result = existing
+    ? await admin.from("kvk_leader_briefs").update(row).eq("id", existing.id).select("id").single()
+    : await admin.from("kvk_leader_briefs").insert({ ...row, plan_id: planId }).select("id").single();
+  if (result.error) return failed(log, "Saving the leader page", result.error);
+
+  await audit(access.user, existing ? "kvk_leader_brief.update" : "kvk_leader_brief.create", "kvk_leader_briefs", String(result.data.id), {
+    planId,
+    published: input.published,
+  });
+  expirePlanCaches(locale, planId);
+  return { status: "saved", message: "Leader page saved." };
+}
+
+export async function saveRallyLeader(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
+  const admin = createAdminClient();
+  const [{ data: heroes }, { data: alliances }, { data: plan }] = await Promise.all([
+    admin.from("heroes").select("slug"),
+    admin.from("alliances").select("tag"),
+    admin.from("kvk_plans").select("*").eq("id", planId).maybeSingle(),
+  ]);
+  // The pets boost must end inside the battle (the standard 12:00–19:00 UTC length while the plan has no times).
+  const length = battleMinutes(plan?.battle_at ?? null, plan?.battle_end_at ?? null);
+  const parsed = parseRallyLeaderForm(
+    formData,
+    (heroes ?? []).map((h) => String(h.slug)),
+    (alliances ?? []).map((a) => String(a.tag)),
+    { latestPetsOffset: latestPetsOffset(length) },
+  );
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
+  const r = parsed.value;
+  const row = {
+    target: localizedUpdate(await existingLocalized("kvk_rally_leaders", id, "target"), r.target),
+    side: r.side,
+    team: r.team,
+    name: r.name,
+    alliance_tag: r.allianceTag,
+    position: localizedUpdate(await existingLocalized("kvk_rally_leaders", id, "position"), r.position),
+    start_at: r.startAt,
+    pets_offset_minutes: r.petsOffsetMinutes,
+    hero_1: r.heroes[0],
+    hero_2: r.heroes[1],
+    hero_3: r.heroes[2],
+    infantry_pct: r.infantry,
+    cavalry_pct: r.cavalry,
+    archers_pct: r.archers,
+    note: localizedUpdate(await existingLocalized("kvk_rally_leaders", id, "note"), r.note),
+    published: r.published,
+  };
+  return saveChild(log, access.user, "kvk_rally_leaders", id ? "kvk_rally_leader.update" : "kvk_rally_leader.create", localeField(formData), planId, id, row);
+}
+
+export async function deleteRallyLeader(formData: FormData): Promise<void> {
+  return deleteChild("kvk_rally_leaders", "kvk_rally_leader.delete", formData);
+}
+
+export async function saveLeaderRule(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const planId = uuidField(formData, "planId");
+  if (!planId || !(await planExists(planId))) return PLAN_GONE;
+  const parsed = parseLeaderRuleForm(formData);
+  if (!parsed.ok) return invalid(parsed.errors);
+  const id = uuidField(formData, "id");
+  const row = {
+    audience: parsed.value.audience,
+    kind: parsed.value.kind,
+    text: localizedUpdate(await existingLocalized("kvk_leader_rules", id, "text"), parsed.value.text),
+    published: parsed.value.published,
+  };
+  return saveChild(log, access.user, "kvk_leader_rules", id ? "kvk_leader_rule.update" : "kvk_leader_rule.create", localeField(formData), planId, id, row);
+}
+
+export async function deleteLeaderRule(formData: FormData): Promise<void> {
+  return deleteChild("kvk_leader_rules", "kvk_leader_rule.delete", formData);
+}
+
 const MOVE_FAILED = "The row could not be moved. Reload the page and try again.";
 
 /**
@@ -430,7 +574,7 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
 
   const current = (row[column] ?? {}) as Localized;
   const update: Record<string, unknown> =
-    column === "intro" && (table === "kvk_plans" || table === "kvk_retrospectives")
+    column === "intro" && (table === "kvk_plans" || table === "kvk_retrospectives" || table === "kvk_leader_briefs")
       ? {
           intro: withLanguage(current, lang, value ? markdownToHtml(value) : ""),
           intro_source: withLanguage((row.intro_source ?? {}) as Localized, lang, value),

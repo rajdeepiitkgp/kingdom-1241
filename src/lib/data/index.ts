@@ -13,6 +13,7 @@ import {
   mapGiftCode,
   mapGuide,
   mapHero,
+  mapKvkLeaderPlan,
   mapKvkPlan,
   mapOpenRetrospective,
   mapRule,
@@ -27,6 +28,7 @@ import type {
   GiftCode,
   Guide,
   Hero,
+  KvkLeaderPlanWithSecret,
   KvkPlanWithSecret,
   OpenRetrospective,
   RuleTopic,
@@ -328,6 +330,55 @@ export async function getActiveKvkPlan(): Promise<KvkPlanWithSecret | null> {
     return mapKvkPlan(plan, rules.data ?? [], coordinators.data ?? [], formations.data ?? []);
   } catch (error) {
     log.error("Failed to load the KvK battle plan from Supabase", { error });
+    return null;
+  }
+}
+
+/**
+ * The rally-leader page of the active battle plan, including its own password.
+ *
+ * Same rules as `getActiveKvkPlan` (service role, server only, the caller
+ * checks the leader cookie and strips the password; `null` on any problem,
+ * never the seed outside local design work). `null` too when the active plan
+ * has no published leader brief: the page then says "no leader plan yet".
+ * The battle plan's own password is not read here.
+ */
+export async function getActiveLeaderPlan(): Promise<KvkLeaderPlanWithSecret | null> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.kvk);
+
+  if (!isSupabaseConfigured()) return buildSeedContent().kvkLeaderPlan;
+  if (!isSupabaseAdminConfigured()) return null;
+  try {
+    const supabase = createAdminClient();
+    const { data: plan, error } = await supabase
+      .from("kvk_plans")
+      .select("*")
+      .eq("active", true)
+      .eq("published", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!plan) return null;
+
+    const [brief, rallies, rules] = await Promise.all([
+      supabase.from("kvk_leader_briefs").select("*").eq("plan_id", plan.id).eq("published", true).maybeSingle(),
+      supabase.from("kvk_rally_leaders").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+      supabase.from("kvk_leader_rules").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+    ]);
+    const tableError = brief.error ?? rallies.error ?? rules.error;
+    if (tableError?.code === "PGRST205" || tableError?.code === "42P01") {
+      // Deployed before migration 0010 reached the database: "no leader plan yet" until it does.
+      log.warn("Rally-leader tables are not in the database yet (migration 0010)");
+      return null;
+    }
+    if (tableError) throw tableError;
+    if (!brief.data) return null;
+
+    return mapKvkLeaderPlan(plan, brief.data, rallies.data ?? [], rules.data ?? []);
+  } catch (error) {
+    log.error("Failed to load the rally-leader plan from Supabase", { error });
     return null;
   }
 }

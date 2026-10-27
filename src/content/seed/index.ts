@@ -5,6 +5,7 @@ import type {
   GiftCode,
   Guide,
   Hero,
+  KvkLeaderPlanWithSecret,
   KvkPlanWithSecret,
   RuleTopic,
   SiteSettings,
@@ -18,7 +19,17 @@ import { SEED_EVENTS } from "./events";
 import { SEED_GIFT_CODES } from "./gift-codes";
 import { SEED_GUIDES } from "./guides";
 import { bundledHeroIcon, SEED_HEROES } from "./heroes";
-import { kvkCoordinatorId, kvkFormationId, kvkRuleId, SEED_KVK_PLAN, seedKvkPassword } from "./kvk";
+import {
+  kvkCoordinatorId,
+  kvkFormationId,
+  kvkLeaderRuleId,
+  kvkRallyLeaderId,
+  kvkRuleId,
+  SEED_KVK_PLAN,
+  SEED_LEADER_BRIEF,
+  seedKvkPassword,
+  seedLeaderPassword,
+} from "./kvk";
 import { SEED_LANGUAGES } from "./languages";
 import { SEED_RULE_TOPICS } from "./rules";
 import { SEED_SETTINGS } from "./settings";
@@ -43,6 +54,7 @@ export interface SeedContent {
   heroes: Hero[];
   /** Placeholder battle plan, with the seed password — server only. */
   kvkPlan: KvkPlanWithSecret;
+  kvkLeaderPlan: KvkLeaderPlanWithSecret;
 }
 
 export function buildSeedContent(): SeedContent {
@@ -138,6 +150,7 @@ export function buildSeedContent(): SeedContent {
       published: true,
     })),
     kvkPlan: buildSeedKvkPlan(now),
+    kvkLeaderPlan: buildSeedLeaderPlan(now),
   };
 }
 
@@ -187,6 +200,51 @@ function buildSeedKvkPlan(now: string): KvkPlanWithSecret {
       cavalry: f.cavalry,
       archers: f.archers,
       note: en(f.note),
+      sortOrder: index,
+      published: true,
+    })),
+  };
+}
+
+function buildSeedLeaderPlan(now: string): KvkLeaderPlanWithSecret {
+  const plan = SEED_KVK_PLAN;
+  return {
+    planId: plan.id,
+    slug: plan.slug,
+    eventType: plan.eventType,
+    title: en(plan.title),
+    opponent: plan.opponent,
+    battleAt: plan.battleAt,
+    battleEndAt: null,
+    minSkillLevel: plan.minSkillLevel,
+    intro: en(markdownToHtml(SEED_LEADER_BRIEF.introMarkdown)),
+    updatedAt: now,
+    password: seedLeaderPassword(),
+    rules: SEED_LEADER_BRIEF.rules.map((rule, index) => ({
+      id: kvkLeaderRuleId(index),
+      planId: plan.id,
+      audience: rule.audience,
+      kind: rule.kind,
+      text: en(rule.text),
+      sortOrder: index,
+      published: true,
+    })),
+    rallies: SEED_LEADER_BRIEF.rallies.map((r, index) => ({
+      id: kvkRallyLeaderId(index),
+      planId: plan.id,
+      target: en(r.target),
+      side: r.side,
+      team: r.team,
+      name: r.name,
+      allianceTag: r.allianceTag,
+      position: en(r.position),
+      startAt: null,
+      petsOffsetMinutes: r.petsOffsetMinutes,
+      heroSlugs: r.heroes,
+      infantry: r.infantry,
+      cavalry: r.cavalry,
+      archers: r.archers,
+      note: en(r.note),
       sortOrder: index,
       published: true,
     })),

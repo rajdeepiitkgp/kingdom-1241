@@ -1,4 +1,5 @@
 import { HOUR, MINUTE } from "@/lib/time";
+import type { KvkArea } from "./access";
 
 /**
  * Brute-force rules for the shared KvK password (pure, unit-tested; storage
@@ -95,11 +96,19 @@ export function shouldAlert(state: ThrottleState, policy: AlertPolicy = PLAN_ALE
   return state.failures >= policy.threshold && state.alertedAt === null;
 }
 
-/** Throttle scopes: the plan as a whole, and one hashed address within it. */
-export function planScope(planId: string): string {
-  return `plan:${planId}`;
+/**
+ * Throttle scopes: the plan as a whole, and one hashed address within it, per
+ * locked page. The battle plan keeps its original names; other pages put their
+ * name first, so the plan's `ip:<plan id>:` prefix never counts their guesses.
+ */
+export function planScope(planId: string, area: KvkArea = "plan"): string {
+  return area === "plan" ? `plan:${planId}` : `plan:${area}:${planId}`;
 }
 
-export function addressScope(planId: string, addressHash: string): string {
-  return `ip:${planId}:${addressHash}`;
+export function addressScopePrefix(planId: string, area: KvkArea = "plan"): string {
+  return area === "plan" ? `ip:${planId}:` : `ip:${area}:${planId}:`;
+}
+
+export function addressScope(planId: string, addressHash: string, area: KvkArea = "plan"): string {
+  return `${addressScopePrefix(planId, area)}${addressHash}`;
 }
