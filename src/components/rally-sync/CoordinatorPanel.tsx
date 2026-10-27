@@ -9,12 +9,22 @@ import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, type CoordinatorOp } from "@/lib/rally-sync/actions";
 import { updateDevice } from "@/lib/rally-sync/device";
-import { IDLE_CLOSE_MS, type RoomMode, type RoomView } from "@/lib/rally-sync/room";
-import { earliestHit, formatSeconds, isTooLate, MAX_BUFFER_SECONDS, MAX_COUNTER_OFFSET_SECONDS, parseDuration } from "@/lib/rally-sync/timing";
+import { IDLE_CLOSE_MS, resyncMarches, type RoomMode, type RoomView } from "@/lib/rally-sync/room";
+import {
+  earliestHit,
+  formatSeconds,
+  isTooLate,
+  MAX_BUFFER_SECONDS,
+  MAX_COUNTER_OFFSET_SECONDS,
+  MAX_RALLY_WAIT_SECONDS,
+  MIN_RALLY_WAIT_SECONDS,
+  parseDuration,
+} from "@/lib/rally-sync/timing";
 import { useRunner } from "./hooks";
 import { InvitePanel } from "./InvitePanel";
 import { type Clock, shown, type TimedLeaderView } from "./LeaderCards";
 import { ErrorLine, LeaderForm } from "./LeaderForm";
+import { stepKeys } from "./step-keys";
 
 /**
  * The coordinator's controls. Always visible: the mode and the hit time
@@ -53,7 +63,8 @@ export function CoordinatorPanel({
 
   const hitSetAt = room.hitSetAt ? Date.parse(room.hitSetAt) : null;
   const late = leaders.filter((l) => l.startAt !== null && isTooLate(l.startAt, hitSetAt));
-  const longest = leaders.reduce((max, l) => Math.max(max, l.marchSeconds), 0);
+  // Re-sync starts the next rally: march times waiting for it count, leaders sitting out don't.
+  const longest = Math.max(0, ...resyncMarches(leaders));
   const preview = now === null ? null : earliestHit(now, room.rallyWaitSeconds, [longest], room.bufferSeconds);
 
   /** A one-field form (time or duration): sends the op and clears the field when it worked. */
@@ -96,6 +107,10 @@ export function CoordinatorPanel({
   }
 
   const invalidTime = dict["sync.error.invalidTime"];
+  const hint = dict["sync.stepHint"];
+  // ↑ / ↓ in an empty time field start from the time that is set now (or what Re-sync would pick).
+  const hitText = () => (room.hitAt ? shown(Date.parse(room.hitAt)) : preview !== null ? shown(preview) : null);
+  const enemyText = () => (room.enemyHitAt ? shown(Date.parse(room.enemyHitAt)) : null);
   const errorLine = (where: string, invalidText?: string) => {
     const error = errorFor(where);
     return error && <ErrorLine dict={dict} error={error} invalidText={invalidText} />;
@@ -153,6 +168,7 @@ export function CoordinatorPanel({
             placeholder="14:30:00"
             submit={dict["sync.coord.set"]}
             pending={pending !== null}
+            keys={stepKeys("clock", hint, { seed: hitText })}
             onSubmit={fieldSubmit("hit", (text) => ({ type: "hitClock", text }))}
           />
           {errorLine("hit", invalidTime)}
@@ -166,6 +182,7 @@ export function CoordinatorPanel({
             submit={dict["sync.coord.set"]}
             pending={pending !== null}
             big
+            keys={stepKeys("duration", hint, { max: MAX_RALLY_WAIT_SECONDS })}
             onSubmit={fieldSubmit("enemyIn", (text) => ({ type: "enemyIn", text }))}
           />
           {errorLine("enemyIn", dict["sync.error.invalidDuration"])}
@@ -175,6 +192,7 @@ export function CoordinatorPanel({
             placeholder="14:30:00"
             submit={dict["sync.coord.set"]}
             pending={pending !== null}
+            keys={stepKeys("clock", hint, { seed: enemyText })}
             onSubmit={fieldSubmit("enemyAt", (text) => ({ type: "enemyClock", text }))}
           />
           {errorLine("enemyAt", invalidTime)}
@@ -197,8 +215,23 @@ export function CoordinatorPanel({
         <Disclosure title={dict["sync.coord.settings"]}>
           <form onSubmit={saveSettings} key={`${room.rallyWaitSeconds}-${room.bufferSeconds}-${room.counterOffsetSeconds}`} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <NumberInput id="sync-wait" name="wait" label={dict["sync.coord.wait"]} defaultValue={formatSeconds(room.rallyWaitSeconds)} hint={dict["sync.coord.waitHint"]} />
-              <NumberInput id="sync-buffer" name="buffer" label={dict["sync.coord.buffer"]} defaultValue={String(room.bufferSeconds)} hint={format(dict["sync.coord.bufferHint"], { max: MAX_BUFFER_SECONDS })} numeric />
+              <NumberInput
+                id="sync-wait"
+                name="wait"
+                label={dict["sync.coord.wait"]}
+                defaultValue={formatSeconds(room.rallyWaitSeconds)}
+                hint={dict["sync.coord.waitHint"]}
+                keys={stepKeys("duration", hint, { min: MIN_RALLY_WAIT_SECONDS, max: MAX_RALLY_WAIT_SECONDS })}
+              />
+              <NumberInput
+                id="sync-buffer"
+                name="buffer"
+                label={dict["sync.coord.buffer"]}
+                defaultValue={String(room.bufferSeconds)}
+                hint={format(dict["sync.coord.bufferHint"], { max: MAX_BUFFER_SECONDS })}
+                numeric
+                keys={stepKeys("seconds", hint, { max: MAX_BUFFER_SECONDS })}
+              />
               <NumberInput
                 id="sync-offset"
                 name="offset"
@@ -206,6 +239,7 @@ export function CoordinatorPanel({
                 defaultValue={String(room.counterOffsetSeconds)}
                 hint={format(dict["sync.coord.offsetHint"], { max: MAX_COUNTER_OFFSET_SECONDS })}
                 numeric
+                keys={stepKeys("seconds", hint, { max: MAX_COUNTER_OFFSET_SECONDS })}
               />
             </div>
             {errorLine("settings", dict["sync.error.invalidSettings"])}
@@ -282,6 +316,7 @@ function TimeForm({
   submit,
   pending,
   big,
+  keys,
   onSubmit,
 }: {
   id: string;
@@ -290,6 +325,7 @@ function TimeForm({
   submit: string;
   pending: boolean;
   big?: boolean;
+  keys: StepKeys;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -298,7 +334,7 @@ function TimeForm({
         {label}
       </label>
       <div className="flex gap-2">
-        <input id={id} name="value" className={clsx("input", big && "text-2xl font-black")} placeholder={placeholder} autoComplete="off" inputMode="text" dir="ltr" />
+        <input id={id} name="value" className={clsx("input", big && "text-2xl font-black")} placeholder={placeholder} autoComplete="off" inputMode="text" dir="ltr" {...keys} />
         <button type="submit" className={clsx("shrink-0", big ? "btn-gold" : "btn-primary")} disabled={pending}>
           {submit}
         </button>
@@ -307,13 +343,31 @@ function TimeForm({
   );
 }
 
-function NumberInput({ id, name, label, defaultValue, hint, numeric }: { id: string; name: string; label: string; defaultValue: string; hint: string; numeric?: boolean }) {
+type StepKeys = ReturnType<typeof stepKeys>;
+
+function NumberInput({
+  id,
+  name,
+  label,
+  defaultValue,
+  hint,
+  numeric,
+  keys,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  defaultValue: string;
+  hint: string;
+  numeric?: boolean;
+  keys: StepKeys;
+}) {
   return (
     <div className="min-w-0">
       <label htmlFor={id} className="label">
         {label}
       </label>
-      <input id={id} name={name} className="input" defaultValue={defaultValue} inputMode={numeric ? "numeric" : "text"} autoComplete="off" dir="ltr" />
+      <input id={id} name={name} className="input" defaultValue={defaultValue} inputMode={numeric ? "numeric" : "text"} autoComplete="off" dir="ltr" {...keys} />
       <p className="mt-1 text-xs text-ink-faint">{hint}</p>
     </div>
   );

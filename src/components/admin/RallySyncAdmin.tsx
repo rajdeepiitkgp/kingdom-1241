@@ -94,7 +94,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
           <Field label="Rally timer (minutes:seconds)" htmlFor="rs-wait" error={errors.rallyWait} hint="The in-game rally wait, usually 5:00.">
             <input id="rs-wait" name="rallyWait" className="input" defaultValue={formatSeconds(last.rallyWaitSeconds)} autoComplete="off" />
           </Field>
-          <Field label="Buffer for Re-sync (seconds)" htmlFor="rs-buffer" error={errors.buffer} hint="Extra time on top of the longest march; 0 is allowed.">
+          <Field label="Buffer for Re-sync (seconds)" htmlFor="rs-buffer" error={errors.buffer} hint="How long the leader with the longest march has to get ready before starting: Re-sync sets the hit to now + rally timer + longest march + buffer. 0 is allowed.">
             <input id="rs-buffer" name="buffer" className="input" inputMode="numeric" defaultValue={last.bufferSeconds} autoComplete="off" />
           </Field>
           <Field label="Counter-rally offset (seconds after the enemy)" htmlFor="rs-offset" error={errors.offset} hint="0 to 10, usually 3.">

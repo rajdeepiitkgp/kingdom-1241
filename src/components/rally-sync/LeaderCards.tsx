@@ -81,13 +81,20 @@ export function FocusBlock({ me, room, now, clock, dict }: { me: TimedLeaderView
 
   const start = me.startAt;
   if (start === null) {
+    // No start time: no hit time yet, sitting out, or joined / came back while this rally was running.
+    const why =
+      me.status === "inactive"
+        ? dict["sync.hero.inactive"]
+        : me.status === "next" && hitAt !== null
+          ? format(dict["sync.hero.nextRally"], { time: `${shown(hitAt)} ${clock.label}` })
+          : dict["sync.hit.none"];
     return (
-      <section className="card p-5 text-center md:p-6">
+      <section className={clsx("card p-5 text-center md:p-6", me.status === "inactive" && "opacity-70")}>
         <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{dict["sync.yourStart"]}</p>
         <p className={clsx(BIG_CLOCK, "text-ink-faint md:text-7xl/none")} dir="ltr">
           --:--:--
         </p>
-        <p className="mt-3 font-semibold text-ink-muted">{dict["sync.hit.none"]}</p>
+        <p className="mt-3 font-semibold text-ink-muted">{why}</p>
         {footer}
       </section>
     );
@@ -174,6 +181,17 @@ export function isUrgent(me: TimedLeaderView | null, room: RoomView, now: number
   return stage === "ready" || stage === "alert" || stage === "go";
 }
 
+/** "· next rally 1:20": a march time changed during a rally, waiting for the next hit time. */
+export function NextMarch({ leader, dict, quiet }: { leader: LeaderView; dict: Dictionary; quiet?: boolean }) {
+  if (leader.nextMarchSeconds === null) return null;
+  return (
+    <span className={clsx("ms-1 font-bold", quiet ? "text-ink-faint" : "text-gold-ink")}>
+      ·{" "}
+      {format(dict["sync.march.next"], { time: formatSeconds(leader.nextMarchSeconds) })}
+    </span>
+  );
+}
+
 const ROW_ACCENT: Record<StartStage, string> = {
   waiting: "border-s-transparent",
   ready: "border-s-gold-strong",
@@ -210,15 +228,20 @@ export function LeaderRow({
   const hitAt = room.hitAt ? Date.parse(room.hitAt) : null;
   const previousStart =
     startChanged(leader, room.hitSetAt) && hitAt !== null && leader.previousMarchSeconds !== null ? startAt(hitAt, room.rallyWaitSeconds, leader.previousMarchSeconds) : null;
-  const status = late
-    ? dict["sync.row.late"]
-    : stage === "go"
-      ? dict["sync.alert.go"]
-      : stage === "passed"
-        ? dict["sync.started"]
-        : left !== null
-          ? format(dict["sync.hit.in"], { time: formatSeconds(left) })
-          : "";
+  const out = leader.status === "inactive";
+  const status = out
+    ? dict["sync.row.inactive"]
+    : leader.status === "next"
+      ? dict["sync.row.nextRally"]
+      : late
+        ? dict["sync.row.late"]
+        : stage === "go"
+          ? dict["sync.alert.go"]
+          : stage === "passed"
+            ? dict["sync.started"]
+            : left !== null
+              ? format(dict["sync.hit.in"], { time: formatSeconds(left) })
+              : "";
   const statusColour = quiet
     ? "text-ink-faint"
     : late || stage === "alert"
@@ -251,6 +274,7 @@ export function LeaderRow({
             {formatSeconds(leader.marchSeconds)}
           </span>
           {previousStart !== null && <span className="ms-1 font-bold text-gold-ink">· {format(dict["sync.leader.changed"], { time: shown(previousStart) })}</span>}
+          <NextMarch leader={leader} dict={dict} quiet={quiet} />
         </span>
       </span>
       {onEdit && (
@@ -264,6 +288,7 @@ export function LeaderRow({
 
   const rowClass = clsx(
     "flex w-full items-center gap-3 px-3 text-start",
+    out && "opacity-60",
     quiet ? "py-2" : ["border-s-4 py-2.5", stage && !late ? ROW_ACCENT[stage] : "border-s-transparent"],
   );
   return onEdit ? (

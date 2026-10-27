@@ -5,6 +5,8 @@ import type { FormEvent, ReactNode } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { LeaderInput, SyncError } from "@/lib/rally-sync/actions";
 import { MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, NAME_MAX, parseMarch, parseName } from "@/lib/rally-sync/room";
+import { MAX_MARCH_SECONDS } from "@/lib/rally-sync/timing";
+import { stepKeys } from "./step-keys";
 
 /**
  * In-game name + march time. Seconds is the main field (that's what the game
@@ -64,13 +66,24 @@ export function LeaderForm({
             autoComplete="off"
             required
             dir="ltr"
+            {...stepKeys("seconds", dict["sync.stepHint"], { max: MAX_MARCH_SECONDS })}
           />
         </div>
         <div className="min-w-0">
           <label htmlFor={`${idPrefix}-minutes`} className="label">
             {dict["sync.form.marchMinutes"]}
           </label>
-          <input id={`${idPrefix}-minutes`} name="minutes" className="input" inputMode="numeric" pattern="[0-9]*" placeholder="0" autoComplete="off" dir="ltr" />
+          <input
+            id={`${idPrefix}-minutes`}
+            name="minutes"
+            className="input"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            autoComplete="off"
+            dir="ltr"
+            {...stepKeys("seconds", dict["sync.stepHint"], { max: MAX_MARCH_SECONDS / 60 })}
+          />
         </div>
       </div>
       <p className="mt-2 text-xs text-ink-faint">{dict["sync.form.marchHint"]}</p>
