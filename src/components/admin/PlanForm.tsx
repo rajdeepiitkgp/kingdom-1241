@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { savePlan } from "@/lib/admin/kvk-actions";
 import type { AdminKvkPlan } from "@/lib/admin/kvk-data";
 import { adminPath } from "@/lib/auth/paths";
 import { pick } from "@/lib/i18n/localized";
+import { STANDARD_BATTLE, standardWindow } from "@/lib/kvk/battle-window";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
@@ -22,6 +23,15 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
     startSubmit(() => action(data));
   };
   const errors = state.errors ?? {};
+  // "Standard window": fills 12:00–19:00 UTC on the chosen day (or the next one); both stay editable.
+  const [windowFill, setWindowFill] = useState<{ start: { value: string; key: number }; end: { value: string; key: number } } | null>(null);
+  const fillStandardWindow = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const typed = (event.currentTarget.form?.elements.namedItem("battleAt") as HTMLInputElement | null)?.value ?? "";
+    const { start, end } = standardWindow(typed, new Date());
+    const key = Date.now();
+    setWindowFill({ start: { value: start, key }, end: { value: end, key } });
+  };
+  const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
   return (
     <form action={action} onSubmit={submit} className="card space-y-5 p-5">
       <input type="hidden" name="locale" value={locale} />
@@ -47,6 +57,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           defaultValue={toUtcInputValue(plan?.battleAt)}
           hint="Enter the UTC time, in the future; players see it in their own time zone."
           error={errors.battleAt}
+          fill={windowFill?.start}
         />
         <DateTimeField
           id="battleEndAt"
@@ -56,7 +67,14 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           hint="Optional, after the start (it may already be over). After this time the page says the battle is over; without it, it keeps saying battle day."
           error={errors.battleEndAt}
           allowPast
+          fill={windowFill?.end}
         />
+        <div className="flex flex-wrap items-center gap-2 md:col-span-2">
+          <button type="button" className="btn-ghost btn-sm" onClick={fillStandardWindow}>
+            Standard window: {hh(STANDARD_BATTLE.startHourUtc)}–{hh(STANDARD_BATTLE.endHourUtc)} UTC
+          </button>
+          <span className="text-xs text-ink-faint">On the start date you picked (or the next day). Change either time afterwards if this battle differs.</span>
+        </div>
         <Field label="Minimum hero stars" htmlFor="minHeroStars" error={errors.minHeroStars}>
           <input id="minHeroStars" name="minHeroStars" type="number" min={0} max={5} className="input" defaultValue={plan?.minHeroStars ?? 4} required />
         </Field>

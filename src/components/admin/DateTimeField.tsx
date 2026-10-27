@@ -39,6 +39,7 @@ export function DateTimeField({
   hint,
   error,
   allowPast = false,
+  fill,
 }: {
   id: string;
   name: string;
@@ -48,9 +49,20 @@ export function DateTimeField({
   error?: string;
   /** For times that may lie behind us (the end of a battle that is over): no minimum, no warning. */
   allowPast?: boolean;
+  /** A value set from outside (e.g. "standard window"); a new `key` applies it once, then the field is free again. */
+  fill?: { value: string; key: number };
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(defaultValue);
+  const [seenFill, setSeenFill] = useState(fill?.key);
+  if (fill && fill.key !== seenFill) {
+    setSeenFill(fill.key);
+    setValue(fill.value);
+  }
+  // The input itself is uncontrolled (so "Discard changes" works): write the filled value into the DOM.
+  useEffect(() => {
+    if (fill && input.current) input.current.value = fill.value;
+  }, [fill]);
   // null until hydrated: the local-time preview must never be server-rendered.
   const now = useNow(60_000);
 
