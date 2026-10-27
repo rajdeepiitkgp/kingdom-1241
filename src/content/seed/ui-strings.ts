@@ -652,11 +652,11 @@ export const UI_STRINGS = {
     ar: "فعّل تعزيز سرعة الجمع لمدة 24 ساعة (600 جوهرة) عند إرسال جامعي الموارد.",
   },
   "prep.tip.warAcademy": {
-    en: "Do both kinds of research today: normal research with speedups, and War Academy research with Truegold Dust.",
-    de: "Mach heute beide Forschungen: normale Forschung mit Beschleunigungen und Forschung in der Kriegsakademie mit Truegold-Staub.",
-    ko: "오늘은 두 가지 연구를 모두 하세요: 가속을 쓰는 일반 연구와 트루골드 가루를 쓰는 전쟁 아카데미 연구.",
-    pl: "Prowadź dziś oba rodzaje badań: zwykłe badania z przyspieszeniami i badania w Akademii Wojennej z pyłem Truegold.",
-    ar: "قم اليوم بنوعَي الأبحاث: الأبحاث العادية بالتسريعات، وأبحاث أكاديمية الحرب بغبار الذهب الحقيقي.",
+    en: "Do both kinds of research today: normal research and War Academy research. Research speedups work for both; War Academy research also needs Truegold Dust.",
+    de: "Mach heute beide Forschungen: normale Forschung und Forschung in der Kriegsakademie. Forschungsbeschleunigungen gelten für beide; die Kriegsakademie braucht zusätzlich Truegold-Staub.",
+    ko: "오늘은 일반 연구와 전쟁 아카데미 연구를 모두 하세요. 연구 가속은 둘 다에 쓸 수 있고, 전쟁 아카데미 연구에는 트루골드 가루도 필요합니다.",
+    pl: "Prowadź dziś oba rodzaje badań: zwykłe i w Akademii Wojennej. Przyspieszenia badań działają na oba; Akademia Wojenna potrzebuje też pyłu Truegold.",
+    ar: "قم اليوم بنوعَي الأبحاث: الأبحاث العادية وأبحاث أكاديمية الحرب. تسريعات الأبحاث تعمل للنوعين، وأبحاث أكاديمية الحرب تحتاج أيضًا إلى غبار الذهب الحقيقي.",
   },
   "prep.tip.troopBatch": {
     en: "Keep a full batch of troops in training and don't complete it until Day {day}.",
