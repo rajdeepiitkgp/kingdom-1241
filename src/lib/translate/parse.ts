@@ -11,7 +11,8 @@ export function parseTranslationJson(text: string, keys: string[]): Record<strin
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    throw new Error(`Translation model returned invalid JSON: ${cleaned.slice(0, 200)}`);
+    // Only the length: the reply is translated content, which never goes into a log.
+    throw new Error(`Translation model returned invalid JSON (${cleaned.length} characters).`);
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("Translation model returned a non-object response.");

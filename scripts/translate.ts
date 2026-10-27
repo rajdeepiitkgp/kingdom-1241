@@ -27,7 +27,8 @@ async function main() {
       import("@/lib/translate/provider"),
     ]);
 
-  const dryRun = args["dry-run"] === true;
+  // Fail safe: `--dry-run=true` or `--dry-run 1` must not start a real, paid run.
+  const dryRun = "dry-run" in args && !["false", "0", "no"].includes(String(args["dry-run"]).toLowerCase());
   if (!dryRun && !provider.isTranslationConfigured()) {
     throw new Error(
       "Translation is off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY), or TRANSLATION_PROVIDER=anthropic|gemini (see SETUP.md).",
