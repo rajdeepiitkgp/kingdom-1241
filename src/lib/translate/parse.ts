@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 /**
  * Shared by every translation provider: turn the model's JSON reply into the
  * `{ fieldKey: translatedText }` map we asked for. Tolerant of code fences and

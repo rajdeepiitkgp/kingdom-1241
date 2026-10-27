@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
 import { GOVERNOR_TOKEN_MAX_AGE, parseMightPulsePlayer, signGovernor, verifyGovernor } from "@/lib/retro/governor";
 

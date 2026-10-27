@@ -2,7 +2,7 @@
 
 Community website for **Kingshot Kingdom 1241** — rules, announcements, event times in every player's time zone, guides and tools, in ten languages (English, German, Korean, Polish, Arabic, Turkish, Italian, Japanese, Traditional Chinese, French — more are a table row away). Modelled on 1424.win, hosted for free.
 
-**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the public **KvK prep days** page (what to use, wait for or save on each of the five scoring days, with a live countdown), the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks), the separate password-locked **rally-leader plan** (who leads which rally with which of their own heroes and troop ratio), the third password-locked page, the **commander checklist** (what to prepare by phase, ticked off on the commander's device, the battle commander's orders and general guidelines), the **battle feedback** form players fill in after each battle (star ratings and short texts, Governor ID checked through MightPulse, results, CSV export and an on-demand AI summary for the council, deleted automatically after 30 days) and the **admin area** (Discord sign-in, roles, battle-plan editor, feedback results, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
+**Live today:** site layout, ten languages, Home (with the real alliances of 1241), Events, Rules, Guides, Tools, the public **KvK prep days** page (what to use, wait for or save on each of the five scoring days, with a live countdown), the password-locked **KvK battle plan** (formations with hero portraits and troop ratios, coordinators, instructions — for both the internal castle battle and KvK, which alternate every two weeks), the separate password-locked **rally-leader plan** (who leads which rally with which of their own heroes and troop ratio), the third password-locked page, the **commander checklist** (what to prepare by phase, ticked off on the commander's device, the battle commander's orders and general guidelines), **Rally Sync** (rooms where rally leaders get their own UTC start time so every rally or counter-rally lands at the same second, with live updates, a clock correction and a countdown that turns red in the last 15 seconds), the **battle feedback** form players fill in after each battle (star ratings and short texts, Governor ID checked through MightPulse, results, CSV export and an on-demand AI summary for the council, deleted automatically after 30 days) and the **admin area** (Discord sign-in, roles, battle-plan editor, feedback results, per-language translation fixes). What comes next is in [docs/PLAN.md](docs/PLAN.md) § Phases, the one place where the roadmap lives.
 
 ## Stack
 
@@ -25,11 +25,12 @@ npm run dev
 
 ```
 src/
-  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/prep, /kvk/feedback, /kvk/leaders, /kvk/checklist, /tools
-  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results + CSV export, users; English only
+  app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/prep, /kvk/feedback, /kvk/leaders, /kvk/checklist, /tools, /tools/rally-sync, /tools/rally-sync/[code]
+  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results + CSV export, Rally Sync rooms, users; English only
   app/auth/callback       finishes the Discord sign-in (code → session cookies)
   app/api/translate       Supabase webhook → translation provider → writes translations back, refreshes cache
   app/api/revalidate      manual cache refresh
+  app/api/rally-sync      a Rally Sync room's state for visitors who unlocked it (+ the server clock)
   proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id; refreshes the admin session
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar)
@@ -38,6 +39,7 @@ src/
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers, the prep-week schedule and item × day table (`prep.ts`)
+  lib/rally-sync/         Rally Sync: timing maths and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds
   lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
@@ -55,7 +57,7 @@ scripts/
   translate.ts            npm run translate
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
-  prune.ts                npm run prune (deletes battle feedback past its retention period, SETUP.md § 9a)
+  prune.ts                npm run prune (deletes battle feedback past its retention period and closed Rally Sync rooms, SETUP.md § 9a/9b)
 .github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push); dependabot.yml for updates
 ```
 
@@ -75,6 +77,10 @@ scripts/
 
 `/kvk/prep` is public: the KvK preparation week, which repeats every four weeks (Day 0 on Sunday, Days 1–4 Monday to Thursday 00:00–24:00 UTC, Day 5 from Friday 00:00 UTC until the invasion on Saturday 10:00 UTC, shields up 10:00–22:00 UTC around the 12:00–17:00 UTC castle battle). Prep proper starts on Monday; Sunday is the get-ready day. The page shows a live status card, one tab per day with its own countdown, each day's ✅ use / 🆗 also counts lists with the points per item, ⚠ get-ready items, the council's tips (intel stacking with Master Pan, bison skill, Alliance RSS node, gathering speed boost, War Academy research, shield and home coordinates), the item × day table and the "save these for KvK" list. The schedule, the table, the points (the council's sheet, checked against kingshotdata.com) and the tips are fixed in `src/lib/kvk/prep.ts` and the `prep.*` interface strings; a change is a PR. The page and the Home card are static and the client picks today and fills the countdowns. Item pictures are 128px WebP files in `public/items/` (downloaded once, rendered `unoptimized` like the hero portraits); items without one keep their emoji.
 
+### Rally Sync
+
+`/tools/rally-sync` coordinates rally leaders so their rallies land at the same second (start = hit − rally timer − march). Moderators create rooms in the admin area (at most three open, ten leaders per room, fifteen in all); players open a room with its invite link or its ID and password, and leaders add their name and march time. The coordinator (the creator's device or the coordinator link) sets the hit time with one-tap *Re-sync*, a UTC time or, in counter-rally mode, the enemy's arrival plus an offset. Tables `rally_sync_rooms` and `rally_sync_leaders` (migration 0012) have no policies; the database enforces the limits and broadcasts a content-free ping on a per-room Realtime topic, and pages refetch through `/api/rally-sync/[code]`, which also gives them the server clock. Rooms close after 30 minutes with nobody on the page (pg_cron and `npm run prune` delete them). Details in SETUP.md § 9b.
+
 ### Logging
 
 Server code logs through `createLogger(scope)` (`src/lib/log.ts`): coloured lines in development, JSON lines in production that Vercel's log viewer parses. Route handlers, the unlock action and the admin actions tag every line with a `reqId`, which is also returned as the `x-request-id` header.
@@ -93,8 +99,8 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 | `npm run translate` | Translate missing/outdated content with the configured provider |
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
 | `npm run backup` | Encrypted dump of all content and admin tables; `-- --restore <file> --yes` writes it back (SETUP.md § 10) |
-| `npm run prune` | Delete battle feedback past its retention period (`-- --dry-run` to preview; SETUP.md § 9a) |
+| `npm run prune` | Delete battle feedback past its retention period and closed Rally Sync rooms (`-- --dry-run` to preview; SETUP.md § 9a, § 9b) |
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+All rights reserved. The code is public to read, but it is not open source and no license is granted: the code, its logic and its design may not be copied, reused or re-created (also not with AI tools) without written permission. Kingshot's names and images belong to the game's publisher. See [LICENSE](LICENSE).

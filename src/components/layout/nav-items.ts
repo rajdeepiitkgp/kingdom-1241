@@ -15,6 +15,8 @@ export interface NavChild {
   labelKey: UiKey;
   /** One short line under the label (who the page is for). */
   hintKey: UiKey;
+  /** A page of another section listed here too (it highlights under its own section). */
+  shortcut?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -32,6 +34,8 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/kvk", labelKey: "kvk.tab.plan", hintKey: "kvk.menu.planHint" },
       { href: "/kvk/leaders", labelKey: "kvk.menu.leaders", hintKey: "kvk.menu.leadersHint" },
       { href: "/kvk/checklist", labelKey: "kvk.menu.checklist", hintKey: "kvk.menu.checklistHint" },
+      // Lives under Tools (it works for any rally, not only KvK); listed here because leaders look for it on battle day.
+      { href: "/tools/rally-sync", labelKey: "kvk.menu.rallySync", hintKey: "kvk.menu.rallySyncHint", shortcut: true },
     ],
   },
   { href: "/tools", labelKey: "nav.tools", icon: "tools" },

@@ -59,6 +59,8 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
 /** Tables that exist but hold nothing worth keeping (a test checks every other table is listed above). */
 export const NOT_BACKED_UP: readonly string[] = [
   "kvk_unlock_throttle", // wrong-password counters, pruned after two days
+  "rally_sync_rooms", // Rally Sync rooms live at most a day
+  "rally_sync_leaders", // their leaders, deleted with the room
 ];
 
 export type Row = Record<string, unknown>;

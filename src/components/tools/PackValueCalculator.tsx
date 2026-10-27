@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 "use client";
 
 import clsx from "clsx";
@@ -208,7 +209,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
         <div className="space-y-3">
           <div className={clsx("rounded-3xl p-5 text-center", RATING_STYLE[result.rating])}>
             <p className="text-xs font-bold tracking-wider uppercase opacity-80">{dict["tools.pack.valuePercent"]}</p>
-            <p className="mt-1 text-5xl leading-none font-black tabular">{hasLines ? `${pf.format(result.valuePercent)}%` : "—"}</p>
+            <p className="mt-1 text-5xl/none font-black tabular">{hasLines ? `${pf.format(result.valuePercent)}%` : "—"}</p>
             <p className="mt-2 text-sm font-extrabold">{hasLines ? dict[`tools.pack.rating.${result.rating}`] : dict["tools.pack.empty"]}</p>
           </div>
 

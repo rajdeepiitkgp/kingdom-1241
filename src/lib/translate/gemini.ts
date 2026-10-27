@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { GoogleGenAI, Type } from "@google/genai";
 import { parseTranslationJson } from "./parse";
 import { buildPrompt, SYSTEM_INSTRUCTION, type TranslateFieldsOptions } from "./provider";
