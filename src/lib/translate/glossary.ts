@@ -219,7 +219,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Alliance RSS node",
     translations: { de: "Allianz-Ressourcenfeld", pl: "Węzeł surowców sojuszu", ko: "연맹 자원지", ar: "عقدة موارد التحالف" },
-    note: "A protected resource tile the alliance places (one resource type per day): nobody can attack marches gathering there, and they gather up to full capacity.",
+    note: "A protected resource tile the alliance places (one resource type per day): nobody can attack marches gathering there, they gather up to full capacity, and players recall them before the 00:00 UTC reset to get the rewards.",
   },
   {
     term: "Invasion",

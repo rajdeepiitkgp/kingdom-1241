@@ -631,11 +631,11 @@ export const UI_STRINGS = {
   },
   "prep.tip.bisonSave": { en: "Save your bison skill for Day {day}.", de: "Spare den Bison-Skill für Tag {day} auf.", ko: "들소 스킬은 {day}일차를 위해 아껴두세요.", pl: "Zachowaj umiejętność bizona na dzień {day}.", ar: "احتفظ بمهارة البيسون ليوم {day}." },
   "prep.tip.allianceNode": {
-    en: "Gather as much as you can on the Alliance RSS node: it's protected, so nobody can attack your marches there, and you can gather up to your full capacity.",
-    de: "Sammle so viel wie möglich am Allianz-Ressourcenfeld: Es ist geschützt, niemand kann deine Truppen dort angreifen, und du sammelst bis zu deiner vollen Kapazität.",
-    ko: "연맹 자원지에서 최대한 채집하세요: 보호 구역이라 아무도 부대를 공격할 수 없고, 채집 한도까지 모두 채집할 수 있습니다.",
-    pl: "Zbieraj jak najwięcej w węźle surowców sojuszu: jest chroniony, nikt nie zaatakuje tam twoich oddziałów, a zbierasz do pełnej pojemności.",
-    ar: "اجمع أكبر قدر ممكن في عقدة موارد التحالف: إنها محمية فلا يستطيع أحد مهاجمة قواتك هناك، ويمكنك الجمع حتى سعتك الكاملة.",
+    en: "Gather as much as you can on the Alliance RSS node: it's protected, so nobody can attack your marches there, and you gather up to your full capacity. Always recall your marches from it before the 00:00 UTC reset, so you get the gathering rewards.",
+    de: "Sammle so viel wie möglich am Allianz-Ressourcenfeld: Es ist geschützt, niemand kann deine Truppen dort angreifen, und du sammelst bis zu deiner vollen Kapazität. Ruf deine Truppen immer vor dem Reset um 00:00 UTC zurück, damit du die Sammelbelohnungen bekommst.",
+    ko: "연맹 자원지에서 최대한 채집하세요: 보호 구역이라 아무도 부대를 공격할 수 없고, 채집 한도까지 모두 채집할 수 있습니다. 채집 보상을 받으려면 00:00 UTC 초기화 전에 항상 부대를 소환하세요.",
+    pl: "Zbieraj jak najwięcej w węźle surowców sojuszu: jest chroniony, nikt nie zaatakuje tam twoich oddziałów, a zbierasz do pełnej pojemności. Zawsze odwołaj oddziały przed resetem o 00:00 UTC, aby dostać nagrody za zbieranie.",
+    ar: "اجمع أكبر قدر ممكن في عقدة موارد التحالف: إنها محمية فلا يستطيع أحد مهاجمة قواتك هناك، ويمكنك الجمع حتى سعتك الكاملة. استدعِ قواتك منها دائمًا قبل إعادة التعيين عند 00:00 UTC لتحصل على مكافآت الجمع.",
   },
   "prep.tip.gatherEarly": {
     en: "Send out your gatherers 7 hours before the reset, so they finish after it.",
