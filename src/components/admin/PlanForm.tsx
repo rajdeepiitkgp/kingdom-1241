@@ -23,7 +23,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
     startSubmit(() => action(data));
   };
   const errors = state.errors ?? {};
-  // "Standard window": fills 12:00–19:00 UTC on the chosen day (or the next one); both stay editable.
+  // "Standard window": fills 12:00–17:00 UTC on the chosen day (or the next one); both stay editable.
   const [windowFill, setWindowFill] = useState<{ start: { value: string; key: number }; end: { value: string; key: number } } | null>(null);
   const fillStandardWindow = (event: React.MouseEvent<HTMLButtonElement>) => {
     const typed = (event.currentTarget.form?.elements.namedItem("battleAt") as HTMLInputElement | null)?.value ?? "";

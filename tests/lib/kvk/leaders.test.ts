@@ -82,7 +82,8 @@ describe("pets boost", () => {
     expect(petsWindow(null, 0)).toBeNull();
   });
   it("must start early enough to end inside the battle", () => {
-    expect(latestPetsOffset(420)).toBe(300); // 12:00–19:00 → last activation at 17:00
+    expect(latestPetsOffset(420)).toBe(300); // a 7-hour battle → last activation 5 h in
+    expect(latestPetsOffset(300)).toBe(180); // the standard 12:00–17:00 → last activation at 15:00
     expect(latestPetsOffset(60)).toBe(0);
   });
 });
