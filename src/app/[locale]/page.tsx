@@ -6,6 +6,7 @@ import { AllianceGrid } from "@/components/home/AllianceGrid";
 import { Announcements } from "@/components/home/Announcements";
 import { GiftCodes } from "@/components/home/GiftCodes";
 import { KvkCard } from "@/components/home/KvkCard";
+import { PrepCard } from "@/components/home/PrepCard";
 import { ServerClock } from "@/components/time/ServerClock";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getAlliances, getAnnouncements, getEvents, getGiftCodes, getSettings } from "@/lib/data";
@@ -61,8 +62,9 @@ export default async function HomePage() {
         <ServerClock dict={dict} locale={locale} resetHourUtc={settings.dailyResetUtcHour} />
       </section>
 
-      {/* KvK battle plan (locked) */}
-      <section aria-label={dict["home.kvkCard.title"]}>
+      {/* KvK prep days (public) and battle plan (locked) */}
+      <section aria-label={dict["home.kvkCard.title"]} className="grid grid-cols-1 gap-4">
+        <PrepCard dict={dict} locale={locale} />
         <KvkCard dict={dict} locale={locale} />
       </section>
 
