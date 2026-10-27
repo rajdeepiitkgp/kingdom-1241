@@ -16,7 +16,7 @@ export function AnalyseButton({ planId, locale, label, hint, disabledReason }: {
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn-primary btn-sm" disabled={pending || disabledReason !== null} aria-busy={pending}>
           {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <Sparkles className="size-4" aria-hidden />}
-          {pending ? "Analysing… this can take a minute" : label}
+          <span>{pending ? "Analysing… this can take a minute" : label}</span>
         </button>
         <span className="text-xs font-semibold text-ink-faint">{disabledReason ?? hint}</span>
       </div>
