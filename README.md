@@ -39,7 +39,7 @@ src/
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/i18n/               language registry (direction, font), fallback helper, negotiation
   lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers, the prep-week schedule and item × day table (`prep.ts`)
-  lib/rally-sync/         Rally Sync: timing maths, garrison refills and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds
+  lib/rally-sync/         Rally Sync: timing maths, garrison refills, the counter-rally order, game-chat texts and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds
   lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
