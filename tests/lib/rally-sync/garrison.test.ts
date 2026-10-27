@@ -8,6 +8,7 @@ import {
   EMPTY_GARRISON,
   type EnemyLeader,
   type EnemyRally,
+  focusSteps,
   type GarrisonState,
   launchFromTap,
   markRally,
@@ -150,6 +151,33 @@ describe("a player's plan", () => {
     expect(refillStage(step, at("12:10:19.5"))).toBe("boost");
     expect(refillStage(step, at("12:10:25"))).toBe("marching");
     expect(refillStage(step, at("12:10:29"))).toBe("done");
+  });
+
+  it("shows sends at most 5 s apart big together, and moves on one by one when they are further apart", () => {
+    // The owner's test wave: hits at :26, :36, :39 and :41, a 24 s march, 2 s between sends: sends at 10:05, 10:13 and 10:16.
+    const spread = planRefills(refillWindows([at("12:10:26"), at("12:10:36"), at("12:10:39"), at("12:10:41")]), 24, 2);
+    expect(spread.map((s) => (s.kind === "send" ? s.sendAt : null))).toEqual([at("12:10:05"), at("12:10:13"), at("12:10:16")]);
+    expect(focusSteps(spread, at("12:10:00"))).toEqual([0]);
+    expect(focusSteps(spread, at("12:10:05.5"))).toEqual([0]); // the send second
+    expect(focusSteps(spread, at("12:10:06"))).toEqual([1, 2]); // refill 1 is on its way
+    // Refill 2 stays big after its send until the burst is over: nothing changes size mid-burst.
+    expect(focusSteps(spread, at("12:10:14"))).toEqual([1, 2]);
+    expect(focusSteps(spread, at("12:10:17"))).toEqual([]); // all on their way
+    expect(focusSteps([], at("12:10:00"))).toEqual([]);
+  });
+
+  it("counts speedups as taps of the burst they fall in", () => {
+    // Sends 5 s apart (one burst), then refill 2's speedup at 10:19 on its own.
+    const steps = planRefills(windows, 31, 5);
+    expect(focusSteps(steps, at("12:09:50"))).toEqual([0, 1]);
+    expect(focusSteps(steps, at("12:10:10"))).toEqual([1]);
+    expect(focusSteps(steps, at("12:10:20"))).toEqual([]);
+    // Sends at 9:55, 10:00 and 10:05, then speedups at 10:16 (refill 3) and 10:19 (refill 2): two bursts.
+    const three = planRefills(refillWindows([at("12:10:25"), at("12:10:27"), at("12:10:30"), at("12:10:33")]), 31, 5);
+    expect(three.map((s) => (s.kind === "send" ? s.speedupAt : null))).toEqual([null, at("12:10:19"), at("12:10:16")]);
+    expect(focusSteps(three, at("12:10:01"))).toEqual([0, 1, 2]);
+    expect(focusSteps(three, at("12:10:10"))).toEqual([1, 2]);
+    expect(focusSteps(three, at("12:10:17"))).toEqual([1, 2]);
   });
 
   it("beeps for every send and speedup, with one chime 30 s before the first", () => {

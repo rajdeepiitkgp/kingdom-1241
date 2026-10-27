@@ -265,6 +265,32 @@ export function refillStage(step: Extract<RefillStep, { kind: "send" }>, now: nu
   return now < step.window.target + SECOND ? "marching" : "done";
 }
 
+/**
+ * Taps (sends and speedups) at most this far apart are one burst, shown big
+ * together: a card that grew at the previous tap would leave too little time to
+ * read it (the beeps for the next tap start 3 s before it).
+ */
+export const TOGETHER_SECONDS = 5;
+
+/**
+ * The steps a player's page shows big: the burst around their next tap. Bursts
+ * come from the plan, not the moment, so no card changes size in the middle of
+ * one: a card stays big after its send until the burst is over, then the next
+ * burst takes over. Empty once every refill is on its way.
+ */
+export function focusSteps(steps: readonly RefillStep[], now: number): number[] {
+  const taps = steps
+    .flatMap((step, index) => (step.kind === "send" ? [step.sendAt, ...(step.speedupAt === null ? [] : [step.speedupAt])].map((at) => ({ at, index })) : []))
+    .sort((a, b) => a.at - b.at || a.index - b.index);
+  const next = taps.findIndex((tap) => secondsUntil(tap.at, now) >= 0); // still ahead, or this second
+  if (next === -1) return [];
+  const close = (i: number) => taps[i + 1].at - taps[i].at <= TOGETHER_SECONDS * SECOND;
+  let [first, last] = [next, next];
+  while (first > 0 && close(first - 1)) first--;
+  while (last < taps.length - 1 && close(last)) last++;
+  return [...new Set(taps.slice(first, last + 1).map((tap) => tap.index))].sort((a, b) => a - b);
+}
+
 /** A hit of this window moved in the last UPDATED_FLAG_SECONDS (the coordinator corrected a rally): the page says so. */
 export function windowUpdated(window: RefillWindow, rallies: readonly EnemyRally[], now: number): boolean {
   return rallies.some((r) => {

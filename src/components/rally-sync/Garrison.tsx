@@ -12,6 +12,7 @@ import {
   currentWave,
   type EnemyLeader,
   type EnemyRally,
+  focusSteps,
   hasLaunched,
   LAUNCH_CHIPS,
   MAX_SEND_SPACING_SECONDS,
@@ -76,8 +77,8 @@ export function GarrisonBoard({ plan, now, clock, dict }: { plan: PlayerPlan | n
   const device = useDevice();
   const march = device.garrison.marchSeconds;
   const hits = plan ? plan.wave.map(rallyHit) : [];
-  // The refill that is up next gets the big card; the ones after it wait smaller below.
-  const current = plan && now !== null ? plan.steps.findIndex((s) => s.kind === "send" && refillStage(s, now) !== "done") : -1;
+  // The refills of the next burst of taps get big cards; the others wait small (focusSteps).
+  const focus = plan && now !== null ? focusSteps(plan.steps, now) : [];
 
   return (
     <div className="space-y-3">
@@ -92,7 +93,7 @@ export function GarrisonBoard({ plan, now, clock, dict }: { plan: PlayerPlan | n
             <ol className="grid grid-cols-1 gap-3">
               {plan.steps.map((step, index) => (
                 <li key={step.number}>
-                  <RefillCard step={step} plan={plan} march={march} big={index === current} now={now} clock={clock} dict={dict} />
+                  <RefillCard step={step} plan={plan} march={march} big={focus.includes(index)} now={now} clock={clock} dict={dict} />
                 </li>
               ))}
             </ol>
@@ -208,7 +209,7 @@ function MarchSettings({ dict }: { dict: Dictionary }) {
 function RefillCard({ step, plan, march, big, now, clock, dict }: { step: RefillStep; plan: PlayerPlan; march: number; big: boolean; now: number | null; clock: Clock; dict: Dictionary }) {
   const updated = now !== null && windowUpdated(step.window, plan.wave, now);
   const header = (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+    <div className={clsx("flex flex-wrap items-center gap-x-3 gap-y-1", big ? "justify-center" : "justify-between")}>
       <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">
         <Phrase template={dict["sync.gar.refill"]} values={{ n: step.number, time: shown(step.window.target) }} />
       </p>
@@ -532,8 +533,8 @@ function CopyForChat({ text, dict }: { text: string; dict: Dictionary }) {
 /**
  * One enemy leader: waiting (one big "Rally started" button), picking the
  * countdown, marked (launches in, ±1 s, re-time, until it launches) or
- * launched (lands at, and "correct landing time" read off the incoming
- * march). `enemy` is null for a rally whose leader left the list.
+ * launched (lands in / lands at, and "correct landing time" read off the
+ * incoming march). `enemy` is null for a rally whose leader left the list.
  */
 function EnemyCard({
   enemy,
@@ -677,15 +678,19 @@ function EnemyCard({
     );
   }
 
-  if (stage === "launched" && rally && hit !== null) {
+  if (stage === "launched" && rally && hit !== null && now !== null) {
+    // Ticks like the game's "lands in", so a second or two off shows at a glance (then: correct landing time).
     return (
       <section className="rounded-card border-2 border-danger/50 bg-card px-4 py-3">
         {header}
         <p className="mt-2 flex flex-wrap items-center gap-2">
           <span className="chip bg-danger-soft text-danger">{dict["sync.gar.launched"]}</span>
           <span className="text-xl font-black text-ink">
-            <Phrase template={dict["sync.gar.lands"]} values={{ time: `${shown(hit)} ${clock.label}` }} />
+            <Phrase template={dict["sync.gar.landsInTime"]} values={{ time: formatSeconds(secondsUntil(hit, now)) }} />
           </span>
+        </p>
+        <p className="text-sm font-bold text-ink-muted">
+          <Phrase template={dict["sync.gar.lands"]} values={{ time: `${shown(hit)} ${clock.label}` }} />
         </p>
         {correcting && (
           <div className="mt-3">

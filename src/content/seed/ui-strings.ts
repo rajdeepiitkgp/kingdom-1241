@@ -902,6 +902,7 @@ export const UI_STRINGS = {
   },
   "sync.gar.now": { en: "Now", de: "Jetzt", ko: "지금", pl: "Teraz", ar: "الآن" },
   "sync.gar.launchesIn": { en: "Launches in {time}", de: "Startet in {time}", ko: "{time} 후 출발", pl: "Wyrusza za {time}", ar: "ينطلق بعد {time}" },
+  "sync.gar.landsInTime": { en: "Lands in {time}", de: "Trifft in {time}", ko: "{time} 후 도착", pl: "Uderza za {time}", ar: "يضرب بعد {time}" },
   "sync.gar.launched": { en: "Launched", de: "Gestartet", ko: "출발함", pl: "Wyruszył", ar: "انطلق" },
   "sync.gar.lands": { en: "Lands {time}", de: "Trifft {time}", ko: "도착 {time}", pl: "Uderza {time}", ar: "يضرب {time}" },
   "sync.gar.windows": { en: "Refill windows", de: "Auffüll-Fenster", ko: "보충 시점", pl: "Okna uzupełnień", ar: "نوافذ التعزيز" },
