@@ -2,13 +2,13 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, Copy, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { coordinate, type GarrisonOp } from "@/lib/rally-sync/actions";
+import { garrisonChat } from "@/lib/rally-sync/chat";
 import { updateDevice } from "@/lib/rally-sync/device";
 import {
-  chatSummary,
   currentWave,
   type EnemyLeader,
   type EnemyRally,
@@ -28,6 +28,7 @@ import {
 } from "@/lib/rally-sync/garrison";
 import { NAME_MAX, type RoomView } from "@/lib/rally-sync/room";
 import { formatSeconds, MAX_MARCH_SECONDS, parseDuration, secondsUntil } from "@/lib/rally-sync/timing";
+import { CopyForChat } from "./CopyForChat";
 import { useDevice, useRunner } from "./hooks";
 import { type Clock, shown } from "./LeaderCards";
 import { ErrorLine } from "./LeaderForm";
@@ -432,7 +433,7 @@ export function GarrisonControls({
         {wave.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="w-full text-xs text-ink-faint">{format(dict["sync.gar.waveLine"], { n: wave.length, s: WAVE_CLEAR_SECONDS })}</p>
-            <CopyForChat text={chatText(wave, clock, dict)} dict={dict} />
+            <CopyForChat text={garrisonChat(wave, clock.label, dict)} dict={dict} />
             <button
               type="button"
               className={clsx("btn-sm ms-auto", clear.armed ? "btn-primary bg-danger" : "btn-ghost text-danger")}
@@ -481,52 +482,6 @@ export function GarrisonControls({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * The summary for the game chat, in the coordinator's language, one short line
- * each (game chat is narrow): the hits with their leaders, then where our
- * refills land (players without the page work out their own send time).
- */
-function chatText(wave: readonly EnemyRally[], clock: Clock, dict: Dictionary): string {
-  const { hits, windows } = chatSummary(wave);
-  const lines = [format(dict["sync.gar.chatHits"], { clock: clock.label }), ...hits.map((h) => `${h.name} ${shown(h.at)}`)];
-  // A blank line between the enemy hits and our refills.
-  if (windows.length > 0) lines.push("", format(dict["sync.gar.chatWindows"], { clock: clock.label }), ...windows.map(shown), dict["sync.gar.chatSend"]);
-  else if (hits.length > 1) lines.push("", dict["sync.gar.chatNoGap"]);
-  return lines.join("\n");
-}
-
-/** Copies the chat summary; if the browser blocks the clipboard, the text appears to copy by hand. */
-function CopyForChat({ text, dict }: { text: string; dict: Dictionary }) {
-  const [copied, setCopied] = useState(false);
-  const [blocked, setBlocked] = useState(false);
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setBlocked(false);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setBlocked(true);
-    }
-  }
-  return (
-    <>
-      <button type="button" className="btn-ghost btn-sm" onClick={() => void copy()}>
-        {copied ? <Check className="size-4 text-success" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-        {copied ? dict["common.copied"] : dict["sync.gar.copy"]}
-      </button>
-      {blocked && (
-        <div className="w-full">
-          <p className="text-xs font-bold text-ink-muted">{dict["sync.gar.copyByHand"]}</p>
-          <p className="mt-1 rounded-lg bg-card px-3 py-2 text-sm whitespace-pre-line text-ink select-all" dir="auto">
-            {text}
-          </p>
-        </div>
-      )}
-    </>
   );
 }
 

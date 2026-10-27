@@ -92,4 +92,11 @@ describe("rally sync limits (in-memory store, same rules as the database trigger
     expect(demo?.garrison.enemies.map((e) => e.marchSeconds)).toEqual([42, 38, 45]);
     expect(await store.leaders(demo?.id ?? "")).toEqual([]);
   });
+
+  it("has a demo counter-rally room with placeholder leaders", async () => {
+    const store = memoryStore();
+    const demo = await store.roomByCode("CNTR22");
+    expect(demo).toMatchObject({ mode: "counter", hitAt: null });
+    expect((await store.leaders(demo?.id ?? "")).map((l) => l.marchSeconds).sort()).toEqual([40, 45, 52]);
+  });
 });

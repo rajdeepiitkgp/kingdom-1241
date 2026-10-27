@@ -112,12 +112,17 @@ describe("rally sync rooms", () => {
     expect(parseSettings({ mode: "rally", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 11 }).ok).toBe(false);
     expect(parseSettings({ mode: "defend", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(false);
     expect(parseSettings({ mode: "garrison", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 }).ok).toBe(true);
+    // No form sends the offset any more: it keeps its default.
+    expect(parseSettings({ mode: "counter", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: "" })).toEqual({
+      ok: true,
+      value: { mode: "counter", rallyWaitSeconds: 300, bufferSeconds: 0, counterOffsetSeconds: 3 },
+    });
   });
 
-  it("switches a rally room between rally and counter-rally, never into or out of garrison", () => {
-    expect(canSwitchMode("rally", "counter")).toBe(true);
-    expect(canSwitchMode("counter", "rally")).toBe(true);
-    expect(canSwitchMode("garrison", "garrison")).toBe(true);
+  it("keeps a room what it was created as: rally, counter-rally and garrison are run by different players", () => {
+    for (const mode of ["rally", "counter", "garrison"] as const) expect(canSwitchMode(mode, mode)).toBe(true);
+    expect(canSwitchMode("rally", "counter")).toBe(false);
+    expect(canSwitchMode("counter", "rally")).toBe(false);
     expect(canSwitchMode("rally", "garrison")).toBe(false);
     expect(canSwitchMode("garrison", "counter")).toBe(false);
   });

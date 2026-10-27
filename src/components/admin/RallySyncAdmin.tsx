@@ -17,9 +17,9 @@ import { Field, Notice } from "./ui";
 import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
 const MODE_LABELS: Record<RoomMode, string> = {
-  rally: "Rally (we attack)",
-  counter: "Counter-rally (land right after the enemy)",
-  garrison: "Garrison refill (defend: refills land between enemy hits; fixed for this room)",
+  rally: "Rally (we attack: every rally lands in the same second)",
+  counter: "Counter-rally (launch order for the counter alliance, slowest march first)",
+  garrison: "Garrison refill (defend: refills land between enemy hits)",
 };
 const MODE_CHIPS: Record<RoomMode, string> = { rally: "Rally", counter: "Counter-rally", garrison: "Garrison" };
 
@@ -67,7 +67,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
           mode,
           rallyWaitSeconds: parseDuration(String(formData.get("rallyWait") ?? "")) ?? data.lastSettings.rallyWaitSeconds,
           bufferSeconds: Number(formData.get("buffer")) || 0,
-          counterOffsetSeconds: Number(formData.get("offset")) || 0,
+          counterOffsetSeconds: data.lastSettings.counterOffsetSeconds,
         },
       }));
     }
@@ -78,7 +78,9 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
   return (
     <section className="card p-5">
       <h2 className="text-lg font-extrabold text-ink">New room</h2>
-      <p className="mt-1 mb-4 text-sm text-ink-muted">The settings can be changed in the room later. This device remembers them for the next room.</p>
+      <p className="mt-1 mb-4 text-sm text-ink-muted">
+        The mode is fixed for the room (rally, counter-rally and garrison are run by different players); the timer and buffer can be changed in the room later. This device remembers them for the next room.
+      </p>
       <form action={formAction} key={JSON.stringify(last)} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -97,7 +99,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
               suggestLabel="Suggest" suggestHint="Fill in a random six-digit code"
             />
           </Field>
-          <Field label="Mode" htmlFor="rs-mode">
+          <Field label="Mode (fixed for this room)" htmlFor="rs-mode">
             <select id="rs-mode" name="mode" className="input select-chevron" defaultValue={last.mode}>
               {ROOM_MODES.map((mode) => (
                 <option key={mode} value={mode}>
@@ -106,14 +108,11 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
               ))}
             </select>
           </Field>
-          <Field label="Rally timer (minutes:seconds)" htmlFor="rs-wait" error={errors.rallyWait} hint="The in-game rally wait, usually 5:00.">
+          <Field label="Rally timer (minutes:seconds)" htmlFor="rs-wait" error={errors.rallyWait} hint="The in-game rally wait, usually 5:00. Counter-rally: the timer every counter leader uses (their cues count down from it).">
             <input id="rs-wait" name="rallyWait" className="input" defaultValue={formatSeconds(last.rallyWaitSeconds)} autoComplete="off" />
           </Field>
-          <Field label="Buffer for Re-sync (seconds)" htmlFor="rs-buffer" error={errors.buffer} hint="How long the leader with the longest march has to get ready before starting: Re-sync sets the hit to now + rally timer + longest march + buffer. 0 is allowed.">
+          <Field label="Buffer for Re-sync (seconds, rally rooms)" htmlFor="rs-buffer" error={errors.buffer} hint="How long the leader with the longest march has to get ready before starting: Re-sync sets the hit to now + rally timer + longest march + buffer. 0 is allowed.">
             <input id="rs-buffer" name="buffer" className="input" inputMode="numeric" defaultValue={last.bufferSeconds} autoComplete="off" />
-          </Field>
-          <Field label="Counter-rally offset (seconds after the enemy)" htmlFor="rs-offset" error={errors.offset} hint="0 to 10, usually 3.">
-            <input id="rs-offset" name="offset" className="input" inputMode="numeric" defaultValue={last.counterOffsetSeconds} autoComplete="off" />
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-3">

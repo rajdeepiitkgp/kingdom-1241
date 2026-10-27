@@ -63,12 +63,10 @@ export async function createRallyRoom(_previous: CreateRoomState, formData: Form
     mode: textField(formData, "mode"),
     rallyWaitSeconds: rallyWait ?? NaN,
     bufferSeconds: textField(formData, "buffer"),
-    counterOffsetSeconds: textField(formData, "offset"),
   });
   if (!settings.ok) {
     if (rallyWait === null || rallyWait < 10 || rallyWait > 3600) errors.rallyWait = "Minutes:seconds between 0:10 and 60:00, e.g. 5:00.";
     if (!/^\d+$/.test(textField(formData, "buffer")) || Number(textField(formData, "buffer")) > 600) errors.buffer = "0 to 600 seconds.";
-    if (!/^\d+$/.test(textField(formData, "offset")) || Number(textField(formData, "offset")) > 10) errors.offset = "0 to 10 seconds.";
   }
   if (!title.ok || !password.ok || !settings.ok) return invalid(errors);
 

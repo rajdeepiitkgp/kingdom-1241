@@ -19,13 +19,16 @@ import type { GarrisonState } from "./garrison";
  * has it on screen and is never older than a day.
  */
 
-/** "garrison" rooms time refills between enemy hits (garrison.ts) and are chosen when the room is created. */
+/**
+ * What a room is for, chosen when it is created: "rally" times our attack (start = hit − rally timer − march),
+ * "counter" gives the counter alliance its launch order (counter.ts), "garrison" times refills between enemy
+ * hits (garrison.ts). Each is run by different players, so a room never changes what it is.
+ */
 export type RoomMode = "rally" | "counter" | "garrison";
 export const ROOM_MODES: readonly RoomMode[] = ["rally", "counter", "garrison"];
 
-/** A rally room switches between rally and counter-rally; a garrison room stays one (its page is a different tool). */
 export function canSwitchMode(from: RoomMode, to: RoomMode): boolean {
-  return from === to || (from !== "garrison" && to !== "garrison");
+  return from === to;
 }
 
 /** No 0/O and no 1/I/L, so a code read out in voice chat can't be mistyped. */
@@ -343,7 +346,8 @@ export function parseSettings(input: { mode?: unknown; rallyWaitSeconds?: unknow
   const mode = ROOM_MODES.find((m) => m === input.mode);
   const wait = inRange(input.rallyWaitSeconds, MIN_RALLY_WAIT_SECONDS, MAX_RALLY_WAIT_SECONDS);
   const buffer = inRange(input.bufferSeconds, 0, MAX_BUFFER_SECONDS);
-  const offset = inRange(input.counterOffsetSeconds, 0, MAX_COUNTER_OFFSET_SECONDS);
+  // No form asks for the offset any more (counter rooms give a launch order); the column keeps its default.
+  const offset = input.counterOffsetSeconds === undefined || input.counterOffsetSeconds === "" ? DEFAULT_COUNTER_OFFSET_SECONDS : inRange(input.counterOffsetSeconds, 0, MAX_COUNTER_OFFSET_SECONDS);
   if (!mode || wait === null || buffer === null || offset === null) return { ok: false };
   return { ok: true, value: { mode, rallyWaitSeconds: wait, bufferSeconds: buffer, counterOffsetSeconds: offset } };
 }
