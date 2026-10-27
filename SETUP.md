@@ -52,7 +52,7 @@ openssl rand -hex 32    # run twice
 
 - First value → `TRANSLATE_WEBHOOK_SECRET` — protects `/api/translate` and `/api/revalidate`. Goes into Vercel, GitHub secrets and the webhook SQL (step 7).
 - Second value → `KVK_SESSION_SECRET` — signs the KvK access cookie. Optional: when unset the webhook secret is used.
-- `KVK_SEED_PASSWORD` (optional) — the password the seed script writes into the placeholder battle plan (default `1241`). The real password is set in the `kvk_plans` table (step 9).
+- `KVK_SEED_PASSWORD` (optional) — the password the seed script writes into the placeholder battle plan (default `1241`). The real password is set in the `kvk_plans` table (step 9). `KVK_SEED_LEADER_PASSWORD` (optional, default `1241-leaders`) does the same for the placeholder rally-leader page; change it under Admin → Battle plans → Rally leaders.
 
 ## 4. Run it locally
 
