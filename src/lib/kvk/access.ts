@@ -19,13 +19,14 @@ export const KVK_COOKIE = "kd1241_kvk";
  * The password-locked pages of a battle. Each has its own password, cookie and
  * throttle scope, so knowing one never opens another: `plan` is the battle plan
  * every player gets (its feedback form rides on the same cookie), `leaders` the
- * rally-leader plan.
+ * rally-leader plan, `checklist` the battle commander's checklist.
  */
-export type KvkArea = "plan" | "leaders";
+export type KvkArea = "plan" | "leaders" | "checklist";
 
 export const KVK_AREA_COOKIES: Record<KvkArea, string> = {
   plan: KVK_COOKIE,
   leaders: "kd1241_kvk_leaders",
+  checklist: "kd1241_kvk_checklist",
 };
 
 /** 30 days, long enough for one KvK cycle. */

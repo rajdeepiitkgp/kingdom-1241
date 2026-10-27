@@ -1,4 +1,4 @@
-import type { CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
+import type { ChecklistPhase, ChecklistSection, CoordinatorTeam, FormationRole, FormationSide, KvkEventType, KvkRuleKind, LeaderAudience } from "@/lib/data/types";
 
 /**
  * Seed battle plan for the password-locked KvK page.
@@ -145,6 +145,44 @@ export const SEED_LEADER_BRIEF: {
   ],
 };
 
+/**
+ * Seed commander checklist for the same placeholder plan: its own password
+ * (KVK_SEED_CHECKLIST_PASSWORD, default "1241-commander") and PLACEHOLDER
+ * tasks, orders and guidelines for the council to replace in the admin area.
+ */
+export const SEED_CHECKLIST: {
+  introMarkdown: string;
+  items: Array<{ phase: ChecklistPhase; text: string; note: string }>;
+  rules: Array<{ section: ChecklistSection; kind: KvkRuleKind; text: string }>;
+} = {
+  introMarkdown: `Battle commander and coordinators: work through the checklist below so nothing is forgotten before the battle starts. Ticks are kept on your own device.
+
+> Kingdom council: this is placeholder text. Write the commander's brief and the real checklist under Admin → Battle plans → Commander checklist.`,
+  // Generic placeholders for the council to replace with the kingdom's own steps.
+  items: [
+    { phase: "before", text: "Publish the battle plan and share its password with every player (placeholder).", note: "" },
+    { phase: "before", text: "Assign every rally on the rally-leader page and share the leaders' password with the rally leaders only (placeholder).", note: "" },
+    { phase: "before", text: "Confirm the battle time with the leaders of every alliance (placeholder).", note: "" },
+    { phase: "before", text: "Name a deputy who takes over if the commander drops out (placeholder).", note: "" },
+    { phase: "day", text: "Move the counter-rally players from [KvK] to [TMP] (placeholder).", note: "" },
+    { phase: "day", text: "Check that every rally leader is online and at their position (placeholder).", note: "" },
+    { phase: "day", text: "Check that every leader knows their march time (placeholder).", note: "" },
+    { phase: "day", text: "Post the start time in UTC in every alliance chat (placeholder).", note: "" },
+    { phase: "during", text: "Call each rally's start and watch the castle garrison (placeholder).", note: "" },
+    { phase: "during", text: "Remind each leader of their pets time (placeholder).", note: "" },
+    { phase: "after", text: "Open the battle feedback form and share the link (placeholder).", note: "" },
+    { phase: "after", text: "Note what to change for the next battle (placeholder).", note: "" },
+  ],
+  rules: [
+    { section: "commander", kind: "do", text: "Keep one voice on the calls: only the commander orders rallies to start or hold (placeholder)." },
+    { section: "commander", kind: "do", text: "Watch the garrison and order a refill before it runs low (placeholder)." },
+    { section: "commander", kind: "dont", text: "Don't change the plan in the last minutes without telling every rally leader (placeholder)." },
+    { section: "commander", kind: "info", text: "If the commander drops out, the deputy takes over the calls (placeholder)." },
+    { section: "general", kind: "do", text: "Give every time in UTC (server time) (placeholder)." },
+    { section: "general", kind: "dont", text: "Don't post any of the passwords in public chats; share each only with its own group (placeholder)." },
+  ],
+};
+
 /** Stable ids for the child rows, so re-seeding never duplicates them. */
 export const kvkRuleId = (index: number) => `d2000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 export const kvkCoordinatorId = (index: number) => `d3000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
@@ -152,6 +190,9 @@ export const kvkFormationId = (index: number) => `d4000000-0000-4000-8000-${Stri
 export const kvkLeaderBriefId = "d5000000-0000-4000-8000-000000000001";
 export const kvkLeaderRuleId = (index: number) => `d7000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 export const kvkRallyLeaderId = (index: number) => `d6000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+export const kvkChecklistBriefId = "d8000000-0000-4000-8000-000000000001";
+export const kvkChecklistItemId = (index: number) => `d9000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+export const kvkChecklistRuleId = (index: number) => `da000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 
 /** Password used when seeding / when Supabase isn't configured. Change it in the table! */
 export function seedKvkPassword(): string {
@@ -161,4 +202,9 @@ export function seedKvkPassword(): string {
 /** The rally-leader page's own seed password. Change it in the admin area! */
 export function seedLeaderPassword(): string {
   return process.env.KVK_SEED_LEADER_PASSWORD?.trim() || "1241-leaders";
+}
+
+/** The commander checklist's own seed password. Change it in the admin area! */
+export function seedChecklistPassword(): string {
+  return process.env.KVK_SEED_CHECKLIST_PASSWORD?.trim() || "1241-commander";
 }

@@ -26,7 +26,7 @@ async function main() {
     { settingsToRows },
     { createAdminClient },
     { sourceHash },
-    { kvkLeaderBriefId },
+    { kvkChecklistBriefId, kvkLeaderBriefId },
   ] = await Promise.all([
     import("@/content/seed"),
     import("@/lib/data/mappers"),
@@ -373,6 +373,46 @@ async function main() {
         published: r.published,
       })),
     );
+
+    // The commander checklist of the placeholder plan, with its own password.
+    const checklist = seed.kvkChecklistPlan;
+    await upsertMissing("kvk_checklist_briefs", "id", [
+      {
+        id: kvkChecklistBriefId,
+        plan_id: checklist.planId,
+        password: checklist.password,
+        intro: checklist.intro,
+        published: true,
+      },
+    ]);
+
+    await upsertMissing(
+      "kvk_checklist_items",
+      "id",
+      checklist.items.map((i) => ({
+        id: i.id,
+        plan_id: i.planId,
+        phase: i.phase,
+        text: i.text,
+        note: i.note,
+        sort_order: i.sortOrder,
+        published: i.published,
+      })),
+    );
+
+    await upsertMissing(
+      "kvk_checklist_rules",
+      "id",
+      checklist.rules.map((r) => ({
+        id: r.id,
+        plan_id: r.planId,
+        section: r.section,
+        kind: r.kind,
+        text: r.text,
+        sort_order: r.sortOrder,
+        published: r.published,
+      })),
+    );
   }
 
   console.log(summary.join("\n"));
@@ -384,6 +424,9 @@ async function main() {
   );
   console.log(
     'KvK: its rally-leader page uses KVK_SEED_LEADER_PASSWORD (default "1241-leaders") — change it under Admin → Battle plans → Rally leaders.',
+  );
+  console.log(
+    'KvK: its commander checklist uses KVK_SEED_CHECKLIST_PASSWORD (default "1241-commander") — change it under Admin → Battle plans → Commander checklist.',
   );
 }
 

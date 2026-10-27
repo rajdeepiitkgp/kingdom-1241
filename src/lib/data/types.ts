@@ -292,6 +292,59 @@ export interface KvkLeaderPlanWithSecret extends KvkLeaderPlan {
   password: string;
 }
 
+/** When a checklist item is due: before battle day, on battle day before the start, during, after the battle. */
+export type ChecklistPhase = "before" | "day" | "during" | "after";
+
+export interface KvkChecklistItem {
+  id: string;
+  planId: string;
+  phase: ChecklistPhase;
+  /** The task ("Share the battle-plan password on Discord"). */
+  text: Localized;
+  /** Optional detail: who, where, how. */
+  note: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+/** Where a line of the checklist page belongs: the battle commander's orders or the general guidelines. */
+export type ChecklistSection = "commander" | "general";
+
+export interface KvkChecklistRule {
+  id: string;
+  planId: string;
+  section: ChecklistSection;
+  kind: KvkRuleKind;
+  text: Localized;
+  sortOrder: number;
+  published: boolean;
+}
+
+/**
+ * The commander checklist of the active battle plan, behind its own password
+ * (kvk_checklist_briefs + kvk_checklist_items + kvk_checklist_rules).
+ */
+export interface KvkChecklistPlan {
+  /** The battle plan this page belongs to (the access cookie and the ticks are bound to it). */
+  planId: string;
+  slug: string;
+  eventType: KvkEventType;
+  title: Localized;
+  opponent: string | null;
+  battleAt: string | null;
+  battleEndAt: string | null;
+  /** Sanitised HTML: the commander's brief. */
+  intro: Localized;
+  updatedAt: string;
+  items: KvkChecklistItem[];
+  rules: KvkChecklistRule[];
+}
+
+/** The checklist page plus its password — server only, never passed to components. */
+export interface KvkChecklistPlanWithSecret extends KvkChecklistPlan {
+  password: string;
+}
+
 // ---------------------------------------------------------------------------
 // Battle retrospective (feedback form per battle plan)
 // ---------------------------------------------------------------------------

@@ -20,10 +20,11 @@ describe("isActivePath", () => {
 });
 
 describe("activeChildHref", () => {
-  const kvk = ["/kvk", "/kvk/leaders"];
+  const kvk = ["/kvk", "/kvk/leaders", "/kvk/checklist"];
   it("picks the most specific page of a dropdown", () => {
     expect(activeChildHref("/kvk", kvk)).toBe("/kvk");
     expect(activeChildHref("/kvk/leaders", kvk)).toBe("/kvk/leaders");
+    expect(activeChildHref("/kvk/checklist", kvk)).toBe("/kvk/checklist");
     // The feedback form belongs to the battle plan.
     expect(activeChildHref("/kvk/feedback", kvk)).toBe("/kvk");
     expect(activeChildHref("/events", kvk)).toBeNull();

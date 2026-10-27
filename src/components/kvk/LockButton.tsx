@@ -2,9 +2,9 @@
 
 import { LockKeyhole } from "lucide-react";
 import type { KvkArea } from "@/lib/kvk/access";
-import { lockKvk, lockLeaders } from "@/lib/kvk/actions";
+import { lockChecklist, lockKvk, lockLeaders } from "@/lib/kvk/actions";
 
-const ACTIONS = { plan: lockKvk, leaders: lockLeaders } satisfies Record<KvkArea, unknown>;
+const ACTIONS = { plan: lockKvk, leaders: lockLeaders, checklist: lockChecklist } satisfies Record<KvkArea, unknown>;
 
 /** Clears the page's access cookie (for shared devices). The page re-renders locked. */
 export function LockButton({ label, area = "plan" }: { label: string; area?: KvkArea }) {

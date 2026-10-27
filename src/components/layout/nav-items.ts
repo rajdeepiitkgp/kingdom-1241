@@ -30,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { href: "/kvk", labelKey: "kvk.tab.plan", hintKey: "kvk.menu.planHint" },
       { href: "/kvk/leaders", labelKey: "kvk.menu.leaders", hintKey: "kvk.menu.leadersHint" },
+      { href: "/kvk/checklist", labelKey: "kvk.menu.checklist", hintKey: "kvk.menu.checklistHint" },
     ],
   },
   { href: "/tools", labelKey: "nav.tools", icon: "tools" },

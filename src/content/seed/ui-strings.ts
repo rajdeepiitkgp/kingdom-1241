@@ -439,6 +439,14 @@ export const UI_STRINGS = {
   "kvk.menu.planHint": { en: "Formations for every player", de: "Formationen für alle Spieler", ko: "모든 플레이어를 위한 편성", pl: "Formacje dla każdego gracza", ar: "التشكيلات لجميع اللاعبين" },
   "kvk.menu.leaders": { en: "Rally leaders", de: "Rally-Leiter", ko: "집결 대장", pl: "Liderzy rajdów", ar: "قادة الحشود" },
   "kvk.menu.leadersHint": { en: "Who leads which rally", de: "Wer welche Rally führt", ko: "누가 어떤 집결을 이끄는지", pl: "Kto prowadzi który rajd", ar: "من يقود أي حشد" },
+  "kvk.menu.checklist": { en: "Commander checklist", de: "Kommandanten-Checkliste", ko: "지휘관 체크리스트", pl: "Lista kontrolna dowódcy", ar: "قائمة مراجعة القائد" },
+  "kvk.menu.checklistHint": {
+    en: "Preparation for the battle commander",
+    de: "Vorbereitung für den Schlachtkommandanten",
+    ko: "전투 지휘관을 위한 준비",
+    pl: "Przygotowania dla dowódcy bitwy",
+    ar: "التحضيرات لقائد المعركة",
+  },
 
   // Rally-leader plan (separate password)
   "leaders.title": { en: "Rally-leader plan", de: "Rally-Leiter-Plan", ko: "집결 대장 계획", pl: "Plan liderów rajdów", ar: "خطة قادة الحشود" },
@@ -511,6 +519,67 @@ export const UI_STRINGS = {
     pl: "Nie przydzielono jeszcze żadnych rajdów.",
     ar: "لم يتم تعيين أي حشود بعد.",
   },
+
+  // Commander checklist (separate password)
+  "checklist.title": { en: "Commander checklist", de: "Kommandanten-Checkliste", ko: "지휘관 체크리스트", pl: "Lista kontrolna dowódcy", ar: "قائمة مراجعة القائد" },
+  "checklist.subtitle": {
+    en: "Everything to prepare before the battle, the commander's orders and the general guidelines. For the battle commander and coordinators only.",
+    de: "Alles, was vor der Schlacht vorbereitet werden muss, die Befehle des Kommandanten und die allgemeinen Richtlinien. Nur für den Schlachtkommandanten und die Koordinatoren.",
+    ko: "전투 전에 준비할 모든 것, 지휘관의 명령과 일반 지침. 전투 지휘관과 코디네이터 전용.",
+    pl: "Wszystko, co trzeba przygotować przed bitwą, rozkazy dowódcy i ogólne wytyczne. Tylko dla dowódcy bitwy i koordynatorów.",
+    ar: "كل ما يجب تحضيره قبل المعركة، وأوامر القائد والإرشادات العامة. لقائد المعركة والمنسقين فقط.",
+  },
+  "checklist.locked.body": {
+    en: "Enter the commander checklist password from the council. It is not the battle-plan or rally-leader password.",
+    de: "Gib das Passwort der Kommandanten-Checkliste ein, das du vom Rat bekommen hast. Es ist weder das Passwort des Schlachtplans noch das der Rally-Leiter.",
+    ko: "운영진에게 받은 지휘관 체크리스트 비밀번호를 입력하세요. 전투 계획이나 집결 대장 비밀번호와는 다릅니다.",
+    pl: "Wpisz hasło do listy kontrolnej dowódcy otrzymane od rady. To nie jest hasło do planu bitwy ani hasło liderów rajdów.",
+    ar: "أدخل كلمة مرور قائمة مراجعة القائد التي استلمتها من المجلس. إنها ليست كلمة مرور خطة المعركة ولا كلمة مرور قادة الحشود.",
+  },
+  "checklist.noPlan": {
+    en: "No commander checklist has been published for the next battle yet.",
+    de: "Für die nächste Schlacht wurde noch keine Kommandanten-Checkliste veröffentlicht.",
+    ko: "다음 전투를 위한 지휘관 체크리스트가 아직 공개되지 않았습니다.",
+    pl: "Lista kontrolna dowódcy na najbliższą bitwę nie została jeszcze opublikowana.",
+    ar: "لم تُنشر قائمة مراجعة القائد للمعركة القادمة بعد.",
+  },
+  "checklist.unavailable": {
+    en: "The commander checklist is not available right now. Try again later.",
+    de: "Die Kommandanten-Checkliste ist gerade nicht verfügbar. Versuch es später noch einmal.",
+    ko: "지금은 지휘관 체크리스트를 볼 수 없습니다. 나중에 다시 시도하세요.",
+    pl: "Lista kontrolna dowódcy jest teraz niedostępna. Spróbuj później.",
+    ar: "قائمة مراجعة القائد غير متاحة حاليًا. حاول مرة أخرى لاحقًا.",
+  },
+  "checklist.items": { en: "Checklist", de: "Checkliste", ko: "체크리스트", pl: "Lista kontrolna", ar: "قائمة المراجعة" },
+  "checklist.itemsHint": {
+    en: "Tick each step off once it is done. Your ticks are saved on this device only and start fresh for every battle.",
+    de: "Hake jeden Schritt ab, sobald er erledigt ist. Deine Häkchen werden nur auf diesem Gerät gespeichert und beginnen bei jeder Schlacht neu.",
+    ko: "완료한 단계마다 체크하세요. 체크 표시는 이 기기에만 저장되며 전투마다 새로 시작됩니다.",
+    pl: "Odhaczaj każdy krok, gdy zostanie wykonany. Twoje znaczniki są zapisywane tylko na tym urządzeniu i zaczynają się od nowa przy każdej bitwie.",
+    ar: "ضع علامة على كل خطوة عند إنجازها. تُحفظ علاماتك على هذا الجهاز فقط وتبدأ من جديد في كل معركة.",
+  },
+  "checklist.phase.before": { en: "Before battle day", de: "Vor dem Schlachttag", ko: "전투일 이전", pl: "Przed dniem bitwy", ar: "قبل يوم المعركة" },
+  "checklist.phase.day": { en: "Battle day, before the start", de: "Am Schlachttag, vor dem Start", ko: "전투 당일, 시작 전", pl: "W dniu bitwy, przed startem", ar: "يوم المعركة، قبل البدء" },
+  "checklist.phase.during": { en: "During the battle", de: "Während der Schlacht", ko: "전투 중", pl: "W trakcie bitwy", ar: "أثناء المعركة" },
+  "checklist.phase.after": { en: "After the battle", de: "Nach der Schlacht", ko: "전투 후", pl: "Po bitwie", ar: "بعد المعركة" },
+  "checklist.progress": { en: "{done} of {total} done", de: "{done} von {total} erledigt", ko: "{total}개 중 {done}개 완료", pl: "Zrobione: {done} z {total}", ar: "تم إنجاز {done} من {total}" },
+  "checklist.progressDone": { en: "Everything is ticked off.", de: "Alles ist abgehakt.", ko: "모든 항목을 완료했습니다.", pl: "Wszystko odhaczone.", ar: "تم إنجاز كل شيء." },
+  "checklist.empty": {
+    en: "No checklist items have been added yet.",
+    de: "Es wurden noch keine Punkte zur Checkliste hinzugefügt.",
+    ko: "아직 추가된 체크리스트 항목이 없습니다.",
+    pl: "Nie dodano jeszcze żadnych punktów listy.",
+    ar: "لم تُضف أي بنود إلى القائمة بعد.",
+  },
+  "checklist.commander": { en: "Commander's orders", de: "Befehle des Kommandanten", ko: "지휘관 명령", pl: "Rozkazy dowódcy", ar: "أوامر القائد" },
+  "checklist.commanderHint": {
+    en: "How the battle commander runs the battle and keeps rally leaders and joiners on the plan.",
+    de: "Wie der Schlachtkommandant die Schlacht führt und Rally-Leiter und Mitspieler beim Plan hält.",
+    ko: "전투 지휘관이 전투를 운영하고 집결 대장과 참여자가 계획을 따르도록 하는 방법.",
+    pl: "Jak dowódca bitwy prowadzi bitwę i pilnuje, by liderzy rajdów i dołączający trzymali się planu.",
+    ar: "كيف يدير قائد المعركة المعركة ويُبقي قادة الحشود والمنضمين ملتزمين بالخطة.",
+  },
+  "checklist.guidelines": { en: "General guidelines", de: "Allgemeine Richtlinien", ko: "일반 지침", pl: "Ogólne wytyczne", ar: "إرشادات عامة" },
 
   // Battle feedback — page and form
   "retro.title": { en: "Battle feedback", de: "Schlacht-Feedback", ko: "전투 피드백", pl: "Opinie o bitwie", ar: "آراء المعركة" },

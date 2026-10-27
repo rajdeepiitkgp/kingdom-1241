@@ -5,6 +5,7 @@ import type {
   GiftCode,
   Guide,
   Hero,
+  KvkChecklistPlanWithSecret,
   KvkLeaderPlanWithSecret,
   KvkPlanWithSecret,
   RuleTopic,
@@ -20,13 +21,17 @@ import { SEED_GIFT_CODES } from "./gift-codes";
 import { SEED_GUIDES } from "./guides";
 import { bundledHeroIcon, SEED_HEROES } from "./heroes";
 import {
+  kvkChecklistItemId,
+  kvkChecklistRuleId,
   kvkCoordinatorId,
   kvkFormationId,
   kvkLeaderRuleId,
   kvkRallyLeaderId,
   kvkRuleId,
+  SEED_CHECKLIST,
   SEED_KVK_PLAN,
   SEED_LEADER_BRIEF,
+  seedChecklistPassword,
   seedKvkPassword,
   seedLeaderPassword,
 } from "./kvk";
@@ -55,6 +60,7 @@ export interface SeedContent {
   /** Placeholder battle plan, with the seed password — server only. */
   kvkPlan: KvkPlanWithSecret;
   kvkLeaderPlan: KvkLeaderPlanWithSecret;
+  kvkChecklistPlan: KvkChecklistPlanWithSecret;
 }
 
 export function buildSeedContent(): SeedContent {
@@ -151,6 +157,7 @@ export function buildSeedContent(): SeedContent {
     })),
     kvkPlan: buildSeedKvkPlan(now),
     kvkLeaderPlan: buildSeedLeaderPlan(now),
+    kvkChecklistPlan: buildSeedChecklistPlan(now),
   };
 }
 
@@ -245,6 +252,40 @@ function buildSeedLeaderPlan(now: string): KvkLeaderPlanWithSecret {
       cavalry: r.cavalry,
       archers: r.archers,
       note: en(r.note),
+      sortOrder: index,
+      published: true,
+    })),
+  };
+}
+
+function buildSeedChecklistPlan(now: string): KvkChecklistPlanWithSecret {
+  const plan = SEED_KVK_PLAN;
+  return {
+    planId: plan.id,
+    slug: plan.slug,
+    eventType: plan.eventType,
+    title: en(plan.title),
+    opponent: plan.opponent,
+    battleAt: plan.battleAt,
+    battleEndAt: null,
+    intro: en(markdownToHtml(SEED_CHECKLIST.introMarkdown)),
+    updatedAt: now,
+    password: seedChecklistPassword(),
+    items: SEED_CHECKLIST.items.map((item, index) => ({
+      id: kvkChecklistItemId(index),
+      planId: plan.id,
+      phase: item.phase,
+      text: en(item.text),
+      note: en(item.note),
+      sortOrder: index,
+      published: true,
+    })),
+    rules: SEED_CHECKLIST.rules.map((rule, index) => ({
+      id: kvkChecklistRuleId(index),
+      planId: plan.id,
+      section: rule.section,
+      kind: rule.kind,
+      text: en(rule.text),
       sortOrder: index,
       published: true,
     })),

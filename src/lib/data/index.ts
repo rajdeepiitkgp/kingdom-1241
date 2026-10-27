@@ -13,6 +13,7 @@ import {
   mapGiftCode,
   mapGuide,
   mapHero,
+  mapKvkChecklistPlan,
   mapKvkLeaderPlan,
   mapKvkPlan,
   mapOpenRetrospective,
@@ -28,6 +29,7 @@ import type {
   GiftCode,
   Guide,
   Hero,
+  KvkChecklistPlanWithSecret,
   KvkLeaderPlanWithSecret,
   KvkPlanWithSecret,
   OpenRetrospective,
@@ -379,6 +381,54 @@ export async function getActiveLeaderPlan(): Promise<KvkLeaderPlanWithSecret | n
     return mapKvkLeaderPlan(plan, brief.data, rallies.data ?? [], rules.data ?? []);
   } catch (error) {
     log.error("Failed to load the rally-leader plan from Supabase", { error });
+    return null;
+  }
+}
+
+/**
+ * The commander checklist of the active battle plan, including its own password.
+ *
+ * Same rules as `getActiveLeaderPlan` (service role, server only, the caller
+ * checks the checklist cookie and strips the password; `null` on any problem
+ * or without a published checklist brief). Neither the battle plan's nor the
+ * leaders' password is read here.
+ */
+export async function getActiveChecklistPlan(): Promise<KvkChecklistPlanWithSecret | null> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.kvk);
+
+  if (!isSupabaseConfigured()) return buildSeedContent().kvkChecklistPlan;
+  if (!isSupabaseAdminConfigured()) return null;
+  try {
+    const supabase = createAdminClient();
+    const { data: plan, error } = await supabase
+      .from("kvk_plans")
+      .select("*")
+      .eq("active", true)
+      .eq("published", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!plan) return null;
+
+    const [brief, items, rules] = await Promise.all([
+      supabase.from("kvk_checklist_briefs").select("*").eq("plan_id", plan.id).eq("published", true).maybeSingle(),
+      supabase.from("kvk_checklist_items").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+      supabase.from("kvk_checklist_rules").select("*").eq("plan_id", plan.id).eq("published", true).order("sort_order"),
+    ]);
+    const tableError = brief.error ?? items.error ?? rules.error;
+    if (tableError?.code === "PGRST205" || tableError?.code === "42P01") {
+      // Deployed before migration 0011 reached the database: "no checklist yet" until it does.
+      log.warn("Checklist tables are not in the database yet (migration 0011)");
+      return null;
+    }
+    if (tableError) throw tableError;
+    if (!brief.data) return null;
+
+    return mapKvkChecklistPlan(plan, brief.data, items.data ?? [], rules.data ?? []);
+  } catch (error) {
+    log.error("Failed to load the commander checklist from Supabase", { error });
     return null;
   }
 }

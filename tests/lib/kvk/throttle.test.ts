@@ -67,4 +67,12 @@ describe("scopes", () => {
     expect(addressScope("p1", "abcd", "leaders").startsWith(addressScopePrefix("p1"))).toBe(false);
     expect(addressScope("p1", "abcd", "leaders").startsWith(addressScopePrefix("p1", "leaders"))).toBe(true);
   });
+
+  it("keep the checklist's guesses apart from the other pages'", () => {
+    expect(planScope("p1", "checklist")).toBe("plan:checklist:p1");
+    const scope = addressScope("p1", "abcd", "checklist");
+    expect(scope.startsWith(addressScopePrefix("p1"))).toBe(false);
+    expect(scope.startsWith(addressScopePrefix("p1", "leaders"))).toBe(false);
+    expect(scope.startsWith(addressScopePrefix("p1", "checklist"))).toBe(true);
+  });
 });

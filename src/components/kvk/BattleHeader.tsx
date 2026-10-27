@@ -11,9 +11,9 @@ import { LockButton } from "./LockButton";
 
 /**
  * The card at the top of an unlocked battle page (battle plan, rally-leader
- * plan): event, title, opponent, countdown, the page's own lock button and its
- * introduction. Server Component; the countdown and a token intro are the
- * client parts.
+ * plan, commander checklist): event, title, opponent, countdown, the page's
+ * own lock button and its introduction. Server Component; the countdown and a
+ * token intro are the client parts.
  */
 export function BattleHeader({
   eventType,
