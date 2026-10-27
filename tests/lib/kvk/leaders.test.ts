@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
 import type { KvkLeaderRule, KvkRallyLeader } from "@/lib/data/types";
 import { latestPetsOffset, offsetLabel, PET_BOOST_MINUTES, petsMoment, petsWindow, ralliesByTeam, rulesByAudience } from "@/lib/kvk/leaders";

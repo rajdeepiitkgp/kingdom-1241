@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeRichText } from "@/lib/html";
 import { DEFAULT_LOCALE } from "@/lib/i18n/languages";

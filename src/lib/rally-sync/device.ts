@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { DAY } from "@/lib/time";
 import { DEFAULT_SETTINGS, type RoomSettings } from "./room";
 import { clampGameOffset } from "./timing";

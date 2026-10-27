@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { ArrowLeft, DoorClosed } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";

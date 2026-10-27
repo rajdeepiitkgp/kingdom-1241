@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { isRoomOpen, type RoomMode, roomClosesAt } from "@/lib/rally-sync/room";

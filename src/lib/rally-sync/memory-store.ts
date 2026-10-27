@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { randomUUID } from "node:crypto";
 import { hashPassword, hashToken } from "./access";
 import { DEFAULT_SETTINGS, isRoomOpen, MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "./room";

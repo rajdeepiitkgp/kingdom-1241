@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { HitHistoryEntry, RoomMode } from "./room";
 
 /** Rows and the storage interface of Rally Sync (implementations in store.ts and memory-store.ts). */

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { beforeEach, describe, expect, it } from "vitest";
 import { memoryStore } from "@/lib/rally-sync/memory-store";
 import { MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "@/lib/rally-sync/room";

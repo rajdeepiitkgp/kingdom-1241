@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { ArrowRight, Timer } from "lucide-react";
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionary";

@@ -103,4 +103,4 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+All rights reserved. The code is public to read, but it is not open source and no license is granted: the code, its logic and its design may not be copied, reused or re-created (also not with AI tools) without written permission. Kingshot's names and images belong to the game's publisher. See [LICENSE](LICENSE).

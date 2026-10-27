@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 -- Kingdom 1241 — Rally Sync (Tools → Rally Sync): rally leaders hit a target at the same second
 --
 --   * rally_sync_rooms    one row per room. A moderator creates it in the admin area; players

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { Metadata } from "next";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";

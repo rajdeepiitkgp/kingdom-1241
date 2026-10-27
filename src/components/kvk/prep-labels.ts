@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { UiKey } from "@/content/seed/ui-strings";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import {

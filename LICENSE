@@ -1,21 +1,35 @@
-MIT License
+Copyright (c) 2026 Rajdeep Biswas. All rights reserved.
 
-Copyright (c) 2026 Rajdeep Biswas
+This repository holds the source code of the Kingdom 1241 community website for
+the game Kingshot, including its tools such as Rally Sync. It is NOT open source
+and no license is granted to anyone.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Without the copyright holder's prior written permission you may not, in whole
+or in part:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  - copy, reproduce, modify, translate or adapt the code, its logic, its data
+    model or its design;
+  - publish, distribute, sublicense, sell or otherwise make it available;
+  - build another product, website, bot or service on it or on anything
+    derived from it;
+  - reproduce it, or re-create it from this code, with automated tools or AI
+    assistants, or use it to train, fine-tune or evaluate machine-learning
+    models.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+The repository is public on GitHub so that it can be read. Apart from what
+GitHub's Terms of Service allow every GitHub user for public repositories
+(viewing it and forking it on GitHub), seeing the code gives you no right to
+use it. Contributions made at the owner's invitation become part of this work
+under the same terms.
+
+THE CODE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+Third-party material is not covered by this notice and stays with its owners:
+
+  - Kingshot, its names, and the hero portraits and item images in
+    public/heroes and public/items belong to the game's publisher. They are
+    used on a non-commercial fan site that is not affiliated with the
+    publisher.
+  - Packages installed from npm keep their own licenses (see each package).
+
+Permission requests: contact the owner through the Kingdom 1241 Discord.

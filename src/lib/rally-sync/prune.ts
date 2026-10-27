@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { IDLE_CLOSE_MS, MAX_ROOM_AGE_MS } from "./room";
 

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 /**
  * Which tables and columns the translation pipeline handles.
  * Every column listed is a Localized JSONB ({"en": ..., "de": ...}).

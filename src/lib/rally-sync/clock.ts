@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 /**
  * Clock correction for the room page (pure, unit-tested). Every state request
  * returns the server's clock; assuming the answer took as long to come back as
