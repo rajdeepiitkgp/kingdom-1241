@@ -8,6 +8,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, type CoordinatorOp } from "@/lib/rally-sync/actions";
+import { rallyChat } from "@/lib/rally-sync/chat";
 import { updateDevice } from "@/lib/rally-sync/device";
 import { IDLE_CLOSE_MS, rallyRunning, resyncMarches, type RoomMode, type RoomView } from "@/lib/rally-sync/room";
 import {
@@ -20,6 +21,7 @@ import {
   MIN_RALLY_WAIT_SECONDS,
   parseDuration,
 } from "@/lib/rally-sync/timing";
+import { CopyForChat } from "./CopyForChat";
 import { Disclosure } from "./Disclosure";
 import { GarrisonControls } from "./Garrison";
 import { useRunner } from "./hooks";
@@ -87,6 +89,22 @@ export function CoordinatorPanel({
   const confirmingResync = running && resyncArmed;
   // A garrison room is a different tool: marking enemy rallies instead of the hit time and leaders.
   const garrison = room.mode === "garrison";
+  // For leaders without the page: the hit time and every start, ready to paste into the game chat.
+  const chat =
+    !garrison && room.hitAt && leaders.some((l) => l.startAt !== null)
+      ? rallyChat(
+          {
+            mode: room.mode === "counter" ? "counter" : "rally",
+            hitAt: Date.parse(room.hitAt),
+            enemyHitAt: room.enemyHitAt ? Date.parse(room.enemyHitAt) : null,
+            rallyWaitSeconds: room.rallyWaitSeconds,
+            hitSetAt,
+            leaders,
+          },
+          clock.label,
+          dict,
+        )
+      : null;
 
   function resync() {
     if (running && !resyncArmed) {
@@ -243,6 +261,11 @@ export function CoordinatorPanel({
         <p role="status" className="mt-3 rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger">
           {format(dict[room.mode === "counter" ? "sync.coord.lateCounter" : "sync.coord.late"], { names: late.map((l) => l.name).join(", ") })}
         </p>
+      )}
+      {chat !== null && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <CopyForChat text={chat} dict={dict} />
+        </div>
       )}
         </>
       )}
