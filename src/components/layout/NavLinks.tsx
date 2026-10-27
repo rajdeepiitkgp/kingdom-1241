@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
-import { NAV_ITEMS } from "./nav-items";
+import { NAV_ITEMS, type NavItem } from "./nav-items";
 import { ActiveNavLink, NavLinkView } from "./NavLink";
+import { ActiveNavMenu, NavMenuView } from "./NavMenu";
 
 /**
  * Navigation. The links themselves are rendered on the server; only the
@@ -22,15 +23,34 @@ import { ActiveNavLink, NavLinkView } from "./NavLink";
 export function DesktopNav({ locale, dict }: { locale: string; dict: Dictionary }) {
   return (
     <nav className="@container hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main">
-      {NAV_ITEMS.map((item) => {
-        const props = { href: localePath(locale, item.href), section: item.href, icon: item.icon, label: dict[item.labelKey], variant: "desktop" as const };
-        return (
-          <Suspense key={item.href} fallback={<NavLinkView {...props} active={false} />}>
-            <ActiveNavLink {...props} />
-          </Suspense>
-        );
-      })}
+      {NAV_ITEMS.map((item) => (
+        <NavEntry key={item.href} item={item} locale={locale} dict={dict} variant="desktop" />
+      ))}
     </nav>
+  );
+}
+
+/** One nav entry: a link, or a dropdown when the section has several pages (KvK). */
+function NavEntry({ item, locale, dict, variant }: { item: NavItem; locale: string; dict: Dictionary; variant: "desktop" | "mobile" }) {
+  const common = { section: item.href, icon: item.icon, label: dict[item.labelKey], variant };
+  if (item.children) {
+    const entries = item.children.map((child) => ({
+      href: localePath(locale, child.href),
+      section: child.href,
+      label: dict[child.labelKey],
+      hint: dict[child.hintKey],
+    }));
+    return (
+      <Suspense fallback={<NavMenuView {...common} entries={entries} active={false} />}>
+        <ActiveNavMenu {...common} entries={entries} />
+      </Suspense>
+    );
+  }
+  const props = { ...common, href: localePath(locale, item.href) };
+  return (
+    <Suspense fallback={<NavLinkView {...props} active={false} />}>
+      <ActiveNavLink {...props} />
+    </Suspense>
   );
 }
 
@@ -43,16 +63,11 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
       aria-label="Main"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-6">
-        {NAV_ITEMS.map((item) => {
-          const props = { href: localePath(locale, item.href), section: item.href, icon: item.icon, label: dict[item.labelKey], variant: "mobile" as const };
-          return (
-            <li key={item.href}>
-              <Suspense fallback={<NavLinkView {...props} active={false} />}>
-                <ActiveNavLink {...props} />
-              </Suspense>
-            </li>
-          );
-        })}
+        {NAV_ITEMS.map((item) => (
+          <li key={item.href}>
+            <NavEntry item={item} locale={locale} dict={dict} variant="mobile" />
+          </li>
+        ))}
       </ul>
     </nav>
   );
