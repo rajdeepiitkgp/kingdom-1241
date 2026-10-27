@@ -16,7 +16,9 @@ import type { KvkArea } from "./access";
  *     can change the password. Nobody is locked out by this layer.
  *
  * Lockouts answer "try again in …" instead of sleeping, so an attack costs the
- * site no function time.
+ * site no function time. Every try is counted before the password is checked,
+ * in one compare-and-swap write (throttle-store.ts), so a burst of parallel
+ * requests can't slip past the count.
  */
 
 export interface ThrottleState {
@@ -70,6 +72,27 @@ export function recordFailure(state: ThrottleState | null, now: number, policy: 
     lockouts += 1;
   }
   return { ...base, failures, windowStartedAt: fresh ? now : base.windowStartedAt, lockedUntil, lockouts };
+}
+
+/**
+ * One try, counted before the password is checked: refused while the address is
+ * locked, else the state with this try already counted as wrong (a correct
+ * password clears the scope afterwards). Counting first means that requests
+ * sent all at once can never check more passwords than the policy allows.
+ */
+export function chargeTry(state: ThrottleState | null, now: number, policy: LockoutPolicy = ADDRESS_POLICY): { retryAt: number } | { next: ThrottleState } {
+  const wait = retryAfter(state, now);
+  return wait > 0 ? { retryAt: now + wait } : { next: recordFailure(state, now, policy) };
+}
+
+/**
+ * The `updated_at` of a write that replaces a row last written at `previous`:
+ * now, but always at least a millisecond later, so a compare-and-swap on the
+ * column can never mistake a newer write for the one it read.
+ */
+export function laterStamp(previous: string | null | undefined, now: number): string {
+  const last = previous ? Date.parse(previous) : Number.NaN;
+  return new Date(Number.isNaN(last) ? now : Math.max(now, last + 1)).toISOString();
 }
 
 /** Tries left from this address before its next lockout (never below zero). */

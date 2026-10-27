@@ -3,8 +3,8 @@
 import { headers } from "next/headers";
 import { getAlliances, getSettings } from "@/lib/data";
 import { kvkSessionSecret } from "@/lib/kvk/access";
-import { type LockoutPolicy, recordFailure, retryAfter } from "@/lib/kvk/throttle";
-import { addressHash, loadThrottle, saveThrottle } from "@/lib/kvk/throttle-store";
+import type { LockoutPolicy } from "@/lib/kvk/throttle";
+import { addressHash, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HOUR } from "@/lib/time";
@@ -63,13 +63,11 @@ export async function lookupGovernor(rawId: string): Promise<LookupState> {
   if (!access?.unlocked) return { status: "skipped" };
 
   const now = Date.now();
-  const scope = `mp:${access.retro.id}:${addressHash(requestHeaders)}`;
-  const [state] = await loadThrottle([scope]);
-  if (retryAfter(state, now) > 0) {
+  const budget = await takeTry(`mp:${access.retro.id}:${addressHash(requestHeaders)}`, now, LOOKUP_POLICY);
+  if (!budget.allowed) {
     log.info("Governor lookup skipped: address over its hourly budget");
     return { status: "skipped" };
   }
-  await saveThrottle([{ scope, state: recordFailure(state, now, LOOKUP_POLICY) }]);
 
   const result = await fetchGovernor(governorId);
   if (result.status === "unavailable") return { status: "skipped", retry: true };
@@ -103,14 +101,11 @@ export async function submitRetro(_previous: SubmitState, formData: FormData): P
     return { status: "ok" }; // a bot learns nothing from a success message
   }
 
-  const scope = `retro:${retro.id}:${addressHash(requestHeaders)}`;
-  const [state] = await loadThrottle([scope]);
-  const wait = retryAfter(state, now);
-  if (wait > 0) {
-    log.info("Feedback refused: address locked", { retro: retro.id, waitMs: wait });
-    return { status: "throttled", retryAt: now + wait };
+  const budget = await takeTry(`retro:${retro.id}:${addressHash(requestHeaders)}`, now, SUBMIT_POLICY);
+  if (!budget.allowed) {
+    log.info("Feedback refused: address locked", { retro: retro.id, waitMs: budget.retryAt - now });
+    return { status: "throttled", retryAt: budget.retryAt };
   }
-  await saveThrottle([{ scope, state: recordFailure(state, now, SUBMIT_POLICY) }]);
 
   // Governor ID: the lookup token from the form, else one fresh lookup (fail-open).
   const governorId = normalizeGovernorId(String(formData.get(FIELD.governorId) ?? ""));
