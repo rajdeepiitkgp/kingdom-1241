@@ -1,18 +1,20 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { kvkSessionSecret } from "@/lib/kvk/access";
-import { randomRoomCode } from "./room";
+import { randomInstanceTag, randomRoomCode } from "./room";
 
 /**
  * Secrets of Rally Sync rooms (server only). The room password is stored as
- * an scrypt hash; after a correct password (or a valid invite link) the
- * visitor gets an HttpOnly cookie per room holding an HMAC of the room id and
- * that hash, so changing the password logs everyone out and invalidates old
- * invite links at once. The invite key is a second HMAC over the same values,
- * carried in the link's #fragment (browsers never send it to the server, so it
- * stays out of request logs). Coordinator and leader tokens are random and
- * stored as sha256 hashes. Like the KvK locks this keeps other kingdoms out;
- * it is not account security.
+ * an scrypt hash. A correct password (or a valid invite link) makes the
+ * browser an instance of the room (rally_sync_instances) and gives it an
+ * HttpOnly cookie per room naming that instance, signed with the room id: a
+ * password change keeps everyone who is in, and the coordinator removes one
+ * browser by deleting its instance. The invite key is an HMAC of the room id
+ * and the password hash, so a new password kills old links; it is carried in
+ * the link's #fragment (browsers never send it to the server, so it stays out
+ * of request logs). Coordinator and leader tokens are random and stored as
+ * sha256 hashes. Like the KvK locks this keeps other kingdoms out; it is not
+ * account security.
  */
 
 export const ROOM_COOKIE_PREFIX = "kd1241_rs_";
@@ -58,7 +60,26 @@ function safeEqual(a: string, b: string): boolean {
   return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
-/** The room cookie's value. */
+/** The room cookie of an instance: `<instance id>.<signature>`, bound to the room but not to the password. */
+export function instanceCookieValue(roomId: string, instanceId: string, secret = kvkSessionSecret()): string {
+  return `${instanceId}.${sign("rally-sync-instance", roomId, instanceId, secret).toString("base64url")}`;
+}
+
+/** The instance id in a room cookie whose signature is valid for this room, else null (the instance must still exist; see session.ts). */
+export function instanceIdFromCookie(value: string | undefined | null, roomId: string, secret = kvkSessionSecret()): string | null {
+  if (typeof value !== "string") return null;
+  const dot = value.indexOf(".");
+  if (dot <= 0) return null;
+  const instanceId = value.slice(0, dot);
+  return safeEqual(value, instanceCookieValue(roomId, instanceId, secret)) ? instanceId : null;
+}
+
+/**
+ * The room cookie from before instances existed (migration 0014): an HMAC of the
+ * room id and the password hash. Still accepted, and still issued while a deploy
+ * runs ahead of its migration; such a browser isn't in the coordinator's list and
+ * leaves with the next password change, as before.
+ */
 export function roomAccessToken(roomId: string, passwordHash: string, secret = kvkSessionSecret()): string {
   return sign("rally-sync", roomId, passwordHash, secret).toString("hex");
 }
@@ -92,6 +113,12 @@ export function tokenMatches(token: unknown, hash: string | null): boolean {
 /** The Realtime topic suffix of a room. */
 export function newChannelKey(): string {
   return randomBytes(16).toString("hex");
+}
+
+export function newInstanceTag(): string {
+  const bytes = randomBytes(32);
+  let i = 0;
+  return randomInstanceTag(() => (i < bytes.length ? bytes[i++] : randomBytes(1)[0]));
 }
 
 export function newRoomCode(): string {

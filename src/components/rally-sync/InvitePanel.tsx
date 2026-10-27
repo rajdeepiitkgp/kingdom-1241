@@ -2,13 +2,14 @@
 "use client";
 
 import { Check, Copy, Eye, Share2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { coordinate } from "@/lib/rally-sync/actions";
 import { coordinatorLinkPath, inviteLinkPath, updateDeviceRoom } from "@/lib/rally-sync/device";
 import { formatRoomCode, PASSWORD_MAX, PASSWORD_MIN, parsePassword } from "@/lib/rally-sync/room";
 import { useDevice, useRunner } from "./hooks";
 import { ErrorLine } from "./LeaderForm";
+import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
 
 /**
  * The two ways in, as in Zoom: the invite link (opens the room directly; its
@@ -23,6 +24,26 @@ export function InvitePanel({ code, token, dict }: { code: string; token: string
   const [showPassword, setShowPassword] = useState(false);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const invite = mine?.invite ?? null;
+  const savedPassword = mine?.password ?? null;
+
+  // What this device saved (link, password) goes stale when another coordinator changes the password:
+  // check it against the room once the panel opens, and drop what no longer works.
+  useEffect(() => {
+    if (!invite && !savedPassword) return;
+    coordinate(code, token, { type: "invite", ...(savedPassword ? { password: savedPassword } : {}) }).then(
+      (result) => {
+        if (!result.ok || !result.inviteKey) return;
+        const freshKey = result.inviteKey;
+        const stalePassword = result.passwordCurrent === false;
+        if ((invite === null || invite === freshKey) && !stalePassword) return;
+        updateDeviceRoom(code, (room) => {
+          const { password, ...rest } = room;
+          return { ...rest, ...(invite ? { invite: freshKey } : {}), ...(password && !stalePassword ? { password } : {}) };
+        });
+      },
+      () => undefined, // offline: keep what we have; the next opening checks again
+    );
+  }, [code, token, invite, savedPassword]);
 
   async function loadInvite() {
     const result = await run("invite", () => coordinate(code, token, { type: "invite" }));
@@ -106,12 +127,20 @@ export function InvitePanel({ code, token, dict }: { code: string; token: string
           {dict["sync.invite.newPassword"]}
         </label>
         <p className="mb-2 text-xs text-ink-faint">{dict["sync.invite.newPasswordHint"]}</p>
-        <div className="flex gap-2">
-          <input id="sync-new-password" name="password" className="input" minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} autoComplete="off" dir="ltr" />
+        <CodeSuggestInput
+          id="sync-new-password"
+          name="password"
+          minLength={PASSWORD_MIN}
+          maxLength={PASSWORD_MAX}
+          autoComplete="off"
+          dir="ltr"
+          suggestLabel={dict["sync.invite.suggest"]}
+          suggestHint={dict["sync.invite.suggestHint"]}
+        >
           <button type="submit" className="btn-primary shrink-0" disabled={pending !== null}>
             {dict["sync.invite.change"]}
           </button>
-        </div>
+        </CodeSuggestInput>
         {errorFor("password") && <ErrorLine dict={dict} error={errorFor("password") ?? "failed"} invalidText={format(dict["sync.error.password"], { min: PASSWORD_MIN })} />}
       </form>
     </div>

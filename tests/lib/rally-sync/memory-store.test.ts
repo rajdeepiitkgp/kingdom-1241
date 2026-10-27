@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { beforeEach, describe, expect, it } from "vitest";
 import { memoryStore } from "@/lib/rally-sync/memory-store";
-import { MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "@/lib/rally-sync/room";
+import { MAX_INSTANCES_PER_ROOM, MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "@/lib/rally-sync/room";
 import { closedCutoffs } from "@/lib/rally-sync/prune";
 import type { NewRoom } from "@/lib/rally-sync/store-types";
 
@@ -52,5 +52,25 @@ describe("rally sync limits (in-memory store, same rules as the database trigger
 
   it("uses the same cut-offs for the database prune", () => {
     expect(closedCutoffs(new Date("2026-11-07T12:00:00Z"))).toEqual({ lastSeenBefore: "2026-11-07T11:30:00.000Z", createdBefore: "2026-11-06T12:00:00.000Z" });
+  });
+
+  it("caps instances per room, removes one or all but one, and forgets them with the room", async () => {
+    const store = memoryStore();
+    const created = await store.insertRoom(room("AAAAAA"));
+    const instances = [];
+    for (let i = 0; i < MAX_INSTANCES_PER_ROOM; i++) instances.push(await store.insertInstance({ roomId: created.id, tag: "K7M4" }));
+    await expect(store.insertInstance({ roomId: created.id, tag: "K7M4" })).rejects.toMatchObject({ problem: "instance_limit" });
+
+    // A leader added from a removed instance stays, without its instance.
+    const leader = await store.insertLeader({ roomId: created.id, name: "Rudy", marchSeconds: 60, tokenHash: "t", instanceId: instances[1].id });
+    expect(await store.deleteInstances(created.id, { ids: [instances[1].id] })).toBe(1);
+    expect(await store.instanceById(instances[1].id)).toBeNull();
+    expect((await store.leaders(created.id)).find((l) => l.id === leader.id)?.instanceId).toBeNull();
+
+    expect(await store.deleteInstances(created.id, { except: instances[0].id })).toBe(MAX_INSTANCES_PER_ROOM - 2);
+    expect((await store.instances(created.id)).map((i) => i.id)).toEqual([instances[0].id]);
+
+    await store.deleteRoom(created.id);
+    expect(await store.instanceById(instances[0].id)).toBeNull();
   });
 });

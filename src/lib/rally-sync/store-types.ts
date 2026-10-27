@@ -34,7 +34,23 @@ export interface LeaderRow {
   previousMarchSeconds: number | null;
   marchChangedAt: string | null;
   tokenHash: string | null;
+  /** The instance (browser) that added this leader; null when the coordinator added it, or that instance was removed. */
+  instanceId: string | null;
   createdAt: string;
+}
+
+/** One browser in a room (migration 0014): what the room cookie names, and what the coordinator can remove. */
+export interface InstanceRow {
+  id: string;
+  roomId: string;
+  /** Random 4-character label for an instance without a name ("Watcher K7M4"). */
+  tag: string;
+  /** Set by the instance itself; null until it does. */
+  name: string | null;
+  /** Has used coordinator rights. */
+  coordinator: boolean;
+  createdAt: string;
+  lastSeenAt: string;
 }
 
 export type NewRoom = Pick<
@@ -44,11 +60,16 @@ export type NewRoom = Pick<
 export type RoomPatch = Partial<
   Pick<RoomRow, "title" | "passwordHash" | "coordinatorHash" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "enemyHitAt" | "hitAt" | "hitSetAt" | "history">
 >;
-export type NewLeader = Pick<LeaderRow, "roomId" | "name" | "marchSeconds" | "tokenHash"> & { status?: LeaderStatus };
+export type NewLeader = Pick<LeaderRow, "roomId" | "name" | "marchSeconds" | "tokenHash"> & { status?: LeaderStatus; instanceId?: string | null };
 export type LeaderPatch = Partial<Pick<LeaderRow, "name" | "marchSeconds" | "status" | "nextMarchSeconds" | "previousMarchSeconds" | "marchChangedAt">>;
 
-/** Why a write was refused. The first four come from the database's limits. */
-export type StoreProblem = "room_limit" | "leader_limit" | "total_limit" | "room_closed" | "duplicate" | "failed";
+export type InstancePatch = Partial<Pick<InstanceRow, "name" | "coordinator">>;
+
+/**
+ * Why a write was refused. The first five come from the database's limits;
+ * `not_migrated` means the table isn't there yet (a deploy that ran ahead of its migration).
+ */
+export type StoreProblem = "room_limit" | "leader_limit" | "total_limit" | "instance_limit" | "room_closed" | "duplicate" | "not_migrated" | "failed";
 
 export class RallyStoreError extends Error {
   constructor(
@@ -75,6 +96,14 @@ export interface RallyStore {
   insertLeader(leader: NewLeader): Promise<LeaderRow>;
   updateLeader(id: string, patch: LeaderPatch): Promise<void>;
   deleteLeader(id: string): Promise<void>;
+  instances(roomId: string): Promise<InstanceRow[]>;
+  instanceById(id: string): Promise<InstanceRow | null>;
+  insertInstance(instance: Pick<InstanceRow, "roomId" | "tag">): Promise<InstanceRow>;
+  updateInstance(id: string, patch: InstancePatch): Promise<void>;
+  /** The instance has the room on screen: bump last_seen_at (at most once a minute, and without a Realtime ping). */
+  touchInstance(id: string, now: number): Promise<void>;
+  /** Removes instances of the room: the given ones, or with `except` every other one. Returns how many. */
+  deleteInstances(roomId: string, which: { ids: readonly string[] } | { except: string | null }): Promise<number>;
   /** Deletes rooms that are closed at `now`; returns how many. */
   deleteClosedRooms(now: number): Promise<number>;
 }
