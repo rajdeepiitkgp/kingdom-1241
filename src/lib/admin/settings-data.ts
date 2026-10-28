@@ -1,6 +1,6 @@
 import { type AllianceSyncState, NO_SYNC_YET, parseAllianceSyncState } from "@/lib/alliances/sync-plan";
 import { isOwnerIdentity, type OwnerKind, ownerLabel, parseOwners } from "@/lib/auth/owner";
-import { checkOwner } from "@/lib/auth/server";
+import { checkOwner, type CurrentUser } from "@/lib/auth/server";
 import { readConfig } from "@/lib/config/app-config";
 import { getFeedbackDefaults, getPasswordRules, getTranslationSettings } from "@/lib/config/settings";
 import { getLanguageInfo } from "@/lib/i18n/languages";
@@ -96,37 +96,38 @@ export interface AllianceSettings {
   sync: AllianceSyncState;
 }
 
-export interface OwnerSettings {
+/** The General tab: who the owner is, and the small switches. */
+export interface GeneralSettings {
   owners: OwnerEntry[];
-  rally: RallyCapacitySettings;
-  alliances: AllianceSettings;
-  languages: LanguageSettings;
   translation: MachineTranslation;
   passwordRules: PasswordRules;
   feedbackDefaults: FeedbackDefaults;
 }
 
-export async function getOwnerSettings(): Promise<OwnerSettings | null> {
+/** One tab's data for the owner only (null for anyone else): each tab of the page loads just what it shows. */
+async function forOwner<T>(tab: string, load: (user: CurrentUser) => Promise<T>): Promise<T | null> {
   const access = await checkOwner();
   if ("denied" in access) {
-    log.warn("Owner settings requested without access", { reason: access.denied });
+    log.warn("Owner settings requested without access", { tab, reason: access.denied });
     return null;
   }
-  const owners: OwnerEntry[] = parseOwners(process.env.SITE_OWNER).map((owner) => {
-    const you = isOwnerIdentity(access.user, owner);
-    return { ...ownerLabel(owner), you, handle: you ? access.user.discordUsername : null };
-  });
-  const [rally, alliances, languages, translation, passwordRules, feedbackDefaults, label] = await Promise.all([
-    rallyCapacitySettings(),
-    allianceSettings(),
-    languageSettings(),
-    getTranslationSettings(),
-    getPasswordRules(),
-    getFeedbackDefaults(),
-    translationProviderLabel(),
-  ]);
-  return { owners, rally, alliances, languages, translation: { ...translation, configured: isTranslationConfigured(), label }, passwordRules, feedbackDefaults };
+  return load(access.user);
 }
+
+export function getGeneralSettings(): Promise<GeneralSettings | null> {
+  return forOwner("general", async (user) => {
+    const owners: OwnerEntry[] = parseOwners(process.env.SITE_OWNER).map((owner) => {
+      const you = isOwnerIdentity(user, owner);
+      return { ...ownerLabel(owner), you, handle: you ? user.discordUsername : null };
+    });
+    const [translation, passwordRules, feedbackDefaults, label] = await Promise.all([getTranslationSettings(), getPasswordRules(), getFeedbackDefaults(), translationProviderLabel()]);
+    return { owners, translation: { ...translation, configured: isTranslationConfigured(), label }, passwordRules, feedbackDefaults };
+  });
+}
+
+export const getRallyCapacitySettings = () => forOwner("rally-sync", rallyCapacitySettings);
+export const getAllianceSettings = () => forOwner("alliances", allianceSettings);
+export const getLanguageSettings = () => forOwner("languages", languageSettings);
 
 const SOURCES = new Set(["seed", "mightpulse", "manual"]);
 

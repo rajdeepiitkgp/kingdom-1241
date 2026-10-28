@@ -34,8 +34,9 @@ import { hasLanguageChanges, languageChanges, parseLanguageForm, savedLanguagesM
 const OWNER_ONLY = "Only the owner can change the settings.";
 const NO_DATABASE: ActionState = { status: "error", message: "The settings need the database." };
 
-function settingsPath(formData: FormData): string {
-  return adminPath(localeField(formData), "/settings");
+/** The settings tab to refresh after a save: General (no tab), or one of the others. */
+function settingsPath(formData: FormData, tab?: "rally-sync" | "alliances" | "languages"): string {
+  return adminPath(localeField(formData), tab ? `/settings/${tab}` : "/settings");
 }
 
 /** Writes one app_config value and audits it with the value before; `parse` reads the stored one as the site does. */
@@ -69,7 +70,7 @@ export async function saveRallyCapacity(_previous: ActionState, formData: FormDa
     log.info("Rally Sync limits saved");
     updateTag(CACHE_TAGS.config);
     const locale = localeField(formData);
-    revalidatePath(adminPath(locale, "/settings"));
+    revalidatePath(adminPath(locale, "/settings/rally-sync"));
     revalidatePath(adminPath(locale, "/rally-sync"));
     return { status: "saved", message: "Saved. The new limits apply from now on." };
   } catch (error) {
@@ -112,7 +113,7 @@ export async function saveLanguages(_previous: ActionState, formData: FormData):
   log.info("Languages saved", { shown: changes.shown.length, hidden: changes.hidden.length, moved: changes.moved });
   // Every page shows the language menu: this one expiry renders the site again.
   updateTag(CACHE_TAGS.languages);
-  revalidatePath(settingsPath(formData));
+  revalidatePath(settingsPath(formData, "languages"));
   return { status: "saved", message: savedLanguagesMessage(changes) };
 }
 
@@ -167,7 +168,7 @@ const TAG_TAKEN = "Another alliance on the list already has that tag.";
 function alliancesChanged(formData: FormData, retagged = false) {
   updateTag(CACHE_TAGS.alliances);
   if (retagged) updateTag(CACHE_TAGS.kvk);
-  revalidatePath(settingsPath(formData));
+  revalidatePath(settingsPath(formData, "alliances"));
 }
 
 /** The next free colour and place for a new alliance. */
@@ -183,7 +184,7 @@ export async function syncAlliancesNow(_previous: ActionState, formData: FormDat
   if ("denied" in access) return denied(access.denied, OWNER_ONLY);
   const result = await syncAlliances({ actor: access.user });
   if (result.status === "synced") alliancesChanged(formData, result.renamed.length > 0);
-  else revalidatePath(settingsPath(formData));
+  else revalidatePath(settingsPath(formData, "alliances"));
   return { status: result.status === "synced" ? "saved" : "error", message: syncMessage(result) };
 }
 

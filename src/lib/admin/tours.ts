@@ -339,8 +339,13 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   },
   settings: {
     id: "admin-settings",
-    version: 3,
+    version: 4,
     steps: [
+      step(
+        "settings-tabs",
+        "Four tabs",
+        "General holds the owner, the translation brake, the wrong-password rules and the feedback defaults; Rally Sync, Alliances and Languages have a tab each. Each tab opens only its own part, and has its own link.",
+      ),
       step(
         "settings-owner",
         "The owner",
@@ -429,6 +434,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (parts.length === 1 && section === "users") return "users";
-  if (parts.length === 1 && section === "settings") return "settings";
+  // One guide for every tab of the settings: steps for parts not on the open tab are left out.
+  if (section === "settings" && (parts.length === 1 || (parts.length === 2 && ["rally-sync", "alliances", "languages"].includes(id)))) return "settings";
   return null;
 }
