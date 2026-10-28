@@ -4,11 +4,13 @@ import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
 import { ProfileForm } from "@/components/admin/ProfileForm";
+import { UsageSummary } from "@/components/admin/UsageReport";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { recentAudit } from "@/lib/admin/audit";
 import { utcLabel } from "@/lib/admin/format";
 import { listPlans } from "@/lib/admin/kvk-data";
+import { getUsageSettings } from "@/lib/admin/settings-data";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
@@ -29,11 +31,12 @@ export default async function AdminOverviewPage() {
 async function Overview({ locale }: { locale: string }) {
   const user = await requireEditor(locale);
   if (!user) return null;
-  const [plans, entries, alliances] = await Promise.all([listPlans(), recentAudit(12), getAlliances()]);
+  const [plans, entries, alliances, usage] = await Promise.all([listPlans(), recentAudit(12), getAlliances(), user.isOwner ? getUsageSettings() : null]);
   const active = plans.find((p) => p.active) ?? null;
 
   return (
     <div className="space-y-6">
+      {usage && <UsageSummary data={usage} locale={locale} />}
       <section data-tour="admin-active-plan">
         <SectionTitle
           icon="⚔️"

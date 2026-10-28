@@ -35,9 +35,10 @@ src/
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms), tour (the guided-tour "?" and overlay, with its read-aloud speaker)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar) and reviewed machine translations (ui-reviewed.ts)
   lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
-  lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile, owner settings: Rally Sync capacity, alliances, languages, translation pause, password rules, feedback defaults), FormData parsers, shared action replies, audit log
+  lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile, owner settings: usage, Rally Sync capacity, alliances, languages, translation pause, password rules, feedback defaults), FormData parsers, shared action replies, audit log
   lib/alliances/          the alliances on Home from MightPulse: answer parsers, the sync plan (link by the game's alliance id, follow renames), the hand-edit form (pure), and the daily sync (server)
   lib/gift-codes/         the gift codes on Home from kingshot.net: the list parser, the sync plan (add, take over, end, prune), the moderators' form (pure), and the hourly check (server)
+  lib/usage/              the owner's Usage tab: the database's own figures read tolerantly, the free-plan limits and the rules that judge each line fine, watch or act (pure)
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
   lib/config/             the owner's settings (table app_config): read and write, tolerant number settings, the readers the site uses (defaults on any problem)
   lib/i18n/               language registry (direction, font, translation style), fallback helper, negotiation, the translation review's checks (ui-review.ts, content-review.ts)

@@ -8,10 +8,11 @@ import { EmptyRow } from "./ui";
 
 /** The owner's settings: one tab per part, each its own page that loads only what it shows. */
 
-export type SettingsTab = "general" | "rally-sync" | "alliances" | "languages";
+export type SettingsTab = "general" | "usage" | "rally-sync" | "alliances" | "languages";
 
 const TABS: ReadonlyArray<{ key: SettingsTab; path: string; label: string }> = [
   { key: "general", path: "/settings", label: "⚙️ General" },
+  { key: "usage", path: "/settings/usage", label: "📊 Usage" },
   { key: "rally-sync", path: "/settings/rally-sync", label: "⏱️ Rally Sync" },
   { key: "alliances", path: "/settings/alliances", label: "🛡️ Alliances" },
   { key: "languages", path: "/settings/languages", label: "🌐 Languages" },
