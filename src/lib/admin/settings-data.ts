@@ -1,5 +1,7 @@
+import { type AllianceSyncState, NO_SYNC_YET, parseAllianceSyncState } from "@/lib/alliances/sync-plan";
 import { isOwnerIdentity, type OwnerKind, ownerLabel, parseOwners } from "@/lib/auth/owner";
 import { checkOwner } from "@/lib/auth/server";
+import { readConfig } from "@/lib/config/app-config";
 import { getFeedbackDefaults, getPasswordRules, getTranslationSettings } from "@/lib/config/settings";
 import { getLanguageInfo } from "@/lib/i18n/languages";
 import type { PasswordRules } from "@/lib/kvk/password-rules";
@@ -9,6 +11,7 @@ import { isRoomOpen, type RoomMode } from "@/lib/rally-sync/room";
 import { roomCapacity } from "@/lib/rally-sync/session";
 import { rallyStore } from "@/lib/rally-sync/store";
 import type { FeedbackDefaults } from "@/lib/retro/form-defaults";
+import { mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import type { TranslationSettings } from "@/lib/translate/pause";
@@ -66,9 +69,37 @@ export interface MachineTranslation extends TranslationSettings {
   label: string;
 }
 
+/** One alliance on the list (the `alliances` table: what Home shows). */
+export interface OwnerAlliance {
+  id: string;
+  tag: string;
+  name: string;
+  color: string;
+  power: number | null;
+  leader: string | null;
+  members: number | null;
+  published: boolean;
+  /** MightPulse's alliance id; null until the first sync links it by its tag. */
+  aid: number | null;
+  source: "seed" | "mightpulse" | "manual";
+  statsAt: string | null;
+}
+
+export interface AllianceSettings {
+  /** False without a database, or when it can't be read. */
+  available: boolean;
+  /** False until migration 0017 is applied. */
+  migrated: boolean;
+  /** MIGHTPULSE_API_KEY is set. */
+  configured: boolean;
+  alliances: OwnerAlliance[];
+  sync: AllianceSyncState;
+}
+
 export interface OwnerSettings {
   owners: OwnerEntry[];
   rally: RallyCapacitySettings;
+  alliances: AllianceSettings;
   languages: LanguageSettings;
   translation: MachineTranslation;
   passwordRules: PasswordRules;
@@ -85,15 +116,58 @@ export async function getOwnerSettings(): Promise<OwnerSettings | null> {
     const you = isOwnerIdentity(access.user, owner);
     return { ...ownerLabel(owner), you, handle: you ? access.user.discordUsername : null };
   });
-  const [rally, languages, translation, passwordRules, feedbackDefaults, label] = await Promise.all([
+  const [rally, alliances, languages, translation, passwordRules, feedbackDefaults, label] = await Promise.all([
     rallyCapacitySettings(),
+    allianceSettings(),
     languageSettings(),
     getTranslationSettings(),
     getPasswordRules(),
     getFeedbackDefaults(),
     translationProviderLabel(),
   ]);
-  return { owners, rally, languages, translation: { ...translation, configured: isTranslationConfigured(), label }, passwordRules, feedbackDefaults };
+  return { owners, rally, alliances, languages, translation: { ...translation, configured: isTranslationConfigured(), label }, passwordRules, feedbackDefaults };
+}
+
+const SOURCES = new Set(["seed", "mightpulse", "manual"]);
+
+/** Every alliance on the list, strongest first (Home's order), with the last sync and its ranking. */
+async function allianceSettings(): Promise<AllianceSettings> {
+  const configured = mightPulseConfigured();
+  const none = { alliances: [], sync: NO_SYNC_YET, configured };
+  if (!isSupabaseAdminConfigured()) return { available: false, migrated: true, ...none };
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("alliances")
+    .select("id, tag, name, color, power, leader, members, published, mightpulse_aid, stats_source, stats_at")
+    .order("power", { ascending: false, nullsFirst: false })
+    .order("sort_order");
+  if (error) {
+    if (error.code === "42703") return { available: true, migrated: false, ...none };
+    log.error("Could not read the alliances", { error: error.message });
+    return { available: false, migrated: true, ...none };
+  }
+  let sync = NO_SYNC_YET;
+  try {
+    sync = parseAllianceSyncState(await readConfig(admin, "alliance_sync"));
+  } catch (configError) {
+    log.warn("Could not read the last alliance sync", { error: configError instanceof Error ? configError.message : String(configError) });
+  }
+  const alliances = (data ?? []).map(
+    (row): OwnerAlliance => ({
+      id: row.id,
+      tag: row.tag,
+      name: row.name,
+      color: row.color,
+      power: typeof row.power === "number" ? row.power : null,
+      leader: row.leader ?? null,
+      members: typeof row.members === "number" ? row.members : null,
+      published: row.published !== false,
+      aid: typeof row.mightpulse_aid === "number" ? row.mightpulse_aid : null,
+      source: SOURCES.has(row.stats_source) ? row.stats_source : "seed",
+      statsAt: row.stats_at ?? null,
+    }),
+  );
+  return { available: true, migrated: true, configured, alliances, sync };
 }
 
 /** Every language row (shown and hidden) with how much of the site is translated into it; reads only the translatable columns. */

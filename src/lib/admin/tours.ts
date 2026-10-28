@@ -51,7 +51,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
-      step("admin-nav-settings", "Settings", "Only the owner has this: how many Rally Sync rooms, leaders and browsers there can be, and who the owner is."),
+      step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
       step("admin-active-plan", "The active plan", "The plan players see on the KvK page right now; Edit opens it. With no active plan, players see “no plan”."),
       step(
         "admin-profile",
@@ -339,7 +339,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   },
   settings: {
     id: "admin-settings",
-    version: 2,
+    version: 3,
     steps: [
       step(
         "settings-owner",
@@ -362,6 +362,32 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Every browser in a room keeps one live connection, and Supabase's free plan allows 200. So all rooms together, if full, may hold 180 browsers. Over that the box turns red, outlines the numbers and offers one to lower.",
       ),
       step("settings-save", "Save", "Save waits until the total fits. Undo changes goes back to what is saved; Use the recommended numbers puts back the battle-day defaults."),
+      step(
+        "settings-alliances",
+        "Alliances",
+        "The alliances on Home. Each one is linked to its alliance in MightPulse, so tag, name, power, leader and members update by themselves every morning, even after a rename.",
+      ),
+      step(
+        "settings-alliances-sync",
+        "Sync now",
+        "The line says when the last sync ran and whether it worked. Sync now runs it at once, e.g. after a merger; it takes up to a minute.",
+      ),
+      step(
+        "settings-alliances-list",
+        "The list",
+        "Only these alliances are on Home, whatever their rank; adding and removing is your call. Edit corrects the numbers by hand while MightPulse is down (marked as typed by hand until the next sync) and sets the colour. Hide from Home keeps it on the list; Remove takes it off.",
+      ),
+      step(
+        "settings-alliances-ranking",
+        "The ranking",
+        "The kingdom's ten strongest alliances as MightPulse last saw them. One that isn't on the list but reaches the top six is held for review: it shows here, never on Home. Add puts one on the list and on Home.",
+      ),
+      step(
+        "settings-alliances-battle",
+        "Battle alliances",
+        "Every player joins KvK or TMP for the castle battle and KvK, so on battle day those two top the ranking and the others empty out. They are never on Home and never ranked with the others. On a battle day, every second Saturday until noon the day after, the alliances keep their numbers from before the battle.",
+      ),
+      step("settings-alliances-hand", "By hand", "For an alliance MightPulse doesn't know yet: add it with its tag, and the next sync links it."),
       step(
         "settings-languages",
         "Languages",

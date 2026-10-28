@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
+import { AllianceSettings } from "@/components/admin/AllianceSettings";
 import { CapacityForm } from "@/components/admin/CapacityForm";
 import { FeedbackDefaultsForm, LanguageList, PasswordRulesForm, TranslationPauseForm } from "@/components/admin/OwnerSettingsForms";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { utcLabel } from "@/lib/admin/format";
+import { DAILY_SYNC_UTC } from "@/lib/alliances/sync-plan";
 import { getOwnerSettings, type MachineTranslation, type OwnerEntry } from "@/lib/admin/settings-data";
 import { requireEditor } from "@/lib/auth/server";
 
@@ -24,6 +26,7 @@ export default async function AdminSettingsPage() {
 const SECTIONS = [
   { id: "owner", label: "Owner" },
   { id: "rally-sync", label: "Rally Sync" },
+  { id: "alliances", label: "Alliances" },
   { id: "languages", label: "Languages" },
   { id: "translation", label: "Machine translation" },
   { id: "passwords", label: "Wrong passwords" },
@@ -62,6 +65,15 @@ async function Settings({ locale }: { locale: string }) {
         hint="How many rooms of each kind moderators can open at once, and how many leaders and browsers each room takes. The three kinds share one limit, so the total is checked with every change."
       >
         <CapacityForm initial={settings.rally.capacity} usage={settings.rally.usage} available={settings.rally.available} locale={locale} />
+      </AdminSection>
+
+      <AdminSection
+        id="alliances"
+        title="Alliances"
+        tour="settings-alliances"
+        hint={`The alliances on Home, strongest first. Each is linked to its alliance in MightPulse, so its tag, name, power, leader and members follow the game every day at ${DAILY_SYNC_UTC} UTC, even after a rename. When MightPulse is down, type the numbers by hand; the next sync replaces them. Description, requirements and Discord link stay as they are.`}
+      >
+        <AllianceSettings settings={settings.alliances} locale={locale} />
       </AdminSection>
 
       <AdminSection
