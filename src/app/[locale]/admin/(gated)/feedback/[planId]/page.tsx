@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
+import { AllianceTable } from "@/components/admin/AllianceTable";
 import { AnalyseButton } from "@/components/admin/AnalyseButton";
 import { DeleteForm } from "@/components/admin/DeleteForm";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
@@ -22,6 +23,7 @@ import { pick } from "@/lib/i18n/localized";
 import { retroAiConfigured, retroAiLabel } from "@/lib/retro/ai";
 import { hasText } from "@/lib/retro/analysis";
 import { RATING_MAX, RATING_MIN, shownRatings, shownTexts } from "@/lib/retro/questions";
+import { PAGE_SIZES, type PageSize, pageAfterResize, type PageWindow, pageWindow, parseResultsView, type ResultsView, withView } from "@/lib/retro/results-view";
 import { formatAverage, overallAverage, percent, summarizeByAlliance, summarizeRatings } from "@/lib/retro/summary";
 
 export const metadata: Metadata = { title: "Feedback results" };
@@ -54,7 +56,11 @@ async function Results({ locale, params, searchParams }: { locale: string; param
   if (!user) return null;
   const retro = await getRetrospectiveByPlan(planId);
   if (!retro) notFound();
-  const [responses, en] = await Promise.all([listResponses(retro.id, { identity: user.isOwner }), getDictionary("en")]);
+  // "Hide names" is applied here, not in the browser: the names never reach a screenshot or a printout.
+  const view = parseResultsView(query);
+  const [responses, en] = await Promise.all([listResponses(retro.id, { identity: user.isOwner && !view.namesHidden }), getDictionary("en")]);
+  const shown = pageWindow(view.page, responses.length, view.size);
+  const base = adminPath(locale, `/feedback/${retro.planId}`);
 
   const ratings = shownRatings(retro.config);
   const texts = shownTexts(retro.config);
@@ -86,6 +92,11 @@ async function Results({ locale, params, searchParams }: { locale: string; param
               Settings
             </Link>
             {responses.length > 0 && (
+              <Link href={withView(`${base}/print`, { ...view, page: shown.page })} className="btn-ghost btn-sm" data-tour="results-print">
+                Print
+              </Link>
+            )}
+            {responses.length > 0 && (
               <a href={adminPath(locale, `/feedback/${retro.planId}/export`)} className="btn-primary btn-sm" download data-tour="results-export">
                 Export CSV
               </a>
@@ -110,7 +121,16 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         {retro.closesAt && <span>Closes {utcLabel(retro.closesAt)} UTC</span>}
         <span>Answers deleted {utcLabel(retro.pruneAt)} UTC</span>
         {user.isOwner ? (
-          <span className="chip bg-gold-soft text-gold-ink">Owner view: Governor IDs and names shown</span>
+          <span className="flex flex-wrap items-center gap-2" data-tour="results-names">
+            {view.namesHidden ? (
+              <span className="chip bg-card-soft text-ink-muted">Names hidden</span>
+            ) : (
+              <span className="chip bg-gold-soft text-gold-ink">Owner view: Governor IDs and names shown</span>
+            )}
+            <Link href={withView(base, { page: shown.page, size: view.size, namesHidden: !view.namesHidden })} className="btn-ghost btn-sm" scroll={false}>
+              {view.namesHidden ? "Show names" : "Hide names"}
+            </Link>
+          </span>
         ) : (
           <span className="chip bg-card-soft text-ink-muted">Identity hidden (owner only)</span>
         )}
@@ -166,49 +186,40 @@ async function Results({ locale, params, searchParams }: { locale: string; param
                 </li>
               ))}
             </ul>
-            {byAlliance.length > 1 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs text-ink-faint">
-                      <th className="py-1 text-start font-bold">Alliance</th>
-                      <th className="py-1 text-end font-bold">Responses</th>
-                      {ratings.map((q) => (
-                        <th key={q.key} className="py-1 text-end font-bold" title={labelOf(q.key)}>
-                          {q.key}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {byAlliance.map((group) => (
-                      <tr key={group.tag ?? "-"} className="border-t border-line">
-                        <td className="py-1.5 font-bold text-ink">{group.tag ? `[${group.tag}]` : "Other / none"}</td>
-                        <td className="py-1.5 text-end tabular">{group.count}</td>
-                        {ratings.map((q) => (
-                          <td key={q.key} className="py-1.5 text-end tabular">
-                            {formatAverage(group.averages[q.key] ?? null)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {byAlliance.length > 1 && <AllianceTable groups={byAlliance} keys={ratings.map((q) => q.key)} labelOf={labelOf} />}
           </div>
         )}
       </AdminSection>
 
-      <AdminSection title={`Responses (${responses.length})`} tour="results-responses" hint="Newest first. Once the AI step has run, texts are shown in English with the original underneath; the chip shows the page language the player used.">
+      <AdminSection
+        id="responses"
+        title={`Responses (${responses.length})`}
+        tour="results-responses"
+        hint={`Newest first; the number of answers per page is under the list. Once the AI step has run, texts are shown in English with the original underneath; the chip shows the page language the player used.`}
+      >
         {responses.length === 0 ? (
           <EmptyRow>Nothing yet. Share the battle plan link: the feedback card is at its top while the form is open.</EmptyRow>
         ) : (
-          <ul className="space-y-3">
-            {responses.map((r) => (
-              <ResponseCard key={r.id} response={r} locale={locale} planId={retro.planId} ratingLabel={labelOf} textLabel={labelOf} ratingKeys={ratings.map((q) => q.key)} textKeys={texts.map((t) => t.key)} />
-            ))}
-          </ul>
+          <>
+            <ul className="space-y-3">
+              {responses.slice(shown.from, shown.to).map((r) => (
+                <ResponseCard
+                  key={r.id}
+                  response={r}
+                  locale={locale}
+                  planId={retro.planId}
+                  view={{ ...view, page: shown.page }}
+                  ratingLabel={labelOf}
+                  textLabel={labelOf}
+                  ratingKeys={ratings.map((q) => q.key)}
+                  textKeys={texts.map((t) => t.key)}
+                />
+              ))}
+            </ul>
+            {responses.length > PAGE_SIZES[0] && (
+              <Pager window={shown} size={view.size} total={responses.length} href={(page, size) => `${withView(base, { page, size, namesHidden: view.namesHidden })}#responses`} />
+            )}
+          </>
         )}
       </AdminSection>
 
@@ -226,10 +237,65 @@ async function Results({ locale, params, searchParams }: { locale: string; param
   );
 }
 
+/**
+ * Newer / older pages of the answer list and how many answers a page shows; links, so the view is in the URL and
+ * survives a reload or a delete. A new page size keeps the first answer on screen in view.
+ */
+function Pager({ window: w, size, total, href }: { window: PageWindow; size: PageSize; total: number; href: (page: number, size: PageSize) => string }) {
+  const off = "btn-ghost btn-sm pointer-events-none opacity-40";
+  return (
+    <div className="mt-4 space-y-3" data-tour="results-pages">
+      {w.pages > 1 && (
+        <nav className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3" aria-label="Pages of answers">
+          {w.page > 1 ? (
+            <Link href={href(w.page - 1, size)} className="btn-ghost btn-sm">
+              ← Newer
+            </Link>
+          ) : (
+            <span className={off} aria-hidden>
+              ← Newer
+            </span>
+          )}
+          <p className="text-center text-sm font-bold text-ink-muted tabular">
+            Page {w.page} of {w.pages}
+            <span className="block text-xs font-semibold text-ink-faint">
+              {w.from + 1}–{w.to} of {total}
+            </span>
+          </p>
+          {w.page < w.pages ? (
+            <Link href={href(w.page + 1, size)} className="btn-ghost btn-sm">
+              Older →
+            </Link>
+          ) : (
+            <span className={off} aria-hidden>
+              Older →
+            </span>
+          )}
+        </nav>
+      )}
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3" role="group" aria-label="Answers per page">
+        <span className="text-sm font-bold text-ink-muted">Per page</span>
+        {PAGE_SIZES.map((option) =>
+          option === size ? (
+            <span key={option} className="btn-primary btn-sm tabular" aria-current="true">
+              {option}
+            </span>
+          ) : (
+            <Link key={option} href={href(pageAfterResize(w.from, option), option)} className="btn-ghost btn-sm tabular">
+              {option}
+            </Link>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResponseCard({
   response: r,
   locale,
   planId,
+  view,
   ratingLabel,
   textLabel,
   ratingKeys,
@@ -238,6 +304,8 @@ function ResponseCard({
   response: RetroResponse;
   locale: string;
   planId: string;
+  /** Sent with a delete, so the page comes back the same. */
+  view: ResultsView;
   ratingLabel: (key: string) => string;
   textLabel: (key: string) => string;
   ratingKeys: Array<keyof RetroResponse["ratings"]>;
@@ -302,7 +370,11 @@ function ResponseCard({
         </dl>
       )}
       <div className="mt-2 flex justify-end">
-        <DeleteForm action={deleteResponse} hidden={{ locale, planId, id: r.id }} confirmText="Delete this response? This cannot be undone." />
+        <DeleteForm
+          action={deleteResponse}
+          hidden={{ locale, planId, id: r.id, page: String(view.page), size: String(view.size), names: view.namesHidden ? "hidden" : "" }}
+          confirmText="Delete this response? This cannot be undone."
+        />
       </div>
     </li>
   );

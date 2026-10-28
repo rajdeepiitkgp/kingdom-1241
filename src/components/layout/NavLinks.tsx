@@ -60,7 +60,7 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
     <nav
       id="bottom-nav"
       data-tour="site-nav"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur-sm lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur-sm lg:hidden print:hidden"
       aria-label="Main"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-6">

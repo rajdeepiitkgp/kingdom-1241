@@ -18,7 +18,7 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
   ];
   return (
     <div dir="ltr">
-      <div className="card-soft mb-6 flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="card-soft mb-6 flex flex-wrap items-center gap-3 px-4 py-3 print:hidden">
         <span className="text-base font-black text-ink">🛠️ Admin</span>
         <Suspense fallback={null}>
           <AdminGuide />

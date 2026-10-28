@@ -26,7 +26,7 @@ npm run dev
 ```
 src/
   app/[locale]/           pages: / (home), /events, /rules, /guides, /guides/[slug], /kvk, /kvk/prep, /kvk/feedback, /kvk/leaders, /kvk/checklist, /tools, /tools/rally-sync, /tools/rally-sync/[code]
-  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results + CSV export, Rally Sync rooms, users, each with its own "Page guide"; English only
+  app/[locale]/admin/     council area (Discord sign-in): overview, battle-plan editor, feedback results (paged, print view, CSV export), Rally Sync rooms, users, each with its own "Page guide"; English only
   app/auth/callback       finishes the Discord sign-in (code → session cookies)
   app/api/translate       Supabase webhook → translation provider → writes translations back, refreshes cache
   app/api/revalidate      manual cache refresh
@@ -40,7 +40,7 @@ src/
   lib/i18n/               language registry (direction, font, translation style), fallback helper, negotiation, the translation review's checks (ui-review.ts, content-review.ts)
   lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers, the prep-week schedule and item × day table (`prep.ts`)
   lib/rally-sync/         Rally Sync: timing maths, garrison refills, the counter-rally order, game-chat texts and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds
-  lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
+  lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, results paging and the hide-names view, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)

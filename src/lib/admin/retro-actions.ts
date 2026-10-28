@@ -13,6 +13,7 @@ import { retroAiConfigured } from "@/lib/retro/ai";
 import { translateAndAnalyse, translateResponses } from "@/lib/retro/analyse";
 import type { AnalysisContext } from "@/lib/retro/analysis";
 import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
+import { parseResultsView, resultsQuery } from "@/lib/retro/results-view";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
@@ -107,26 +108,28 @@ async function clearAnalysis(retroId: string, log: Logger): Promise<void> {
   if (error) log.error("Clearing the feedback summary failed", { retro: retroId, error: error.message });
 }
 
-/** One answer (e.g. abusive text). Moderators and admins. */
+/** One answer (e.g. abusive text). Moderators and admins. Returns to the page of answers it was on, names hidden if they were. */
 export async function deleteResponse(formData: FormData): Promise<void> {
   const locale = localeField(formData);
   const planId = uuidField(formData, "planId");
   const id = uuidField(formData, "id");
   if (!planId) redirect(adminPath(locale, "/feedback"));
+  const view = resultsQuery(parseResultsView(formData));
+  const back = (notice: string) => resultsPath(locale, planId, view ? `${notice}&${view}` : notice);
   const access = await checkAccess("moderator");
-  if ("denied" in access) redirect(resultsPath(locale, planId, "error=forbidden"));
+  if ("denied" in access) redirect(back("error=forbidden"));
   if (id) {
     const log = await actionLogger();
     const { data, error } = await createAdminClient().from("kvk_retro_responses").delete().eq("id", id).select("retrospective_id").maybeSingle();
     if (error) {
       log.error("Deleting a feedback response failed", { id, error: error.message });
-      redirect(resultsPath(locale, planId, "error=delete"));
+      redirect(back("error=delete"));
     }
     // The stored summary may quote the deleted answer: it goes too, and the next "Translate and analyse" writes a fresh one.
     if (data?.retrospective_id) await clearAnalysis(String(data.retrospective_id), log);
     await audit(access.user, "retro.delete_response", "kvk_retro_responses", id, { planId, retroId: data?.retrospective_id ?? null });
   }
-  redirect(resultsPath(locale, planId, "deleted=1"));
+  redirect(back("deleted=1"));
 }
 
 /** Every answer of a battle. Administrators only; the page asks for an export first. */

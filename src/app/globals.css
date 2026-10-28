@@ -5,9 +5,12 @@
 
 /* ---------------------------------------------------------------------------
  * Design tokens — light theme ("cute & polished": soft blue, white cards,
- * gold accents). Dark values are overridden further down.
+ * gold accents). Dark values are overridden further down. `.paper-light` /
+ * `.paper-dark` force one palette on a subtree when printed, whatever the site
+ * theme (the feedback print view's paper choice); on screen they follow it.
  * ------------------------------------------------------------------------- */
-:root {
+:root,
+.paper-light {
   --bg: #eaf2ff;
   --bg-deep: #dce9ff;
   --card: #ffffff;
@@ -41,7 +44,8 @@
   --radius-card: 1.5rem;
 }
 
-.dark {
+.dark,
+.paper-dark {
   --bg: #0f1627;
   --bg-deep: #0a1020;
   --card: #182239;
@@ -69,6 +73,39 @@
   --on-success: #04261a;
 
   --shadow-color: 220 60% 3%;
+}
+
+/* On screen the paper scopes take the site theme from their parent: the paper only changes the printout.
+   Every token above is listed (a test keeps the list complete). */
+@media screen {
+  .paper-light,
+  .paper-dark {
+    --bg: inherit;
+    --bg-deep: inherit;
+    --card: inherit;
+    --card-soft: inherit;
+    --line: inherit;
+    --ink: inherit;
+    --ink-muted: inherit;
+    --ink-faint: inherit;
+    --primary: inherit;
+    --primary-strong: inherit;
+    --primary-soft: inherit;
+    --primary-ink: inherit;
+    --gold: inherit;
+    --gold-strong: inherit;
+    --gold-soft: inherit;
+    --gold-ink: inherit;
+    --on-gold: inherit;
+    --success: inherit;
+    --success-soft: inherit;
+    --danger: inherit;
+    --danger-soft: inherit;
+    --on-danger: inherit;
+    --on-success: inherit;
+    --shadow-color: inherit;
+    --radius-card: inherit;
+  }
 }
 
 @theme inline {
@@ -173,6 +210,22 @@ body {
   font-family: var(--font-sans);
   font-feature-settings: "ss01", "cv11";
   text-rendering: optimizeLegibility;
+}
+
+/* Paper: the site's bars carry `print:hidden` and the page backdrop stays off. Dark paper (the feedback
+   print view, for reading the PDF on a screen) keeps its colours; that page sets the colour of the whole
+   sheet for either paper with its own `@page` / root rule. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: none;
+  }
+  .paper-dark {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 /* Language-specific font stacks (set on <html> by the layout). */

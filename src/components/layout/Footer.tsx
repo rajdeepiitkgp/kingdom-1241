@@ -16,7 +16,7 @@ export function Footer({
   adminHref: string;
 }) {
   return (
-    <footer className="mx-auto mt-16 max-w-6xl px-4 pb-8 text-center text-sm text-ink-muted">
+    <footer className="mx-auto mt-16 max-w-6xl px-4 pb-8 text-center text-sm text-ink-muted print:hidden">
       <div className="card-soft px-6 py-5">
         <p className="font-semibold">{dict["footer.disclaimer"]}</p>
         <p className="mt-2">{dict["footer.translationNote"]}</p>
