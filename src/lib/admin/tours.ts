@@ -10,7 +10,7 @@ import type { Tour } from "@/lib/tour/tour";
  * hasn't been created) are left out when the tour starts.
  */
 
-export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "rallySync" | "users";
+export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "users";
 
 export const ADMIN_TOUR_LABELS = {
   open: "Page guide",
@@ -215,13 +215,19 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   },
   results: {
     id: "admin-results",
-    version: 1,
+    version: 2,
     steps: [
       step(
         "results-status",
         "At a glance",
         "Open or closed, how many answered, when it closes and when the answers are deleted. Only the owner sees names and Governor IDs.",
       ),
+      step(
+        "results-names",
+        "Hide names",
+        "Takes the names and Governor IDs off this page, its pages and the print view, e.g. for a screenshot. Show names brings them back.",
+      ),
+      step("results-print", "Print", "Every answer on one page, laid out for paper or a PDF (light or dark), with the summary on top."),
       step("results-export", "Export CSV", "Every answer in a spreadsheet file, without names. Export before the answers are deleted."),
       step(
         "results-ai",
@@ -230,7 +236,38 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step("results-summary", "Summary", "Averages on the 0–5 scale and how the answers spread."),
       step("results-responses", "Responses", "Every answer, newest first. Delete removes one answer, e.g. spam."),
+      step(
+        "results-pages",
+        "More answers",
+        "Newer and Older move through the pages; Per page shows 5, 15 or 25 answers at a time. The summary above always counts every answer.",
+      ),
       step("results-delete", "Delete all", "Removes every answer now instead of waiting for the retention period. Export first: it can't be undone."),
+    ],
+  },
+  print: {
+    id: "admin-feedback-print",
+    version: 1,
+    steps: [
+      step(
+        "print-sheet",
+        "The printout",
+        "The summary, the AI summary if there is one, then every answer, newest first. Only this part goes on paper: the bars and buttons stay off.",
+      ),
+      step(
+        "print-names",
+        "Hide names",
+        "Leaves the names and Governor IDs out of the printout. Hide them before you share the file outside the council.",
+      ),
+      step(
+        "print-paper",
+        "Paper",
+        "Light is white paper, for a printer. Dark gives a PDF that is easier to read on a phone at night. It changes only the printout, not this page.",
+      ),
+      step(
+        "print-button",
+        "Print or save as PDF",
+        "Opens the print dialog. To get a file, pick Save as PDF as the printer. On a phone the dialog may sit behind Share, then Print. Inside an app's own browser (Discord) nothing may open: open the page in Chrome or Safari.",
+      ),
     ],
   },
   rallySync: {
@@ -309,7 +346,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   const [section, id, sub] = parts;
   if (parts.length === 0) return "overview";
   if (section === "kvk") return parts.length === 1 ? "plans" : parts.length === 2 ? "plan" : parts.length === 3 && (sub === "leaders" || sub === "checklist") ? sub : null;
-  if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : null;
+  if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (parts.length === 1 && section === "users") return "users";
   return null;

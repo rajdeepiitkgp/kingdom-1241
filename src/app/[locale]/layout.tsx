@@ -88,7 +88,7 @@ export default async function RootLayout({
       </head>
       {/* suppressHydrationWarning: browser extensions (Grammarly, ...) add attributes to <body>
           before React hydrates; the mismatch is harmless and only concerns this element. */}
-      <body className="flex min-h-full flex-col pb-24 lg:pb-0" suppressHydrationWarning>
+      <body className="flex min-h-full flex-col pb-24 lg:pb-0 print:pb-0" suppressHydrationWarning>
         <PersistentUiState locale={currentLocale} />
         <Header
             locale={currentLocale}
@@ -98,7 +98,7 @@ export default async function RootLayout({
             kingdomNumber={settings.kingdomNumber}
             adminHref={`/${currentLocale}/admin`}
           />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 md:pt-10 print:p-0">
             {/* Route changes crossfade through the <ViewTransition> in template.tsx; language
                 switches through withNavigationTransition() in the language switcher. */}
             {children}

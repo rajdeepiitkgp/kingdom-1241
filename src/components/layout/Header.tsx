@@ -25,7 +25,7 @@ export function Header({
   adminHref: string;
 }) {
   return (
-    <header id="site-header" className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md">
+    <header id="site-header" className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-md print:hidden">
       {/* max-w-7xl, wider than the content column: the labelled nav needs the room (see DesktopNav). */}
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
         <Link href={localePath(locale, "/")} className="flex shrink-0 items-center gap-2.5 font-extrabold" aria-label={kingdomName}>

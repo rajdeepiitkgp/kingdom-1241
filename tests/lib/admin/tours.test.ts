@@ -13,6 +13,7 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/kvk/3f2a/checklist")).toBe("checklist");
     expect(adminPageFor("/en/admin/feedback")).toBe("feedback");
     expect(adminPageFor("/en/admin/feedback/3f2a")).toBe("results");
+    expect(adminPageFor("/en/admin/feedback/3f2a/print")).toBe("print");
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");
     expect(adminPageFor("/en/admin/users")).toBe("users");
   });
