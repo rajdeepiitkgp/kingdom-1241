@@ -47,3 +47,22 @@ export function isOwnerIdentity(
     return Boolean(candidate.email) && identity.email === candidate.email;
   });
 }
+
+/**
+ * Why SITE_OWNER can't go to production, or null. The owner is decided when
+ * the site is set up (SETUP.md, step 0), and a production build without one
+ * fails rather than run a site nobody owns: exactly one entry, the Discord
+ * user id (a handle can be renamed and then registered by someone else).
+ */
+export function productionOwnerProblem(value: string | null | undefined): string | null {
+  const entries = (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (entries.length === 0) return "SITE_OWNER is not set. Set it to the owner's Discord user id in Vercel (SETUP.md, step 0).";
+  if (entries.length > 1) return "SITE_OWNER holds more than one owner. Production takes exactly one: the owner's Discord user id.";
+  if (!parseOwner(entries[0])?.discordId) {
+    return "SITE_OWNER must be the owner's Discord user id (a 17–20 digit number from Discord → Settings → Advanced → Developer Mode → Copy User ID), not a username or e-mail.";
+  }
+  return null;
+}
