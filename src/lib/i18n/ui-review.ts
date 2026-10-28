@@ -46,7 +46,8 @@ export interface ReviewInput {
 }
 
 const PLACEHOLDER = /\{\{?[\w.:-]+\}?\}/g;
-const placeholders = (s: string) => (s.match(PLACEHOLDER) ?? []).sort().join(" ");
+/** The placeholders of a text, sorted: `{n}`, `{{date}}`, `{{ui:key}}` must survive translation unchanged. */
+export const placeholderSignature = (s: string) => (s.match(PLACEHOLDER) ?? []).sort().join(" ");
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -158,7 +159,7 @@ export function reviewItems(input: ReviewInput, keyFilter: (key: string) => bool
       if (outdated) findings.push("live: the site still has older English (run sync-ui)");
       else if (!text.trim()) findings.push("missing: no translation yet");
       else {
-        if (placeholders(text) !== placeholders(en)) findings.push("placeholders differ from the English");
+        if (placeholderSignature(text) !== placeholderSignature(en)) findings.push("placeholders differ from the English");
         findings.push(...glossaryFindings(en, text, locale, input.glossary));
         findings.push(...labelFindings(key, en, text, locale, input.english, input.live));
         findings.push(...styleFindings(text, locale));

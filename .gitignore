@@ -47,3 +47,6 @@ supabase/.branches
 
 # content backups (npm run backup)
 /backups
+
+# Translation review: hashes of secret battle-plan texts stay on this machine
+.claude/skills/translation-review/*.local.json

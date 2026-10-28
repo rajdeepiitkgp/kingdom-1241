@@ -16,6 +16,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "translate": "tsx scripts/translate.ts",
     "ui:review": "tsx scripts/ui-review.ts",
+    "content:review": "tsx scripts/content-review.ts",
+    "content:fixes": "tsx scripts/content-fixes.ts",
     "dev:admin": "tsx scripts/dev-admin.ts",
     "backup": "tsx scripts/backup.ts",
     "prune": "tsx scripts/prune.ts"
