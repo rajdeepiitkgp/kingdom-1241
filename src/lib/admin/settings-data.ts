@@ -1,4 +1,4 @@
-import { parseOwners } from "@/lib/auth/owner";
+import { isOwnerIdentity, type OwnerKind, ownerLabel, parseOwners } from "@/lib/auth/owner";
 import { checkOwner } from "@/lib/auth/server";
 import { getFeedbackDefaults, getPasswordRules, getTranslationSettings } from "@/lib/config/settings";
 import { getLanguageInfo } from "@/lib/i18n/languages";
@@ -23,10 +23,14 @@ import { addCoverage, type TextCoverage } from "./languages";
 
 const log = createLogger("admin");
 
-/** One entry of SITE_OWNER as configured (production holds exactly one, ideally the Discord user id). */
+/** One entry of SITE_OWNER as configured (production holds exactly one: the Discord user id), shown in part only. */
 export interface OwnerEntry {
-  kind: "discord_id" | "discord_handle" | "email";
-  value: string;
+  kind: OwnerKind;
+  shown: string;
+  /** The account signed in now. */
+  you: boolean;
+  /** Its Discord handle, when it is the account signed in now (the page names it by that, not the number). */
+  handle: string | null;
 }
 
 export interface RallyCapacitySettings {
@@ -77,13 +81,10 @@ export async function getOwnerSettings(): Promise<OwnerSettings | null> {
     log.warn("Owner settings requested without access", { reason: access.denied });
     return null;
   }
-  const owners: OwnerEntry[] = parseOwners(process.env.SITE_OWNER).map((owner) =>
-    owner.discordId
-      ? { kind: "discord_id", value: owner.discordId }
-      : owner.discordUsername
-        ? { kind: "discord_handle", value: owner.discordUsername }
-        : { kind: "email", value: owner.email ?? "" },
-  );
+  const owners: OwnerEntry[] = parseOwners(process.env.SITE_OWNER).map((owner) => {
+    const you = isOwnerIdentity(access.user, owner);
+    return { ...ownerLabel(owner), you, handle: you ? access.user.discordUsername : null };
+  });
   const [rally, languages, translation, passwordRules, feedbackDefaults, label] = await Promise.all([
     rallyCapacitySettings(),
     languageSettings(),

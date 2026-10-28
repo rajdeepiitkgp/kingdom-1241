@@ -107,18 +107,23 @@ async function Settings({ locale }: { locale: string }) {
   );
 }
 
-const OWNER_KINDS: Record<OwnerEntry["kind"], string> = { discord_id: "Discord user id", discord_handle: "Discord username", email: "E-mail (development only)" };
+const OWNER_KINDS: Record<OwnerEntry["kind"], string> = { discord_id: "Discord user id ending in", discord_handle: "Discord username", email: "E-mail (development only)" };
 
 function OwnerLine({ owners }: { owners: OwnerEntry[] }) {
   if (owners.length === 0) return <p className="text-sm font-bold text-danger">SITE_OWNER is not set.</p>;
   return (
     <ul className="space-y-2">
       {owners.map((owner) => (
-        <li key={`${owner.kind}:${owner.value}`} className="text-sm">
-          <span className="font-bold text-ink">{OWNER_KINDS[owner.kind]}:</span>{" "}
-          <span className="font-semibold break-all text-ink-muted tabular" dir="ltr">
-            {owner.value}
+        <li key={`${owner.kind}:${owner.shown}`} className="text-sm">
+          {/* The id is what signs the owner in; the signed-in owner's own account is named by its handle instead of the number. */}
+          <span className="font-bold text-ink">{owner.kind === "discord_id" && owner.handle ? "Discord account" : OWNER_KINDS[owner.kind]}</span>{" "}
+          <span className="font-semibold break-all text-ink-muted" dir="ltr">
+            {owner.kind === "discord_id" && owner.handle ? `@${owner.handle}` : owner.kind === "discord_handle" ? `@${owner.shown}` : owner.shown}
           </span>
+          {owner.you && <span className="chip ms-2 bg-success-soft text-success">You</span>}
+          {owner.kind === "discord_id" && owner.handle && (
+            <p className="mt-1 text-xs text-ink-faint">Set by its Discord user id, so a new username keeps it the owner.</p>
+          )}
           {owner.kind === "discord_handle" && (
             <p className="mt-1 text-xs font-bold text-danger">
               Production needs the Discord user id here: a username can be renamed and then taken by someone else, and the next deploy fails until it is
