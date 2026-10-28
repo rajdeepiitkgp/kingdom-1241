@@ -17,6 +17,8 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");
     expect(adminPageFor("/en/admin/users")).toBe("users");
     expect(adminPageFor("/en/admin/settings")).toBe("settings");
+    for (const tab of ["rally-sync", "alliances", "languages"]) expect(adminPageFor(`/en/admin/settings/${tab}`), tab).toBe("settings");
+    expect(adminPageFor("/en/admin/settings/elsewhere")).toBeNull();
   });
 
   it("have no guide outside the admin pages", () => {

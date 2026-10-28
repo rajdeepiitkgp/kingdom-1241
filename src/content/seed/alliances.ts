@@ -2,9 +2,10 @@
  * Alliances of Kingdom 1241, taken from the in-game "Alliance Power" ranking
  * on 23 Oct 2026. Tags, names and power are real; the colours follow the
  * in-game banners. Leader, member count, description and requirements are
- * left empty for each R5 to fill in — edit the `alliances` table (admin panel
- * in phase 2, MightPulse sync in phase 4). The home page reads the table, not
- * this file, once Supabase is configured.
+ * left empty for each R5 to fill in. Once Supabase is configured the home page
+ * reads the table, and the daily MightPulse sync (Admin → Settings →
+ * Alliances) links these rows by their tag and keeps tag, name, power, leader
+ * and members current.
  */
 export interface SeedAlliance {
   id: string;

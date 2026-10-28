@@ -20,11 +20,17 @@ export function parseGameName(value: unknown): { ok: true; value: string } | { o
   return { ok: true, value: name };
 }
 
-/** "[ULU] Rudy" → name "Rudy", tag "ULU" when ULU is one of the kingdom's alliances; anything else is left alone. */
+/**
+ * "[ULU] Rudy" → name "Rudy", tag "ULU" when ULU is one of the kingdom's
+ * alliances; anything else is left alone. Tags are case-sensitive in the game
+ * ([NAM] and [Nam] are two alliances), so the exact tag wins, and a tag typed
+ * in another case only counts when exactly one alliance matches it.
+ */
 export function splitAllianceTag(value: string, tags: readonly string[]): { name: string; tag: string | null } {
   const match = /^\[\s*([A-Za-z0-9]{2,6})\s*\]\s*(.*)$/.exec(value.trim());
   if (!match) return { name: value, tag: null };
-  const tag = tags.find((t) => t.toUpperCase() === match[1].toUpperCase());
+  const loose = tags.filter((t) => t.toUpperCase() === match[1].toUpperCase());
+  const tag = tags.find((t) => t === match[1]) ?? (loose.length === 1 ? loose[0] : undefined);
   return tag ? { name: match[2], tag } : { name: value, tag: null };
 }
 

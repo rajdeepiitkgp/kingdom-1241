@@ -42,7 +42,8 @@ export function parseMightPulsePlayer(json: unknown, governorId: string): Govern
   return {
     governorId,
     name: clipText(name, 40),
-    allianceTag: allianceTag ? allianceTag.toUpperCase().slice(0, 8) : null,
+    // As the game writes it: tags are case-sensitive ([NAM] and [Nam] are two alliances of 1241).
+    allianceTag: allianceTag ? allianceTag.slice(0, 8) : null,
     kingdom: int(player.kid) ?? int(player.kingdom),
   };
 }

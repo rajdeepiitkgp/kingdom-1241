@@ -15,7 +15,7 @@ const RANK_STYLES = [
   "bg-amber-600 text-white shadow-[0_2px_0_0_#92400e]",
 ];
 
-/** Alliances in the order of the `alliances` table (sort_order = in-game power rank). */
+/** Alliances strongest first (the loader orders by power, which the daily MightPulse sync keeps current), so the badge is the in-game rank. */
 export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[]; dict: Dictionary; locale: string }) {
   if (alliances.length === 0) return null;
   const anyPower = alliances.some((a) => a.power != null);

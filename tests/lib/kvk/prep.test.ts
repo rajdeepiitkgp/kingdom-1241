@@ -8,6 +8,7 @@ import {
   defaultDay,
   INTEL_STACK_STEPS,
   intelStackFor,
+  isBattleSaturday,
   markOn,
   pointsOn,
   PREP_DAYS,
@@ -176,5 +177,12 @@ describe("the prep table", () => {
       expect(PREP_ITEMS.find((i) => i.id === "gathering")?.marks[bison.day - 1]).toBe("best");
       for (const id of ["allianceNode", "gatherEarly", "gatherBoost"] as const) expect(PREP_TIPS[day].some((t) => t.id === id), `${id} on day ${day}`).toBe(true);
     }
+  });
+});
+
+describe("the battle calendar", () => {
+  it("has a battle every second Saturday: KvK on each round's Saturday, the castle battle in between", () => {
+    for (const day of ["2026-10-24", "2026-11-07", "2026-11-21", "2026-12-05", "2027-01-02"]) expect(isBattleSaturday(Date.parse(`${day}T15:00:00Z`)), day).toBe(true);
+    for (const day of ["2026-10-31", "2026-11-14", "2026-11-08", "2026-11-06"]) expect(isBattleSaturday(Date.parse(`${day}T15:00:00Z`)), day).toBe(false);
   });
 });
