@@ -1,0 +1,38 @@
+# The hourly gift-code check: the site reads kingshot.net's list of working
+# codes (POST /api/gift-codes/sync; src/lib/gift-codes/) and updates Home when a
+# code came, changed or ended. A workflow of its own so its 24 runs a day don't
+# bury the Maintenance history.
+#
+# Runs every hour and by hand (Actions → Gift codes → Run workflow; moderators
+# have Check now on the admin page too). Secrets: SITE_URL and
+# TRANSLATE_WEBHOOK_SECRET, the same as Maintenance (SETUP.md § 9d). A run
+# fails only when the site's database is the problem or kingshot.net has not
+# answered for six hours; shorter outages pass and are retried the next hour.
+name: Gift codes
+
+on:
+  schedule:
+    # Every hour at minute 23; keep HOURLY_CHECK_MINUTE in src/lib/gift-codes/sync-plan.ts in step.
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gift-codes
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check kingshot.net
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check gift codes
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 -X POST "$SITE_URL/api/gift-codes/sync" \
+            -H "Authorization: Bearer $TRANSLATE_WEBHOOK_SECRET"

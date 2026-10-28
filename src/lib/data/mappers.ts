@@ -180,6 +180,8 @@ export function mapGiftCode(row: Row): GiftCode {
     expiresAt: row.expires_at ? iso(row.expires_at, "") || null : null,
     active: row.active !== false,
     addedAt: iso(row.added_at, new Date(0).toISOString()),
+    source: row.source === "kingshot" ? "kingshot" : "manual",
+    endedAt: row.ended_at ? iso(row.ended_at, "") || null : null,
   };
 }
 

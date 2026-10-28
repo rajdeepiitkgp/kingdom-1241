@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { buildSeedContent, SEED_LANGUAGES, SEED_SETTINGS } from "@/content/seed";
+import { giftCodeState } from "@/lib/gift-codes/sync-plan";
 import { getLanguageInfo, type SiteLanguage } from "@/lib/i18n/languages";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -250,24 +251,30 @@ export async function getAlliances(): Promise<Alliance[]> {
   }
 }
 
+/** The codes Home shows: not hidden, still in kingshot.net's list (or added by hand) and not expired; newest first. */
 export async function getGiftCodes(): Promise<GiftCode[]> {
   "use cache";
   cacheLife("content");
   cacheTag(CACHE_TAGS.all, CACHE_TAGS.giftCodes);
 
-  if (!isSupabaseConfigured()) return dropExpired(buildSeedContent().giftCodes);
+  const shown = (codes: GiftCode[]) => {
+    const now = Date.now();
+    return codes.filter((code) => giftCodeState(code, now) === "home");
+  };
+  if (!isSupabaseConfigured()) return shown(buildSeedContent().giftCodes);
   try {
     const supabase = createPublicClient()!;
+    // `*`, not the new columns by name: a deploy may run ahead of migration 0018.
     const { data, error } = await supabase
       .from("gift_codes")
       .select("*")
       .eq("active", true)
       .order("added_at", { ascending: false });
     if (error) throw error;
-    return dropExpired((data ?? []).map(mapGiftCode));
+    return shown((data ?? []).map(mapGiftCode));
   } catch (error) {
     logFallback("gift codes", error);
-    return dropExpired(buildSeedContent().giftCodes);
+    return shown(buildSeedContent().giftCodes);
   }
 }
 
