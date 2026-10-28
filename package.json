@@ -20,7 +20,8 @@
     "content:fixes": "tsx scripts/content-fixes.ts",
     "dev:admin": "tsx scripts/dev-admin.ts",
     "backup": "tsx scripts/backup.ts",
-    "prune": "tsx scripts/prune.ts"
+    "prune": "tsx scripts/prune.ts",
+    "deployments:prune": "tsx scripts/prune-deployments.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.2.0",
