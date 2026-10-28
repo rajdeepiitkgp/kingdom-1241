@@ -4,12 +4,12 @@ import { type Tour, uiStep } from "./tour";
 
 /**
  * The Home page's guided tour: where things are on the site and the parts of
- * Home that are real today. Announcements, events and gift codes are still
- * placeholder content, so the tour leaves them out until they are filled in.
+ * Home that are real today. Announcements and events are still placeholder
+ * content, so the tour leaves them out until they are filled in.
  */
 export const HOME_TOUR: Tour<UiKey> = {
   id: "home",
-  version: 1,
+  version: 2,
   steps: [
     uiStep("site-nav", "site.nav"),
     uiStep("site-language", "site.language"),
@@ -19,5 +19,6 @@ export const HOME_TOUR: Tour<UiKey> = {
     uiStep("home-prep", "home.prep"),
     uiStep("home-kvk", "home.kvk"),
     uiStep("home-alliances", "home.alliances"),
+    uiStep("home-gift-codes", "home.giftCodes", "home.giftCodes"),
   ],
 };

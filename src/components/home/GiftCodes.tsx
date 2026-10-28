@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Copy, Gift } from "lucide-react";
+import { Check, Copy, ExternalLink, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { GiftCode } from "@/lib/data/types";
+import { KINGSHOT_GIFT_CODES_PAGE, KINGSHOT_SITE, OFFICIAL_REDEEM_PAGE } from "@/lib/gift-codes/kingshot";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { useNow } from "../time/useNow";
@@ -20,6 +21,9 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
   // re-checks on the client so a code that expires while the page is open disappears.
   const now = useNow(60_000);
   const active = codes.filter((c) => c.active && (!c.expiresAt || !now || Date.parse(c.expiresAt) > now.getTime()));
+
+  // The site's name is a link, so the sentence is split around it (word order differs per language).
+  const [before, after = ""] = dict["home.giftCodesSource"].split("{site}");
 
   async function copy(code: string) {
     try {
@@ -49,7 +53,11 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
                 {code.code}
               </code>
               <div className="col-span-2 min-w-0 text-sm sm:col-span-1">
-                <p className="text-ink" dir="auto">{pick(code.rewards, locale)}</p>
+                {pick(code.rewards, locale) && (
+                  <p className="text-ink" dir="auto">
+                    {pick(code.rewards, locale)}
+                  </p>
+                )}
                 <p className="text-xs font-semibold text-ink-faint">
                   {code.expiresAt
                     ? // UTC on purpose: the server (UTC) and the visitor's browser must render the same text, or React reports a hydration mismatch.
@@ -71,6 +79,19 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
           ))}
         </ul>
       )}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line pt-3">
+        <p className="min-w-0 text-xs font-semibold text-ink-faint">
+          {before}
+          <a href={KINGSHOT_GIFT_CODES_PAGE} target="_blank" rel="noopener noreferrer" className="font-bold text-ink-muted underline underline-offset-2 hover:text-ink" dir="ltr">
+            {KINGSHOT_SITE}
+          </a>
+          {after}
+        </p>
+        <a href={OFFICIAL_REDEEM_PAGE} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm">
+          {dict["home.giftCodesRedeem"]}
+          <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden />
+        </a>
+      </div>
     </div>
   );
 }

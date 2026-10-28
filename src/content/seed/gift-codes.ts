@@ -1,6 +1,8 @@
 /**
- * Gift codes shown on the home page. These are EXAMPLES — replace them with
- * real, working codes. Expired codes are hidden automatically.
+ * Gift codes shown on the home page. None are seeded: the real ones come from
+ * kingshot.net every hour (src/lib/gift-codes/), and moderators add others on
+ * the admin page. The two example codes of the first setup were removed by
+ * migration 0018.
  */
 export interface SeedGiftCode {
   id: string;
@@ -10,19 +12,4 @@ export interface SeedGiftCode {
   addedAt: string;
 }
 
-export const SEED_GIFT_CODES: SeedGiftCode[] = [
-  {
-    id: "c1000000-0000-4000-8000-000000000001",
-    code: "KINGDOM1241",
-    rewards: "Example code — replace with a real one. (Gems, speedups, resources)",
-    expiresAt: null,
-    addedAt: "2026-10-23T10:00:00.000Z",
-  },
-  {
-    id: "c1000000-0000-4000-8000-000000000002",
-    code: "WELCOME2026",
-    rewards: "Example code — replace with a real one. (Hero shards, Forgehammers)",
-    expiresAt: "2026-12-31T23:59:59.000Z",
-    addedAt: "2026-10-23T10:00:00.000Z",
-  },
-];
+export const SEED_GIFT_CODES: SeedGiftCode[] = [];

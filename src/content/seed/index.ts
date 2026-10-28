@@ -144,6 +144,8 @@ export function buildSeedContent(): SeedContent {
       expiresAt: c.expiresAt,
       active: true,
       addedAt: c.addedAt,
+      source: "manual" as const,
+      endedAt: null,
     })),
     heroes: SEED_HEROES.map((h, index) => ({
       id: h.id,

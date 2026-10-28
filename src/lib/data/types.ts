@@ -103,6 +103,10 @@ export interface GiftCode {
   expiresAt: string | null;
   active: boolean;
   addedAt: string;
+  /** kingshot.net (checked hourly) or added by a moderator. */
+  source: "kingshot" | "manual";
+  /** When it left kingshot.net's list of working codes. */
+  endedAt: string | null;
 }
 
 export interface SiteSettings {

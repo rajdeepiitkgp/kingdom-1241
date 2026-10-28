@@ -122,8 +122,20 @@ describe("content mappers", () => {
     const alliance = mapAlliance({ id: "al1", tag: "ULU", name: "Ulu", power: "123", members: null, languages: "EN / DE" });
     expect(alliance).toMatchObject({ tag: "ULU", color: "#3b82f6", leader: null, power: 123, members: null, maxMembers: 100, languages: "EN / DE", discordUrl: null });
     expect(alliance.description).toEqual({});
-    expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({ code: "KS2026", active: false, expiresAt: null, addedAt: "2026-10-01T00:00:00.000Z" });
-    expect(mapGiftCode({ id: "c2", code: "X", expires_at: "2026-11-01T00:00:00Z" })).toMatchObject({ active: true, expiresAt: "2026-11-01T00:00:00.000Z" });
+    expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({
+      code: "KS2026",
+      active: false,
+      expiresAt: null,
+      addedAt: "2026-10-01T00:00:00.000Z",
+      source: "manual",
+      endedAt: null,
+    });
+    expect(mapGiftCode({ id: "c2", code: "X", expires_at: "2026-11-01T00:00:00Z", source: "kingshot", ended_at: "2026-10-30T10:23:00Z" })).toMatchObject({
+      active: true,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+      source: "kingshot",
+      endedAt: "2026-10-30T10:23:00.000Z",
+    });
   });
 });
 
