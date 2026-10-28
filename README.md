@@ -44,6 +44,7 @@ src/
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
+  lib/vercel/             which old Vercel deployments to delete (pure; the script is scripts/prune-deployments.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
   lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
 tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
@@ -62,7 +63,8 @@ scripts/
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
   prune.ts                npm run prune (deletes battle feedback past its retention period and closed Rally Sync rooms, SETUP.md § 9a/9b)
-.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push); dependabot.yml for updates
+  prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
+.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Prune deployments (old Vercel deployments, after every deploy); dependabot.yml for updates
 ```
 
 ### Languages and translation
@@ -105,6 +107,7 @@ Pages are prerendered and content is cached for 5 minutes (`cacheLife('content')
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
 | `npm run backup` | Encrypted dump of all content and admin tables; `-- --restore <file> --yes` writes it back (SETUP.md § 10) |
 | `npm run prune` | Delete battle feedback past its retention period and closed Rally Sync rooms (`-- --dry-run` to preview; SETUP.md § 9a, § 9b) |
+| `npm run deployments:prune` | Delete old Vercel deployments, keeping the live one, the one before it and open pull requests' previews (`-- --dry-run` to preview; needs `VERCEL_TOKEN`, SETUP.md § 5) |
 
 ## License
 

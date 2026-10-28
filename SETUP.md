@@ -107,15 +107,24 @@ From now on Vercel deploys **every push to `main` to production** and **every pu
 
 The site sends `noindex` headers and a `robots.txt` that blocks every crawler; it is only reachable through the shared link.
 
+**Old deployments.** Every build is stored (about 150 MB: every page in every language), and the Hobby plan has 10 GB of Deployment Storage. Vercel keeps each deployment for 30 days, and when the team goes over 10 GB it can block new deployments. The **Prune deployments** workflow (step 6) therefore deletes old ones after every finished deployment and once a day. It keeps the live deployment, the one before it (for a rollback from **Deployments → ⋯ → Instant Rollback**), the newest preview of each open pull request and anything still building. Deleted deployments stay under **Settings → Security → Recently Deleted** for a while (a day up to 30 days, depending on their age) and can be restored there. It needs one token:
+
+1. Vercel → avatar → **Account Settings → Tokens → Create**: name `github-prune-deployments`, scope the team that owns the project, an expiry you will remember (a year).
+2. Store it as the GitHub secret `VERCEL_TOKEN` (step 6a), e.g. `gh secret set VERCEL_TOKEN` and paste it when asked.
+3. Actions → **Prune deployments** → **Run workflow** (a dry run by default) and read the list; from then on it runs on its own.
+
+The token can do anything in that Vercel team, so it lives only in GitHub's secrets; when it expires, the workflow leaves a warning and deletes nothing until a new one is stored. As a backstop you can also shorten **Settings → Security → Deployment Retention Policy** (e.g. Pre-Production 1 day, Production 7 days).
+
 ## 6. GitHub Actions — CI and database deploys
 
-Three workflows live in `.github/workflows/`:
+Four workflows live in `.github/workflows/`:
 
 | Workflow | Runs when | Does |
 | --- | --- | --- |
 | **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build |
 | **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually; a PR that touches them gets a dry run | `supabase link` + `supabase db push` — applies new migration files to the production database (`--dry-run` on the PR only lists them) |
 | **Maintenance** | manually (Actions → Maintenance → Run workflow), every Monday on its own for the backup and daily for the prune | `seed`, `sync-ui`, `translate`, `translate-dry-run`, `revalidate`, `backup` (§ 10), `prune` / `prune-dry-run` (§ 9, battle feedback), `webhooks` (§ 7), `config-push` (§ 8.1): everything you would otherwise run from a laptop |
+| **Prune deployments** | after every finished Vercel deployment, daily, or manually (a dry run by default) | deletes old Vercel deployments, keeping the live one, the one before it and open pull requests' previews (§ 5) |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
@@ -132,6 +141,7 @@ Three workflows live in `.github/workflows/`:
 | `TRANSLATE_WEBHOOK_SECRET` | Maintenance | step 3 |
 | `KVK_SEED_PASSWORD` | Maintenance (optional) | step 3 |
 | `BACKUP_PASSPHRASE` | Maintenance (`backup`) | `openssl rand -hex 32`; keep a copy outside GitHub (§ 10) |
+| `VERCEL_TOKEN` | Prune deployments | Vercel account token scoped to the team (§ 5) |
 
 **Variables** (same page, tab *Variables*; all optional, same meaning as in step 2): `TRANSLATION_PROVIDER` (`anthropic`, `gemini` or `off`), `ANTHROPIC_MODEL`, `GEMINI_MODEL`.
 
