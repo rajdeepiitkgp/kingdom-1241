@@ -71,6 +71,11 @@ describe("what a step says", () => {
     expect(speechParts("Lines", "Short ✅ Do / ⛔ Don't / ℹ️ Info lines.", "en")).toEqual(["Lines", "Short Do / Don't / Info lines."]);
   });
 
+  it("takes Android's underscore tags and never throws on a tag it can't read", () => {
+    expect(speechParts("T", "One. Two.", "de_DE")).toEqual(["T", "One.", "Two."]);
+    for (const tag of ["sr_ME_#Latn", "", "not a tag"]) expect(speechParts("T", "One. Two.", tag)).toEqual(["T", "One. Two."]);
+  });
+
   it("skips empty parts", () => {
     expect(speechParts("Title", "", "en")).toEqual(["Title"]);
     expect(speechParts("", "  ", "en")).toEqual([]);

@@ -3,7 +3,7 @@
 
 import clsx from "clsx";
 import { CircleHelp, Volume2, VolumeX, X } from "lucide-react";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Component, type ReactNode, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { type Dictionary, format } from "@/lib/i18n/dictionary";
 import { cardSide, hasSeen, markSeen, parseSeen, scrollDelta, TOUR_GAP, TOUR_STORAGE_KEY, type Tour, type TourStep } from "@/lib/tour/tour";
@@ -71,11 +71,22 @@ const readVoiceOn = () => readStored(VOICE_STORAGE_KEY) === "1";
 
 const speech = () => ("speechSynthesis" in window ? window.speechSynthesis : null);
 
-/** Chrome lists its voices a moment after the page loads. */
+/** Chrome lists its voices a moment after the page loads (older Safari can't announce it, but has them from the start). */
 function subscribeVoices(onChange: () => void) {
   const synth = speech();
-  synth?.addEventListener("voiceschanged", onChange);
-  return () => synth?.removeEventListener("voiceschanged", onChange);
+  if (typeof synth?.addEventListener !== "function") return () => {};
+  synth.addEventListener("voiceschanged", onChange);
+  return () => synth.removeEventListener("voiceschanged", onChange);
+}
+
+/** The voice for the tour's language; null (the speaker stays hidden) without speech, without a voice, or when the browser can't list them. */
+function voiceFor(lang: string | undefined): string | null {
+  try {
+    const synth = speech();
+    return synth ? (pickVoice(synth.getVoices(), lang ?? document.documentElement.lang)?.voiceURI ?? null) : null;
+  } catch {
+    return null;
+  }
 }
 
 function subscribe(onChange: () => void) {
@@ -173,8 +184,32 @@ export function useGuidedTour(
       </button>
     </p>
   );
-  const overlay = open && <TourOverlay steps={open} labels={labels} dir={dir} lang={lang} onClose={close} />;
+  const overlay = open && (
+    <TourBoundary onError={close}>
+      <TourOverlay steps={open} labels={labels} dir={dir} lang={lang} onClose={close} />
+    </TourBoundary>
+  );
   return { button, nudge, overlay };
+}
+
+/**
+ * Whatever goes wrong inside an open tour closes the tour, never the page under
+ * it (a rally room mid-countdown): the tour is a helper, the page is the work.
+ */
+class TourBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onError();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /**
@@ -194,29 +229,28 @@ function TourOverlay({ steps, labels, dir, lang, onClose }: { steps: TourStep[];
   const card = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
   const voiceOn = useSyncExternalStore(subscribe, readVoiceOn, () => false);
-  const voiceUri = useSyncExternalStore(
-    subscribeVoices,
-    () => {
-      const synth = speech();
-      return synth ? (pickVoice(synth.getVoices(), lang ?? document.documentElement.lang)?.voiceURI ?? null) : null;
-    },
-    () => null,
-  );
+  const voiceUri = useSyncExternalStore(subscribeVoices, () => voiceFor(lang), () => null);
 
   // Each step is read out while the voice is on (opening the tour or a tap starts it, which browsers require);
-  // the next step, switching it off or closing the tour stops the one before.
+  // the next step, switching it off or closing the tour stops the one before. The tour's own tag, not the
+  // voice's: Android labels its voices "en_US", which Intl refuses. Speech that fails leaves the tour silent, never broken.
   useEffect(() => {
     const synth = speech();
     const voice = voiceOn ? synth?.getVoices().find((v) => v.voiceURI === voiceUri) : undefined;
     if (!synth || !voice) return;
-    for (const text of speechParts(step.title, step.body, voice.lang)) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-      synth.speak(utterance);
+    const tag = lang ?? document.documentElement.lang;
+    try {
+      for (const text of speechParts(step.title, step.body, tag)) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = voice;
+        utterance.lang = tag;
+        synth.speak(utterance);
+      }
+    } catch {
+      synth.cancel();
     }
     return () => synth.cancel();
-  }, [step, voiceOn, voiceUri]);
+  }, [step, voiceOn, voiceUri, lang]);
 
   // Placed by hand, not through state: scroll the element into the free band once per step, then follow it
   // every frame while the tour is open, since anything can move it (scrolling, a live room re-rendering,
