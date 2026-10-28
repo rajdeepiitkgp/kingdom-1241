@@ -1,12 +1,13 @@
 /**
  * Language registry.
  *
- * The list of languages the site *offers* lives in the database (`languages`
- * table) so admins can add or remove one at any time. This file is the
- * catalogue of languages the site *knows how to render*: names, text
- * direction and which font stack to use. Adding a language to the site is
- * therefore: add a row in `languages` (or in `src/content/seed/languages.ts`),
- * and if the code isn't listed here yet, add it below.
+ * The list of languages the site *offers*, in which order, lives in the
+ * database (`languages` table; the owner shows, hides and orders them on
+ * Admin → Settings). This file is the catalogue of languages the site *knows
+ * how to render*: names, text direction, font stack and translation style.
+ * Adding a language is a code change: an entry here, a seed row with
+ * `enabled: false`, its glossary words and a reviewed translation before it is
+ * shown (SETUP.md § 8.2a).
  */
 
 export type TextDirection = "ltr" | "rtl";
@@ -86,6 +87,11 @@ export function getLanguageInfo(code: string): LanguageInfo {
       flag: "🌐",
     }
   );
+}
+
+/** A language this file knows (shown or hidden on the site). */
+export function isKnownLanguage(code: string): boolean {
+  return Object.hasOwn(LANGUAGE_REGISTRY, code);
 }
 
 /** Shape of a locale code the site accepts in forms and paths: "en", "pt-BR", "zh-Hant" (not whether it is enabled). */

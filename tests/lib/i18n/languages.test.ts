@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLanguageInfo, isLocaleCode, LANGUAGE_REGISTRY } from "@/lib/i18n/languages";
+import { getLanguageInfo, isKnownLanguage, isLocaleCode, LANGUAGE_REGISTRY } from "@/lib/i18n/languages";
 
 describe("getLanguageInfo", () => {
   it("returns the registry entry", () => {
@@ -20,5 +20,13 @@ describe("isLocaleCode", () => {
   });
   it("rejects paths, upper-case primaries, empty values and non-strings", () => {
     for (const value of ["", "EN", "e", "english", "en/admin", "en-", "../en", null, undefined, 42]) expect(isLocaleCode(value), String(value)).toBe(false);
+  });
+});
+
+describe("isKnownLanguage", () => {
+  it("knows the registry's codes only, not inherited object keys", () => {
+    expect(isKnownLanguage("fr")).toBe(true);
+    expect(isKnownLanguage("zh-TW")).toBe(true);
+    for (const code of ["xx", "FR", "constructor", "toString", ""]) expect(isKnownLanguage(code), code).toBe(false);
   });
 });

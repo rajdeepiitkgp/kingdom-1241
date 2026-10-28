@@ -32,6 +32,11 @@ on:
           - prune-dry-run
           - webhooks
           - config-push
+      language:
+        description: "translate / translate-dry-run: only this language code (e.g. fr), also a hidden one; empty = every shown language"
+        type: string
+        required: false
+        default: ""
   schedule:
     # Weekly content backup, Monday 04:17 UTC. GitHub stops the schedules of a
     # public repository after 60 days without a commit (SETUP.md § 10).
@@ -101,7 +106,14 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           SITE_URL: ${{ secrets.SITE_URL }}
           TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
-        run: npm run translate
+          LANGUAGE: ${{ inputs.language }}
+        run: |
+          if [ -n "$LANGUAGE" ]; then
+            [[ "$LANGUAGE" =~ ^[A-Za-z]{2,3}(-[A-Za-z]{2,4})?$ ]] || { echo "Not a language code: $LANGUAGE"; exit 1; }
+            npm run translate -- --locale "$LANGUAGE"
+          else
+            npm run translate
+          fi
 
       - name: Translate (dry run)
         if: env.TASK == 'translate-dry-run'
@@ -109,7 +121,14 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           TRANSLATION_PROVIDER: ${{ vars.TRANSLATION_PROVIDER }}
-        run: npm run translate -- --dry-run
+          LANGUAGE: ${{ inputs.language }}
+        run: |
+          if [ -n "$LANGUAGE" ]; then
+            [[ "$LANGUAGE" =~ ^[A-Za-z]{2,3}(-[A-Za-z]{2,4})?$ ]] || { echo "Not a language code: $LANGUAGE"; exit 1; }
+            npm run translate -- --dry-run --locale "$LANGUAGE"
+          else
+            npm run translate -- --dry-run
+          fi
 
       # Battle feedback past its retention period (kvk_retrospectives.retention_days
       # after the battle) is deleted and the form closed; one audit_log entry per battle.

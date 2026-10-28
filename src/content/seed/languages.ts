@@ -1,7 +1,8 @@
 /**
- * Languages the site offers on first deploy. Admins can change this list in
- * the `languages` table later (phase 2 adds a UI for it). The codes must
- * exist in `src/lib/i18n/languages.ts`.
+ * Languages the site offers on first deploy. The owner shows, hides and orders
+ * them on Admin → Settings; adding one is a code change (SETUP.md § 8.2a: a new
+ * row starts with `enabled: false`). The codes must exist in
+ * `src/lib/i18n/languages.ts`.
  */
 export const SEED_LANGUAGES: Array<{ code: string; enabled: boolean; sortOrder: number }> = [
   { code: "en", enabled: true, sortOrder: 0 },

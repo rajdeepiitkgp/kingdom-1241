@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE } from "./languages";
+import { DEFAULT_LOCALE, isKnownLanguage } from "./languages";
 
 /**
  * Pick the best locale for a visitor from the enabled locales.
@@ -51,4 +51,15 @@ export function parseAcceptLanguage(header: string | null | undefined): string[]
     .filter((entry) => entry.tag && entry.tag !== "*" && entry.q > 0)
     .sort((a, b) => b.q - a.q || a.index - b.index)
     .map((entry) => entry.tag);
+}
+
+/**
+ * The path a visitor is sent to in `locale`: the language goes in front, or in
+ * place of a language the site knows but doesn't show, so an old link to a
+ * hidden language opens the same page in the visitor's language.
+ */
+export function pathInLocale(pathname: string, locale: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const rest = segments[0] && isKnownLanguage(segments[0]) ? segments.slice(1) : segments;
+  return `/${[locale, ...rest].join("/")}`;
 }
