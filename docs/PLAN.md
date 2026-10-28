@@ -32,7 +32,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 ## Languages
 
-- Live in ten languages: English, German, Korean, Polish and Arabic (hand-written interface strings), plus Turkish, Italian, Japanese, Chinese (Traditional) and French (machine-translated, correctable by hand).
+- Live in ten languages: English, German, Korean, Polish and Arabic (hand-written interface strings), plus Turkish, Italian, Japanese, Chinese (Traditional) and French (machine-translated, reviewed about once a month in Claude Code, correctable by hand).
 - Languages are configurable: admins can add or remove one at any time.
 - Each language sets its own reading direction, so Arabic and other right-to-left languages get a properly mirrored layout.
 - All content is translated by AI when it's added or edited, never when someone views the page. Leaders can correct any translation by hand.
