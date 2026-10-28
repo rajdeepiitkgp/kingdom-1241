@@ -19,14 +19,128 @@ import type { UiKey } from "./ui-strings";
 export type ReviewedText = { en: string } & Localized;
 
 export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
+  "home.kvkCard.body": {
+    en: "Formations to prepare, coordinators and instructions for the next castle battle or KvK. Password protected — ask your R4/R5.",
+    ja: "次の城戦またはKvKに向けて準備する編成、コーディネーター、指示。パスワード保護 — R4/R5に聞いてね。",
+    "zh-TW": "下一場王城爭奪戰或 KvK 需準備的編隊、協調員與說明。受密碼保護——請向你的 R4/R5 索取。",
+  },
   "kvk.coordinators": {
     en: "Coordinators",
     ja: "コーディネーター",
     "zh-TW": "協調員",
   },
+  "kvk.coordinators.hint": {
+    en: "The coordinators run our two battle alliances: [KvK] rallies the castle, [TMP] counter-rallies. Follow their instructions on battle day — they decide who goes where and which formation to use.",
+    ja: "コーディネーターが2つの戦闘同盟を率います：[KvK]は城に集結、[TMP]はカウンター集結を担当。決戦の日はコーディネーターの指示に従ってね — 誰がどこへ行き、どの編成を使うかはコーディネーターが決めます。",
+    "zh-TW": "協調員負責帶領我們的兩個作戰聯盟：[KvK] 集結王城，[TMP] 負責反集結。開戰日請聽從他們的指示 — 由他們決定誰去哪裡、使用哪個陣容。",
+  },
+  "kvk.formations.hint": {
+    en: "Prepare every formation below in advance and save each one in the game's Troop Ratio presets. The coordinators tell you which one to use.",
+    ja: "以下の編成をすべて事前に準備し、ゲーム内の兵種比率プリセットにそれぞれ保存してね。どれを使うかはコーディネーターが伝えます。",
+    "zh-TW": "請事先準備好以下所有陣容，並分別儲存在遊戲的部隊比例預設中。協調員會告訴你要用哪一個。",
+  },
+  "kvk.menu.rallySync": {
+    en: "Rally Sync",
+    ja: "集結同期",
+  },
+  "kvk.subtitle": {
+    en: "Formations, coordinators and instructions for the next castle battle or KvK. For governors of Kingdom 1241 only.",
+    ja: "次の城争奪戦またはKvKの編成、コーディネーター、指示。Kingdom 1241の領主専用です。",
+    "zh-TW": "下一場王城戰或 KvK 的陣容、協調員與說明。僅限 Kingdom 1241 的領主。",
+  },
+  "leaders.overview": {
+    en: "Find your name below. Your card shows your battle team, where to teleport, when to start your rally (in UTC and in your own time) and when to activate your pets: their boost lasts two hours, so the council spreads the activations over the battle. Work out your march time before the battle.",
+    it: "Trova il tuo nome qui sotto. La tua scheda mostra la tua squadra di battaglia, dove teletrasportarti, quando avviare il tuo raduno (in UTC e nel tuo orario locale) e quando attivare i tuoi pet: il loro potenziamento dura due ore, quindi il consiglio distribuisce le attivazioni durante la battaglia. Calcola il tempo di marcia prima della battaglia.",
+  },
   "leaders.pets": {
     en: "Pets",
     it: "Pet",
+  },
+  "leaders.startCalled": {
+    en: "When your coordinator calls it",
+    "zh-TW": "當你的協調員下令時",
+  },
+  "prep.group.best": {
+    en: "Use today",
+    tr: "Bugün kullan",
+    ja: "今日使う",
+    "zh-TW": "今天使用",
+  },
+  "prep.group.tips": {
+    en: "Remember",
+    ja: "覚えておくこと",
+    "zh-TW": "注意事項",
+    fr: "À retenir",
+  },
+  "prep.intel.complete": {
+    en: "Complete",
+    fr: "Terminer",
+  },
+  "prep.intel.step.open": {
+    en: "Day {day} begins: claim the saved 08:00 rewards, then complete every intel mission available: the waiting ones, the fresh ones and Master Pan's new set.",
+    it: "Inizia il giorno {day}: riscatta le ricompense delle 08:00 messe da parte, poi completa tutte le missioni di intel disponibili: quelle in attesa, quelle nuove e il nuovo set di Master Pan.",
+  },
+  "prep.item.manuscript": {
+    en: "Master's Manuscripts",
+    ja: "マスターの写本",
+  },
+  "prep.item.temperedTruegold": {
+    en: "Tempered Truegold",
+    it: "Truegold temprato",
+    fr: "Truegold trempé",
+  },
+  "prep.item.tgDust": {
+    en: "Truegold Dust",
+    fr: "Poussière de Truegold",
+  },
+  "prep.mark.ok": {
+    en: "OK",
+    "zh-TW": "可以",
+  },
+  "prep.points.perScore": {
+    en: "{n} pts per +1 score",
+    "zh-TW": "每 +1 評分得 {n} 分",
+  },
+  "prep.save.truegold": {
+    en: "Truegold",
+    "zh-TW": "純金",
+  },
+  "prep.tip.warAcademy": {
+    en: "Do both kinds of research today: normal research and War Academy research. Research speedups work for both; War Academy research also needs Truegold Dust.",
+    it: "Fai oggi entrambi i tipi di ricerca: la ricerca normale e la ricerca dell'Accademia di Guerra. Gli acceleratori di ricerca valgono per entrambe; la ricerca dell'Accademia di Guerra richiede anche Polvere di Truegold.",
+    fr: "Fais les deux types de recherche aujourd'hui : la recherche normale et la recherche de l'Académie de guerre. Les accélérations de recherche fonctionnent pour les deux ; la recherche de l'Académie de guerre nécessite aussi de la Poussière de Truegold.",
+  },
+  "retro.error.duplicate": {
+    en: "Feedback for this Governor ID has already been recorded. If that wasn't you, tell the council on Discord.",
+    "zh-TW": "此領主ID的回饋已經記錄過了。如果不是你提交的，請在 Discord 上告知議會。",
+  },
+  "retro.governorId.hint": {
+    en: "In the game: tap your avatar; the number under your name. One answer per Governor ID.",
+    ja: "ゲーム内でアバターをタップし、名前の下にある番号を確認してね。回答は領主IDごとに1回まで。",
+  },
+  "retro.privacy": {
+    en: "Only the site owner can see your Governor ID and name; the council sees your alliance and your answers.",
+    ja: "領主IDと名前はサイト管理者のみが閲覧できます。評議会にはあなたの同盟と回答が表示されます。",
+  },
+  "retro.q.coordination.hint": {
+    en: "Rally calls, timing and the coordinators' instructions.",
+    "zh-TW": "集結號召、時機與協調員的指示。",
+  },
+  "retro.you": {
+    en: "About you",
+    tr: "Senin hakkında",
+  },
+  "sync.back": {
+    en: "Back to Rally Sync",
+    ja: "集結同期に戻る",
+  },
+  "sync.backIn": {
+    en: "Back in",
+    tr: "Tekrar katıl",
+    it: "Rientra",
+    ja: "復帰",
+    "zh-TW": "重新參加",
+    fr: "Revenir",
   },
   "sync.coord.badge": {
     en: "Coordinator",
@@ -36,10 +150,72 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     en: "Coordinator",
     "zh-TW": "協調員",
   },
+  "sync.counter.orWhen": {
+    en: "or when {name}'s shows {time}",
+    tr: "veya {name} rallisi {time} gösterdiğinde",
+  },
+  "sync.form.marchHint": {
+    en: "The march time the game shows for your rally to the target. Minutes and seconds add up (1 min + 12 s = 72 s).",
+    fr: "Le temps de marche affiché par le jeu pour ton ralliement jusqu'à la cible. Les minutes et les secondes s'additionnent (1 min + 12 s = 72 s).",
+  },
+  "sync.gar.correct": {
+    en: "Correct landing time",
+    tr: "Varış zamanını düzelt",
+    it: "Correggi orario di arrivo",
+    ja: "着弾時間を修正",
+    "zh-TW": "修正抵達時間",
+    fr: "Corriger l'heure d'arrivée",
+  },
+  "sync.gar.enemyMarch": {
+    en: "March to our castle",
+    tr: "Kalemize sefer süresi",
+    ja: "こちらの城までの行軍",
+  },
+  "sync.gar.enemyMarchHint": {
+    en: "A guess is fine for a new leader: once their rally launches, “Correct landing time” fixes it.",
+    tr: "Yeni bir lider için tahmin yeterli: Rallisi başladığında “Varış zamanını düzelt” bunu düzeltir.",
+  },
+  "sync.gar.landsInHint": {
+    en: "Type it, then tap Now when the game shows it. This also saves their real march time (a new leader, or pets) for the next waves.",
+    ja: "入力して、ゲームに表示されたら「今」をタップしてね。これで実際の行軍時間（新しいリーダーやペットの影響）も次のウェーブ用に保存されるよ。",
+  },
+  "sync.gar.landsInTime": {
+    en: "Lands in {time}",
+    ja: "{time}後に到着",
+  },
+  "sync.gar.marchLaunchedHint": {
+    en: "This rally has launched: the new time counts from their next rally. To fix this one, use “Correct landing time”.",
+    tr: "Bu ralli başladı: yeni süre bir sonraki rallilerinden itibaren geçerli. Bunu düzeltmek için “Varış zamanını düzelt” seçeneğini kullan.",
+  },
+  "sync.gar.marchOf": {
+    en: "march {march}",
+    ja: "行軍 {march}",
+    "zh-TW": "行軍 {march}",
+  },
+  "sync.hero.nextRally": {
+    en: "You're in from the next rally: this one (lands {time}) was already under way. Your start time appears when the coordinator sets the next hit time.",
+    "zh-TW": "你將從下一次集結開始加入：這次集結（{time} 抵達）已在進行中。協調員設定下一次攻擊時間後，就會顯示你的出發時間。",
+  },
+  "sync.hero.tooLateHint": {
+    en: "Your rally can't make this hit time. Ask the coordinator to re-sync.",
+    "zh-TW": "你的集結無法趕上這個命中時間。請聯絡協調員重新同步。",
+  },
   "sync.history": {
     en: "Previous hit times ({n})",
     it: "Orari d'impatto precedenti ({n})",
     ja: "過去の着弾時刻（{n}）",
+  },
+  "sync.how.3": {
+    en: "The coordinator sets the hit time. Everyone sees their own start time in UTC and starts the rally when the in-game clock shows it.",
+    "zh-TW": "協調員設定命中時間。每個人都會看到自己以 UTC 顯示的出發時間，當遊戲內時鐘顯示該時間時就發起集結。",
+  },
+  "sync.invite.coordLink": {
+    en: "Coordinator link",
+    "zh-TW": "協調員連結",
+  },
+  "sync.join.body": {
+    en: "Your coordinator shares the room ID and password on Discord, or sends an invite link that opens the room directly.",
+    "zh-TW": "你的協調員會在 Discord 上分享房間 ID 和密碼，或傳送可直接開啟房間的邀請連結。",
   },
   "sync.join.leader": {
     en: "Are you a rally leader?",
@@ -53,10 +229,31 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     en: "Rally leaders",
     fr: "Chefs de ralliement",
   },
+  "sync.link.live": {
+    en: "Live",
+    "zh-TW": "已連線",
+  },
   "sync.missing": {
     en: "There is no room with this ID. Check it with your coordinator.",
     fr: "Il n'existe aucun salon avec cet ID. Vérifie-le auprès de ton coordinateur.",
     ja: "このIDのルームはありません。コーディネーターに確認してください。",
+  },
+  "sync.sound.off": {
+    en: "Sound off",
+    tr: "Ses kapalı",
+    "zh-TW": "音效已關閉",
+  },
+  "sync.sound.on": {
+    en: "Sound on",
+    "zh-TW": "音效已開啟",
+  },
+  "sync.watching.label": {
+    en: "Your name in this room (optional)",
+    "zh-TW": "你在此房間的名稱（選填）",
+  },
+  "sync.yourStart": {
+    en: "Your start",
+    "zh-TW": "你的出發時間",
   },
   "tour.checklist.board.body": {
     en: "Everything to do, by phase. Tick tasks off as you go: ticks stay on this device, so every coordinator keeps their own.",
