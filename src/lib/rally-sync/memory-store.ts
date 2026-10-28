@@ -3,14 +3,16 @@ import { randomUUID } from "node:crypto";
 import { laterStamp } from "@/lib/kvk/throttle";
 import { hashPassword, hashToken } from "./access";
 import { EMPTY_GARRISON, type GarrisonState } from "./garrison";
-import { DEFAULT_SETTINGS, isRoomOpen, MAX_INSTANCES_PER_ROOM, MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, MAX_OPEN_ROOMS } from "./room";
+import { ACTIVE_BROWSER_MS, BROWSER_BUDGET, parseCapacity } from "./capacity";
+import { DEFAULT_SETTINGS, isRoomOpen } from "./room";
 import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, type RoomRow } from "./store-types";
 
 /**
  * Rally Sync without a database, for reviewing the pages locally
  * (RALLY_SYNC_STORE=memory; ignored on Vercel). Rooms live in this server
- * process only and vanish on restart; the limits behave like the database's
- * triggers. There is no Realtime here, so pages poll.
+ * process only and vanish on restart; the limits (and the owner's settings of
+ * them) behave like the database's triggers. There is no Realtime here, so
+ * pages poll.
  *
  * Three demo rooms are always there to try (a minute after one is destroyed or closes, it comes back):
  *   /tools/rally-sync/TEST23                                     password "review123"
@@ -28,6 +30,8 @@ interface Memory {
   rooms: Map<string, RoomRow>;
   leaders: Map<string, LeaderRow>;
   instances: Map<string, InstanceRow>;
+  /** The owner's limits as saved on the settings page (app_config in the database). */
+  capacity: unknown;
   /** When each demo room was last deleted (its pages should see "closed" for a while, not a fresh room). */
   demoGoneAt: Record<string, number>;
 }
@@ -36,7 +40,7 @@ interface Memory {
 const holder = globalThis as typeof globalThis & { __rallySyncMemory?: Memory };
 
 function memory(): Memory {
-  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), demoGoneAt: {} };
+  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), capacity: null, demoGoneAt: {} };
   holder.__rallySyncMemory.instances ??= new Map(); // a process that started before instances existed
   if (typeof holder.__rallySyncMemory.demoGoneAt !== "object") holder.__rallySyncMemory.demoGoneAt = {};
   return holder.__rallySyncMemory;
@@ -46,6 +50,11 @@ const iso = () => new Date().toISOString();
 
 function openRooms(m: Memory, now: number): RoomRow[] {
   return [...m.rooms.values()].filter((r) => isRoomOpen(r, now));
+}
+
+/** Browsers that had a room on screen recently (the ones its limit counts). */
+function activeInstances(m: Memory, now: number, roomIds: ReadonlySet<string>): InstanceRow[] {
+  return [...m.instances.values()].filter((i) => roomIds.has(i.roomId) && Date.parse(i.lastSeenAt) > now - ACTIVE_BROWSER_MS);
 }
 
 /** Placeholder enemy rally leaders of the demo garrison room. */
@@ -127,7 +136,8 @@ export function memoryStore(): RallyStore {
       return new Map(roomIds.map((id) => [id, [...m.leaders.values()].filter((l) => l.roomId === id).length]));
     },
     async insertRoom(room) {
-      if (openRooms(m, Date.now()).length >= MAX_OPEN_ROOMS) throw new RallyStoreError("room_limit", "rally_sync_room_limit");
+      const limit = parseCapacity(m.capacity)[room.mode].rooms;
+      if (openRooms(m, Date.now()).filter((r) => r.mode === room.mode).length >= limit) throw new RallyStoreError("room_limit", "rally_sync_room_limit");
       if ([...m.rooms.values()].some((r) => r.code === room.code)) throw new RallyStoreError("duplicate", "duplicate code");
       const now = iso();
       const row: RoomRow = { ...room, id: randomUUID(), enemyHitAt: null, hitAt: null, hitSetAt: null, history: [], garrison: EMPTY_GARRISON, lastSeenAt: now, createdAt: now, updatedAt: now };
@@ -159,10 +169,8 @@ export function memoryStore(): RallyStore {
       const now = Date.now();
       const room = m.rooms.get(leader.roomId);
       if (!room || !isRoomOpen(room, now)) throw new RallyStoreError("room_closed", "rally_sync_room_closed");
-      const all = [...m.leaders.values()];
-      if (all.filter((l) => l.roomId === leader.roomId).length >= MAX_LEADERS_PER_ROOM) throw new RallyStoreError("leader_limit", "rally_sync_leader_limit");
-      const open = new Set(openRooms(m, now).map((r) => r.id));
-      if (all.filter((l) => open.has(l.roomId)).length >= MAX_LEADERS_TOTAL) throw new RallyStoreError("total_limit", "rally_sync_total_limit");
+      const limit = parseCapacity(m.capacity)[room.mode].leaders;
+      if ([...m.leaders.values()].filter((l) => l.roomId === leader.roomId).length >= limit) throw new RallyStoreError("leader_limit", "rally_sync_leader_limit");
       const row: LeaderRow = { ...leader, status: leader.status ?? "active", instanceId: leader.instanceId ?? null, id: randomUUID(), nextMarchSeconds: null, previousMarchSeconds: null, marchChangedAt: null, createdAt: iso() };
       m.leaders.set(row.id, row);
       return row;
@@ -181,13 +189,16 @@ export function memoryStore(): RallyStore {
       return m.instances.get(id) ?? null;
     },
     async insertInstance(instance) {
+      const now = Date.now();
       const room = m.rooms.get(instance.roomId);
-      if (!room || !isRoomOpen(room, Date.now())) throw new RallyStoreError("room_closed", "rally_sync_room_closed");
-      if ([...m.instances.values()].filter((i) => i.roomId === instance.roomId).length >= MAX_INSTANCES_PER_ROOM) {
+      if (!room || !isRoomOpen(room, now)) throw new RallyStoreError("room_closed", "rally_sync_room_closed");
+      const limit = parseCapacity(m.capacity)[room.mode].browsers;
+      const everyOpenRoom = new Set(openRooms(m, now).map((r) => r.id));
+      if (activeInstances(m, now, new Set([room.id])).length >= limit || activeInstances(m, now, everyOpenRoom).length >= BROWSER_BUDGET) {
         throw new RallyStoreError("instance_limit", "rally_sync_instance_limit");
       }
-      const now = iso();
-      const row: InstanceRow = { ...instance, id: randomUUID(), name: null, coordinator: false, createdAt: now, lastSeenAt: now };
+      const at = iso();
+      const row: InstanceRow = { ...instance, id: randomUUID(), name: null, coordinator: false, createdAt: at, lastSeenAt: at };
       m.instances.set(row.id, row);
       return row;
     },
@@ -213,6 +224,19 @@ export function memoryStore(): RallyStore {
       const closed = [...m.rooms.values()].filter((r) => !isRoomOpen(r, now));
       for (const room of closed) await this.deleteRoom(room.id);
       return closed.length;
+    },
+    async activeInstanceCounts(roomIds, since) {
+      const counts = new Map<string, number>(roomIds.map((id) => [id, 0]));
+      for (const instance of m.instances.values()) {
+        if (counts.has(instance.roomId) && Date.parse(instance.lastSeenAt) > since) counts.set(instance.roomId, (counts.get(instance.roomId) ?? 0) + 1);
+      }
+      return counts;
+    },
+    async readCapacity() {
+      return m.capacity ?? null;
+    },
+    async writeCapacity(capacity) {
+      m.capacity = capacity;
     },
   };
 }

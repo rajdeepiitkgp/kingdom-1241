@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readConfig, writeConfig } from "@/lib/config/app-config";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
@@ -124,9 +125,9 @@ function toColumns<T extends object>(patch: T, columns: Record<keyof T, string>)
   return out;
 }
 
-/** The database's limit errors (raised by the triggers of migrations 0012 and 0014) as problems. */
+/** The database's limit errors (raised by the triggers of migration 0016) as problems. */
 function problemOf(error: { message: string; code?: string }): StoreProblem {
-  for (const problem of ["room_limit", "leader_limit", "total_limit", "instance_limit", "room_closed"] as const) if (error.message.includes(`rally_sync_${problem}`)) return problem;
+  for (const problem of ["room_limit", "leader_limit", "instance_limit", "room_closed"] as const) if (error.message.includes(`rally_sync_${problem}`)) return problem;
   // A table or column the API doesn't know yet: the migration hasn't run.
   if (error.code === "PGRST205" || error.code === "PGRST204" || error.code === "42P01" || error.code === "42703") return "not_migrated";
   return error.code === "23505" ? "duplicate" : "failed";
@@ -279,6 +280,33 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
     },
     async deleteClosedRooms(now) {
       return pruneClosedRooms(admin, new Date(now));
+    },
+    async activeInstanceCounts(roomIds, since) {
+      const counts = new Map<string, number>(roomIds.map((id) => [id, 0]));
+      if (roomIds.length === 0) return counts;
+      const { data, error } = await admin.from("rally_sync_instances").select("room_id").in("room_id", roomIds).gt("last_seen_at", new Date(since).toISOString());
+      if (error) {
+        if (problemOf(error) === "not_migrated") return counts;
+        fail("Counting instances", error);
+      }
+      for (const row of data ?? []) counts.set(String(row.room_id), (counts.get(String(row.room_id)) ?? 0) + 1);
+      return counts;
+    },
+    async readCapacity() {
+      try {
+        return await readConfig(admin, "rally_sync_capacity");
+      } catch (error) {
+        // Before migration 0016 there is no table: the defaults apply.
+        if (problemOf(error as { message: string; code?: string }) === "not_migrated") return null;
+        fail("Reading the room limits", error as { message: string; code?: string });
+      }
+    },
+    async writeCapacity(capacity) {
+      try {
+        await writeConfig(admin, "rally_sync_capacity", capacity);
+      } catch (error) {
+        fail("Saving the room limits", error as { message: string; code?: string });
+      }
     },
   };
 }

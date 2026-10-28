@@ -50,6 +50,7 @@ export function CoordinatorPanel({
   locale,
   version,
   exactNow,
+  leaderLimit,
   onChanged,
 }: {
   room: RoomView;
@@ -63,6 +64,8 @@ export function CoordinatorPanel({
   version: number | null;
   /** The page's corrected game-clock "now" in milliseconds (garrison rooms mark rallies at the tap's moment). */
   exactNow: () => number;
+  /** The room's leader limit (the owner's setting for its type). */
+  leaderLimit: number;
   onChanged: () => void;
 }) {
   const router = useRouter();
@@ -273,6 +276,7 @@ export function CoordinatorPanel({
             submitLabel={dict["sync.coord.add"]}
             pending={pending !== null}
             error={errorFor("add")}
+            leaderLimit={leaderLimit}
             onInvalid={() => fail("add", "invalid")}
             onSubmit={(input) =>
               void send("add", { type: "addLeader", ...input }).then((done) => {

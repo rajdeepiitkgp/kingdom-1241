@@ -15,6 +15,7 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
     { href: adminPath(locale, "/feedback"), label: "Feedback", tour: "admin-nav-feedback" },
     { href: adminPath(locale, "/rally-sync"), label: "Rally Sync", tour: "admin-nav-rally" },
     ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users", tour: "admin-nav-users" }] : []),
+    ...(user.isOwner ? [{ href: adminPath(locale, "/settings"), label: "Settings", tour: "admin-nav-settings" }] : []),
   ];
   return (
     <div dir="ltr">

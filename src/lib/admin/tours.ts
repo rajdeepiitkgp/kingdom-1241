@@ -10,7 +10,7 @@ import type { Tour } from "@/lib/tour/tour";
  * hasn't been created) are left out when the tour starts.
  */
 
-export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "users";
+export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "users" | "settings";
 
 export const ADMIN_TOUR_LABELS = {
   open: "Page guide",
@@ -51,6 +51,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
+      step("admin-nav-settings", "Settings", "Only the owner has this: how many Rally Sync rooms, leaders and browsers there can be, and who the owner is."),
       step("admin-active-plan", "The active plan", "The plan players see on the KvK page right now; Edit opens it. With no active plan, players see “no plan”."),
       step(
         "admin-profile",
@@ -277,7 +278,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "rs-new",
         "New room",
-        "One room per group on battle day: a rally room per attack wave, a counter-rally room for the counter alliance, a garrison room for the defenders. At most three are open at once.",
+        "One room per group on battle day: a rally room per attack wave, a counter-rally room for the counter alliance, a garrison room for the defenders. How many of each can be open at once is shown under Rooms.",
       ),
       step("rs-title", "Title", "Optional; players see it once they're in, e.g. “Castle, first wave”."),
       step(
@@ -301,7 +302,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "rs-rooms",
         "Rooms",
-        "Every room with its mode and activity. Open goes in; New coordinator link replaces a lost one (the old one stops working); Destroy closes it at once. A room also closes by itself after 30 minutes with nobody on the page.",
+        "Open now counts the rooms of each kind against the owner's limit. Below, every room with its mode and activity: Open goes in; New coordinator link replaces a lost one (the old one stops working); Destroy closes it at once.",
       ),
       step(
         null,
@@ -336,6 +337,38 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
     ],
   },
+  settings: {
+    id: "admin-settings",
+    version: 1,
+    steps: [
+      step(
+        "settings-owner",
+        "The owner",
+        "You. The owner is set once, when the site is set up (SITE_OWNER in Vercel), and nothing in the site can change it. Only you see this page and its link.",
+      ),
+      step(
+        "settings-capacity",
+        "Rally Sync capacity",
+        "How many rooms of each kind moderators can open at once, and how many leaders and browsers each room takes. Changes apply at once for everyone.",
+      ),
+      step(
+        "settings-modes",
+        "One card per kind of room",
+        "Rally rooms are our attacks, garrison rooms our defence (a few coordinators, many defenders watching), counter-rally rooms the counter alliance's launch order. Tap minus or plus, or type a number.",
+      ),
+      step(
+        "settings-total",
+        "The shared limit",
+        "Every browser in a room keeps one live connection, and Supabase's free plan allows 200. So all rooms together, if full, may hold 180 browsers. Over that the box turns red, outlines the numbers and offers one to lower.",
+      ),
+      step("settings-save", "Save", "Save waits until the total fits. Undo changes goes back to what is saved; Use the recommended numbers puts back the battle-day defaults."),
+      step(
+        null,
+        "Good practice",
+        "Set the numbers the day before a big battle, not in the middle of it. Lowering one never closes a room or removes anyone: it only stops new ones until some close. Every change appears under Recent changes.",
+      ),
+    ],
+  },
 };
 
 /** Which admin page a path is (`/en/admin/kvk/<id>/leaders` → "leaders"); null where there is no guide (the login page). */
@@ -349,5 +382,6 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (parts.length === 1 && section === "users") return "users";
+  if (parts.length === 1 && section === "settings") return "settings";
   return null;
 }

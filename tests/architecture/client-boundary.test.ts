@@ -38,6 +38,8 @@ const SERVER_ONLY = [
   "lib/rally-sync/session.ts",
   "lib/rally-sync/prune.ts",
   "lib/admin/rally-sync-data.ts",
+  "lib/admin/settings-data.ts",
+  "lib/config/app-config.ts",
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
   "lib/translate/provider.ts",

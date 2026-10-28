@@ -17,7 +17,6 @@ import type { LinkStatus } from "@/lib/rally-sync/realtime";
 import {
   formatRoomCode,
   type InstanceSelf,
-  MAX_LEADERS_PER_ROOM,
   NAME_MAX,
   nextRallyMarch,
   parseInstanceName,
@@ -168,6 +167,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       locale={locale}
       version={sync.updatedAt}
       exactNow={exactNow}
+      leaderLimit={sync.state.leaderLimit}
       onChanged={sync.refresh}
     />
   );
@@ -191,6 +191,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       prominent={!coordinatorToken}
       runningHitAt={now !== null && rallyRunning(room.hitAt, now) ? room.hitAt : null}
       clock={clock}
+      leaderLimit={sync.state.leaderLimit}
       dict={dict}
       onChanged={sync.refresh}
     />
@@ -246,7 +247,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
           title={
             <>
               {myLeader ? dict["sync.leaders.others"] : dict["sync.leaders.title"]}{" "}
-              <span className="tabular">{myLeader ? `(${others.length})` : `(${others.length}/${MAX_LEADERS_PER_ROOM})`}</span>
+              <span className="tabular">{myLeader ? `(${others.length})` : `(${others.length}/${sync.state.leaderLimit})`}</span>
             </>
           }
           empty={myLeader ? null : dict["sync.leaders.empty"]}
@@ -499,6 +500,7 @@ function MyEntry({
   prominent,
   runningHitAt,
   clock,
+  leaderLimit,
   dict,
   onChanged,
 }: {
@@ -510,6 +512,8 @@ function MyEntry({
   /** The hit time while a rally is running (changes then wait for the next rally), else null. */
   runningHitAt: string | null;
   clock: Clock;
+  /** The room's leader limit, for "this room is full". */
+  leaderLimit: number;
   dict: Dictionary;
   onChanged: () => void;
 }) {
@@ -545,6 +549,7 @@ function MyEntry({
           submitLabel={dict["sync.join.leaderSubmit"]}
           pending={pending !== null}
           error={errorFor("join")}
+          leaderLimit={leaderLimit}
           onInvalid={() => fail("join", "invalid")}
           onSubmit={(input) =>
             void run("join", async () => {

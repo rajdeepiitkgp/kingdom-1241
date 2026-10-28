@@ -185,6 +185,13 @@ export async function checkAccess(required: Role): Promise<{ user: CurrentUser }
   return { user };
 }
 
+/** For the owner's Server Actions (the settings): the owner, or why not. */
+export async function checkOwner(): Promise<{ user: CurrentUser } | { denied: AccessDenial }> {
+  const access = await checkAccess("admin");
+  if ("denied" in access) return access;
+  return access.user.isOwner ? access : { denied: "forbidden" };
+}
+
 /**
  * Page-level gate. Next renders a page in parallel with its layouts, so a
  * layout alone cannot keep page data out of the response: every admin page

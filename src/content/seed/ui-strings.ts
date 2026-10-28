@@ -1215,13 +1215,6 @@ export const UI_STRINGS = {
     pl: "Ten pokój jest pełny ({n} liderów).",
     ar: "هذه الغرفة ممتلئة ({n} قادة).",
   },
-  "sync.error.total_limit": {
-    en: "All open rooms together are full ({n} leaders).",
-    de: "Alle offenen Räume zusammen sind voll ({n} Leiter).",
-    ko: "열린 방 전체가 가득 찼습니다(대장 {n}명).",
-    pl: "Wszystkie otwarte pokoje razem są pełne ({n} liderów).",
-    ar: "الغرف المفتوحة كلها ممتلئة ({n} قائدًا).",
-  },
   "sync.error.failed": {
     en: "That didn't work. Try again in a moment.",
     de: "Das hat nicht geklappt. Versuch es gleich noch einmal.",
