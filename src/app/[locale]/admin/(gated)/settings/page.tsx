@@ -3,9 +3,11 @@ import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
 import { CapacityForm } from "@/components/admin/CapacityForm";
+import { FeedbackDefaultsForm, LanguageList, PasswordRulesForm, TranslationPauseForm } from "@/components/admin/OwnerSettingsForms";
 import { AdminSection, EmptyRow } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { getOwnerSettings, type OwnerEntry } from "@/lib/admin/settings-data";
+import { utcLabel } from "@/lib/admin/format";
+import { getOwnerSettings, type MachineTranslation, type OwnerEntry } from "@/lib/admin/settings-data";
 import { requireEditor } from "@/lib/auth/server";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -18,6 +20,15 @@ export default async function AdminSettingsPage() {
     </Suspense>
   );
 }
+
+const SECTIONS = [
+  { id: "owner", label: "Owner" },
+  { id: "rally-sync", label: "Rally Sync" },
+  { id: "languages", label: "Languages" },
+  { id: "translation", label: "Machine translation" },
+  { id: "passwords", label: "Wrong passwords" },
+  { id: "feedback", label: "Feedback forms" },
+];
 
 async function Settings({ locale }: { locale: string }) {
   const user = await requireEditor(locale);
@@ -32,17 +43,65 @@ async function Settings({ locale }: { locale: string }) {
       <p className="text-sm font-semibold text-ink-muted">
         Only you, the owner, see this page and its link. Changes apply at once, and each one appears under Recent changes on the Overview.
       </p>
+      <nav className="flex flex-wrap gap-x-2 gap-y-3" aria-label="Settings sections">
+        {SECTIONS.map((section) => (
+          <a key={section.id} href={`#${section.id}`} className="btn-ghost btn-sm">
+            {section.label}
+          </a>
+        ))}
+      </nav>
 
-      <AdminSection title="Owner" tour="settings-owner" hint="Set once, when the site is set up (SITE_OWNER in Vercel, SETUP.md § 8.2). Nothing in the site can change it.">
+      <AdminSection id="owner" title="Owner" tour="settings-owner" hint="Set once, when the site is set up (SITE_OWNER in Vercel, SETUP.md step 0). Nothing in the site can change it.">
         <OwnerLine owners={settings.owners} />
       </AdminSection>
 
       <AdminSection
+        id="rally-sync"
         title="Rally Sync capacity"
         tour="settings-capacity"
         hint="How many rooms of each kind moderators can open at once, and how many leaders and browsers each room takes. The three kinds share one limit, so the total is checked with every change."
       >
         <CapacityForm initial={settings.rally.capacity} usage={settings.rally.usage} available={settings.rally.available} locale={locale} />
+      </AdminSection>
+
+      <AdminSection
+        id="languages"
+        title="Languages"
+        tour="settings-languages"
+        hint="The order of the language menu, and which languages players can pick. A hidden language leaves the menu, its links open the same page in the player's other language and nothing is translated into it, so it costs nothing; showing it again brings it back as it was. Arrange the list, then Save."
+      >
+        {settings.languages.available ? (
+          <LanguageList languages={settings.languages.languages} texts={settings.languages.texts} locale={locale} />
+        ) : (
+          <EmptyRow>The languages could not be read from the database.</EmptyRow>
+        )}
+        <p className="mt-3 text-xs text-ink-faint">
+          Texts not translated yet show in English. A new language is added in the code, not here, so it comes with its game words, writing rules and a
+          reviewed translation (SETUP.md, “Adding a language”). After a save the menu changes at once; players who already have the site open see it after a reload.
+        </p>
+      </AdminSection>
+
+      <AdminSection
+        id="translation"
+        title="Machine translation"
+        tour="settings-translation"
+        hint="A brake on the AI bill. While paused, nothing is sent to the AI: edited texts show in English in the other languages, and the feedback buttons Translate answers and Translate and analyse wait."
+      >
+        <TranslationStatus translation={settings.translation} />
+        <TranslationPauseForm paused={settings.translation.paused} locale={locale} />
+      </AdminSection>
+
+      <AdminSection
+        id="passwords"
+        title="Wrong passwords"
+        tour="settings-passwords"
+        hint="For the battle plan, the leader and checklist pages and the Rally Sync rooms. Guessing is slowed down per address, and the council is alerted when many guesses come in at once; a player is never locked out because of someone else."
+      >
+        <PasswordRulesForm initial={settings.passwordRules} locale={locale} />
+      </AdminSection>
+
+      <AdminSection id="feedback" title="Feedback forms" tour="settings-feedback" hint="What a new battle feedback form starts with. Moderators can still change it on each form.">
+        <FeedbackDefaultsForm initial={settings.feedbackDefaults} locale={locale} />
       </AdminSection>
     </div>
   );
@@ -61,13 +120,22 @@ function OwnerLine({ owners }: { owners: OwnerEntry[] }) {
             {owner.value}
           </span>
           {owner.kind === "discord_handle" && (
-            <p className="mt-1 text-xs text-ink-faint">
-              A username can be renamed and then taken by someone else. Switch SITE_OWNER to your Discord user id (Discord → Settings → Advanced → Developer Mode,
-              then Copy User ID on your profile) in Vercel, and redeploy.
+            <p className="mt-1 text-xs font-bold text-danger">
+              Production needs the Discord user id here: a username can be renamed and then taken by someone else, and the next deploy fails until it is
+              switched. Discord → Settings → Advanced → Developer Mode, then Copy User ID on your profile; paste it into SITE_OWNER in Vercel and redeploy.
             </p>
           )}
         </li>
       ))}
     </ul>
   );
+}
+
+function TranslationStatus({ translation }: { translation: MachineTranslation }) {
+  const [label, tone] = !translation.configured
+    ? ["Off: no ANTHROPIC_API_KEY or GEMINI_API_KEY is set, so nothing is translated whatever this switch says.", "text-ink-muted"]
+    : translation.paused
+      ? [`Paused${translation.since ? ` since ${utcLabel(translation.since)} UTC` : ""}.`, "text-danger"]
+      : [`Running (${translation.label}).`, "text-success"];
+  return <p className={`mb-3 text-sm font-bold ${tone}`}>{label}</p>;
 }
