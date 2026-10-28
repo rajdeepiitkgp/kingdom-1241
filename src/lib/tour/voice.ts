@@ -18,8 +18,9 @@ export interface VoiceInfo {
   default: boolean;
 }
 
-/** "de_DE" (Android) and "de-de" read as "de-DE". */
-const normal = (tag: string) => tag.replace(/_/g, "-").toLowerCase();
+/** A tag Intl accepts: Android labels its voices "de_DE". */
+const bcp47 = (tag: string) => tag.replace(/_/g, "-");
+const normal = (tag: string) => bcp47(tag).toLowerCase();
 const primary = (tag: string) => normal(tag).split("-")[0];
 
 /**
@@ -47,7 +48,16 @@ export function pickVoice<V extends VoiceInfo>(voices: readonly V[], lang: strin
 }
 
 /** Emoji (✅, ⛔, ℹ️) would be read out by name. */
-const PICTOGRAPHS = /[\p{Extended_Pictographic}️]/gu;
+const PICTOGRAPHS = /[\p{Extended_Pictographic}\uFE0F]/gu;
+
+function sentences(text: string, lang: string): string[] {
+  try {
+    return [...new Intl.Segmenter(bcp47(lang), { granularity: "sentence" }).segment(text)].map((s) => s.segment);
+  } catch {
+    // No Intl.Segmenter (an older browser) or a tag it can't read: the text in one piece.
+    return [text];
+  }
+}
 
 /**
  * What to say for a step: its title, then its body sentence by sentence, since
@@ -55,6 +65,5 @@ const PICTOGRAPHS = /[\p{Extended_Pictographic}️]/gu;
  */
 export function speechParts(title: string, body: string, lang: string): string[] {
   const clean = (text: string) => text.replace(PICTOGRAPHS, "").replace(/\s+/g, " ").trim();
-  const sentences = typeof Intl.Segmenter === "function" ? [...new Intl.Segmenter(lang, { granularity: "sentence" }).segment(body)].map((s) => s.segment) : [body];
-  return [title, ...sentences].map(clean).filter(Boolean);
+  return [title, ...sentences(body, lang)].map(clean).filter(Boolean);
 }
