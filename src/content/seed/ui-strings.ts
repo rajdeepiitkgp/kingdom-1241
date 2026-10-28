@@ -2453,6 +2453,7 @@ export const UI_STRINGS = {
     ar: "يقرأ المجلس الإجابات بلا أسماء؛ مالك الموقع وحده يرى من كتب ماذا.",
   },
   "tour.empty": { en: "Nothing on this page to walk through right now.", de: "Auf dieser Seite gibt es gerade nichts zu zeigen.", ko: "지금은 이 페이지에서 안내할 내용이 없습니다.", pl: "Na tej stronie nie ma teraz nic do pokazania.", ar: "لا يوجد في هذه الصفحة الآن ما يمكن شرحه." },
+  "tour.voice": { en: "Read aloud", de: "Vorlesen", ko: "소리 내어 읽기", pl: "Czytaj na głos", ar: "قراءة بصوت عالٍ" },
   "tour.kvk.tabs.title": { en: "Plan and feedback", de: "Plan und Feedback", ko: "계획과 피드백", pl: "Plan i opinie", ar: "الخطة والرأي" },
   "tour.kvk.tabs.body": {
     en: "While the feedback form is open, switch here between the battle plan and the form.",

@@ -2,11 +2,12 @@
 "use client";
 
 import clsx from "clsx";
-import { CircleHelp, X } from "lucide-react";
+import { CircleHelp, Volume2, VolumeX, X } from "lucide-react";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { type Dictionary, format } from "@/lib/i18n/dictionary";
 import { cardSide, hasSeen, markSeen, parseSeen, scrollDelta, TOUR_GAP, TOUR_STORAGE_KEY, type Tour, type TourStep } from "@/lib/tour/tour";
+import { pickVoice, speechParts, VOICE_STORAGE_KEY } from "@/lib/tour/voice";
 
 /** The tour's own words: from the dictionary on public pages, plain English in the admin area. */
 export interface TourLabels {
@@ -22,6 +23,8 @@ export interface TourLabels {
   step: string;
   /** The one card shown when none of the tour's parts is on the page (a "?" never does nothing). */
   empty: string;
+  /** The speaker that switches reading aloud on and off. */
+  voice: string;
 }
 
 export const tourLabels = (dict: Dictionary): TourLabels => ({
@@ -35,30 +38,44 @@ export const tourLabels = (dict: Dictionary): TourLabels => ({
   close: dict["tour.close"],
   step: dict["tour.step"],
   empty: dict["tour.empty"],
+  voice: dict["tour.voice"],
 });
 
 const CHANGE_EVENT = "kd1241:tours";
 /** What a blocked localStorage couldn't keep: remembered for this page view only, so the line still goes away. */
-let unsaved: string | null = null;
+const unsaved = new Map<string, string>();
 
-function readSeen(): string {
-  if (unsaved !== null) return unsaved;
+function readStored(key: string): string {
+  const kept = unsaved.get(key);
+  if (kept !== undefined) return kept;
   try {
-    return window.localStorage.getItem(TOUR_STORAGE_KEY) ?? "";
+    return window.localStorage.getItem(key) ?? "";
   } catch {
     return "";
   }
 }
 
-function rememberSeen(tour: Pick<Tour, "id" | "version">) {
-  const value = JSON.stringify(markSeen(parseSeen(readSeen()), tour));
+function store(key: string, value: string) {
   try {
-    window.localStorage.setItem(TOUR_STORAGE_KEY, value);
-    unsaved = null;
+    window.localStorage.setItem(key, value);
+    unsaved.delete(key);
   } catch {
-    unsaved = value;
+    unsaved.set(key, value);
   }
   window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+const readSeen = () => readStored(TOUR_STORAGE_KEY);
+const rememberSeen = (tour: Pick<Tour, "id" | "version">) => store(TOUR_STORAGE_KEY, JSON.stringify(markSeen(parseSeen(readSeen()), tour)));
+const readVoiceOn = () => readStored(VOICE_STORAGE_KEY) === "1";
+
+const speech = () => ("speechSynthesis" in window ? window.speechSynthesis : null);
+
+/** Chrome lists its voices a moment after the page loads. */
+function subscribeVoices(onChange: () => void) {
+  const synth = speech();
+  synth?.addEventListener("voiceschanged", onChange);
+  return () => synth?.removeEventListener("voiceschanged", onChange);
 }
 
 function subscribe(onChange: () => void) {
@@ -81,6 +98,8 @@ export interface TourOptions {
   showLabel?: boolean | "wide";
   /** The open tour's direction when its page forces one (the English-only admin area under /ar). */
   dir?: "ltr" | "rtl";
+  /** The language the steps are read aloud in, when it isn't the page's (the English-only admin area). */
+  lang?: string;
 }
 
 /**
@@ -94,7 +113,7 @@ export function useGuidedTour(
   tour: Pick<Tour, "id" | "version">,
   steps: readonly TourStep[],
   labels: TourLabels,
-  { quiet = false, showLabel = false, dir }: TourOptions = {},
+  { quiet = false, showLabel = false, dir, lang }: TourOptions = {},
 ): { button: ReactNode; nudge: ReactNode; overlay: ReactNode } {
   // Null until hydrated: the server can't know what this device has seen, so nothing is highlighted yet.
   const raw = useSyncExternalStore(subscribe, readSeen, () => null);
@@ -154,7 +173,7 @@ export function useGuidedTour(
       </button>
     </p>
   );
-  const overlay = open && <TourOverlay steps={open} labels={labels} dir={dir} onClose={close} />;
+  const overlay = open && <TourOverlay steps={open} labels={labels} dir={dir} lang={lang} onClose={close} />;
   return { button, nudge, overlay };
 }
 
@@ -162,9 +181,11 @@ export function useGuidedTour(
  * The open tour: the page dimmed around the highlighted element, and one card
  * with the step at the bottom of the screen (at the top when the element sits
  * there). Esc, the ×, Done or a tap on the dimmed page ends it; nothing about
- * it is stored, so a reload always brings the plain page back.
+ * it is stored, so a reload always brings the plain page back. The speaker
+ * (shown when the device has a voice for the language) reads each step aloud;
+ * that choice is the one thing kept, for every tour on this device.
  */
-function TourOverlay({ steps, labels, dir, onClose }: { steps: TourStep[]; labels: TourLabels; dir?: "ltr" | "rtl"; onClose: () => void }) {
+function TourOverlay({ steps, labels, dir, lang, onClose }: { steps: TourStep[]; labels: TourLabels; dir?: "ltr" | "rtl"; lang?: string; onClose: () => void }) {
   const [index, setIndex] = useState(0);
   const step = steps[index];
   const last = index === steps.length - 1;
@@ -172,6 +193,30 @@ function TourOverlay({ steps, labels, dir, onClose }: { steps: TourStep[]; label
   const spot = useRef<HTMLDivElement>(null);
   const card = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
+  const voiceOn = useSyncExternalStore(subscribe, readVoiceOn, () => false);
+  const voiceUri = useSyncExternalStore(
+    subscribeVoices,
+    () => {
+      const synth = speech();
+      return synth ? (pickVoice(synth.getVoices(), lang ?? document.documentElement.lang)?.voiceURI ?? null) : null;
+    },
+    () => null,
+  );
+
+  // Each step is read out while the voice is on (opening the tour or a tap starts it, which browsers require);
+  // the next step, switching it off or closing the tour stops the one before.
+  useEffect(() => {
+    const synth = speech();
+    const voice = voiceOn ? synth?.getVoices().find((v) => v.voiceURI === voiceUri) : undefined;
+    if (!synth || !voice) return;
+    for (const text of speechParts(step.title, step.body, voice.lang)) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+      synth.speak(utterance);
+    }
+    return () => synth.cancel();
+  }, [step, voiceOn, voiceUri]);
 
   // Placed by hand, not through state: scroll the element into the free band once per step, then follow it
   // every frame while the tour is open, since anything can move it (scrolling, a live room re-rendering,
@@ -264,15 +309,23 @@ function TourOverlay({ steps, labels, dir, onClose }: { steps: TourStep[]; label
                 {step.title}
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={labels.close}
-              title={labels.close}
-              className="-me-1 -mt-1 grid size-9 shrink-0 place-items-center rounded-xl text-ink-faint hover:text-ink"
-            >
-              <X className="size-5" aria-hidden />
-            </button>
+            <div className="-me-1 -mt-1 flex shrink-0">
+              {voiceUri !== null && (
+                <button
+                  type="button"
+                  onClick={() => store(VOICE_STORAGE_KEY, voiceOn ? "0" : "1")}
+                  aria-pressed={voiceOn}
+                  aria-label={labels.voice}
+                  title={labels.voice}
+                  className={clsx("grid size-9 place-items-center rounded-xl", voiceOn ? "bg-primary-soft text-primary" : "text-ink-faint hover:text-ink")}
+                >
+                  {voiceOn ? <Volume2 className="size-5" aria-hidden /> : <VolumeX className="size-5" aria-hidden />}
+                </button>
+              )}
+              <button type="button" onClick={onClose} aria-label={labels.close} title={labels.close} className="grid size-9 place-items-center rounded-xl text-ink-faint hover:text-ink">
+                <X className="size-5" aria-hidden />
+              </button>
+            </div>
           </div>
           <p id="tour-body" className="mt-2 text-sm text-ink-muted">
             {step.body}

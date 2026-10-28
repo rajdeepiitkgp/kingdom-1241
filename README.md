@@ -32,7 +32,7 @@ src/
   app/api/revalidate      manual cache refresh
   app/api/rally-sync      a Rally Sync room's state for visitors who unlocked it (+ the server clock)
   proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id; refreshes the admin session
-  components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms), tour (the guided-tour "?" and overlay)
+  components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms), tour (the guided-tour "?" and overlay, with its read-aloud speaker)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar) and reviewed machine translations (ui-reviewed.ts)
   lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
   lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile), FormData parsers, shared action replies, audit log
@@ -45,7 +45,7 @@ src/
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
   lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
-  lib/tour/               guided tours: which tours a device has seen, where the step card goes (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
+  lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
 tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
 public/heroes/            128px hero portraits (from kingshotdata.com)
 public/items/             128px game icons for the KvK prep page (kingshotdata.com, kingshot.net, kingshotwiki.com, g2384/Kingshot-Data)
