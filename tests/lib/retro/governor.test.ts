@@ -11,7 +11,7 @@ describe("parseMightPulsePlayer", () => {
       { ok: true, governor_id: "12345678", player: { nick_name: "Rudy", kid: 1241, power: 1, alliance: { abbr: "nam", name: "Namaste" } } },
       "12345678",
     );
-    expect(profile).toEqual({ governorId: "12345678", name: "Rudy", allianceTag: "NAM", kingdom: 1241 });
+    expect(profile).toEqual({ governorId: "12345678", name: "Rudy", allianceTag: "nam", kingdom: 1241 });
   });
 
   it("copes with a missing alliance or kingdom and rejects an answer without a name", () => {

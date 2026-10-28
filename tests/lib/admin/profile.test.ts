@@ -26,6 +26,12 @@ describe("splitAllianceTag", () => {
     expect(splitAllianceTag("[ULU] Rudy", TAGS)).toEqual({ name: "Rudy", tag: "ULU" });
     expect(splitAllianceTag("[ kvk ]Cleo", TAGS)).toEqual({ name: "Cleo", tag: "KvK" });
   });
+  it("takes the exact tag when two alliances differ only in case, and no guess when it is ambiguous", () => {
+    const tags = ["NAM", "Nam", "ULU"];
+    expect(splitAllianceTag("[Nam] Rudy", tags)).toEqual({ name: "Rudy", tag: "Nam" });
+    expect(splitAllianceTag("[NAM] Rudy", tags)).toEqual({ name: "Rudy", tag: "NAM" });
+    expect(splitAllianceTag("[nam] Rudy", tags)).toEqual({ name: "[nam] Rudy", tag: null });
+  });
   it("leaves unknown tags and plain names alone", () => {
     expect(splitAllianceTag("[XYZ] Rudy", TAGS)).toEqual({ name: "[XYZ] Rudy", tag: null });
     expect(splitAllianceTag("Rudy", TAGS)).toEqual({ name: "Rudy", tag: null });
