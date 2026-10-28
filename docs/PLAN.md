@@ -60,7 +60,7 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 
 ## Technology
 
-- A modern web app hosted for free (Next.js on Vercel).
+- A modern web app hosted for free (Next.js on Vercel). Old builds are deleted automatically after every deploy (the live one and the one before it stay), so the free plan's storage never fills up.
 - A free database for content, roles and submissions (Supabase Postgres + Storage).
 - An AI service for translations (Anthropic Claude for quality, about a dollar a month; Google Gemini's free tier as the alternative; can be switched or turned off at any time).
 
