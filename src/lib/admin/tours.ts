@@ -224,7 +224,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "results-ai",
         "AI summary",
-        "Translates the written answers to English once and sums up the mood, the themes and what to do. It runs only when you click, and each run costs a little.",
+        "Translate answers puts the written answers into English: cheap, run it whenever new answers come in. The summary (mood, themes, what to do) is run by the owner only, because each run costs several dollars; everyone can read the last one here.",
       ),
       step("results-summary", "Summary", "Averages on the 0–5 scale and how the answers spread."),
       step("results-responses", "Responses", "Every answer, newest first. Delete removes one answer, e.g. spam."),
