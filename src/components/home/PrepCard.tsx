@@ -20,6 +20,7 @@ export function PrepCard({ dict, locale }: { dict: Dictionary; locale: string })
   return (
     <Link
       href={localePath(locale, "/kvk/prep")}
+      data-tour="home-prep"
       className="card group relative flex items-center gap-4 overflow-hidden border-2 border-primary/50 p-5 transition-shadow hover:shadow-lift md:p-6"
     >
       <div className="pointer-events-none absolute -inset-e-10 -top-10 size-32 rounded-full bg-primary/20 blur-2xl" aria-hidden />

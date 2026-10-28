@@ -22,7 +22,7 @@ import { ActiveNavMenu, NavMenuView } from "./NavMenu";
  */
 export function DesktopNav({ locale, dict }: { locale: string; dict: Dictionary }) {
   return (
-    <nav className="@container hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main">
+    <nav className="@container hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main" data-tour="site-nav">
       {NAV_ITEMS.map((item) => (
         <NavEntry key={item.href} item={item} locale={locale} dict={dict} variant="desktop" />
       ))}
@@ -59,6 +59,7 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
   return (
     <nav
       id="bottom-nav"
+      data-tour="site-nav"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur-sm lg:hidden"
       aria-label="Main"
     >

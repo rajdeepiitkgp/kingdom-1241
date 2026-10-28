@@ -40,7 +40,7 @@ export function BattleHeader({
 }) {
   const html = pick(intro, locale);
   return (
-    <section className="card relative overflow-hidden p-5 md:p-7">
+    <section className="card relative overflow-hidden p-5 md:p-7" data-tour="kvk-header">
       <div className="pointer-events-none absolute -inset-e-12 -top-12 size-44 rounded-full bg-gold/25 blur-2xl" aria-hidden />
       <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">

@@ -174,7 +174,7 @@ export function RetroForm({
         </label>
       </div>
 
-      <section className="card space-y-4 p-5">
+      <section className="card space-y-4 p-5" data-tour="retro-you">
         <h2 className="text-lg font-extrabold text-ink">{dict["retro.you"]}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1 sm:col-span-2">
@@ -276,7 +276,7 @@ export function RetroForm({
       </section>
 
       {shownRatings(config).length > 0 && (
-        <section className="card space-y-3 p-5">
+        <section className="card space-y-3 p-5" data-tour="retro-ratings">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-extrabold text-ink">{dict["retro.ratings"]}</h2>
             <p className="text-xs font-bold text-ink-faint" dir="ltr">
@@ -298,7 +298,7 @@ export function RetroForm({
       )}
 
       {shownTexts(config).length > 0 && (
-        <section className="card space-y-4 p-5">
+        <section className="card space-y-4 p-5" data-tour="retro-texts">
           <div>
             <h2 className="text-lg font-extrabold text-ink">{dict["retro.texts"]}</h2>
             <p className="mt-1 text-sm font-semibold text-ink-muted">{format(dict["retro.texts.hint"], { max: TEXT_MAX })}</p>
@@ -356,7 +356,7 @@ export function RetroForm({
         </p>
       )}
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end" data-tour="retro-send">
         <button type="submit" className="btn-primary" disabled={pending || waiting || closed}>
           {pending ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Send className="size-5 rtl:-scale-x-100" aria-hidden />}
           {/* Text in its own element: browser translation replaces bare text nodes, and React's icon swap must not depend on them. */}

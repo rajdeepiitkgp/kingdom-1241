@@ -8,6 +8,7 @@ export function KvkCard({ dict, locale }: { dict: Dictionary; locale: string }) 
   return (
     <Link
       href={localePath(locale, "/kvk")}
+      data-tour="home-kvk"
       className="card group relative flex items-center gap-4 overflow-hidden border-2 border-gold/60 p-5 transition-shadow hover:shadow-lift md:p-6"
     >
       <div className="pointer-events-none absolute -inset-e-10 -top-10 size-32 rounded-full bg-gold/20 blur-2xl" aria-hidden />

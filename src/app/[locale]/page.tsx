@@ -8,11 +8,13 @@ import { GiftCodes } from "@/components/home/GiftCodes";
 import { KvkCard } from "@/components/home/KvkCard";
 import { PrepCard } from "@/components/home/PrepCard";
 import { ServerClock } from "@/components/time/ServerClock";
+import { PageGuide } from "@/components/tour/PageGuide";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getAlliances, getAnnouncements, getEvents, getGiftCodes, getSettings } from "@/lib/data";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
+import { HOME_TOUR } from "@/lib/tour/home";
 
 export default async function HomePage() {
   const locale = await rootLocale();
@@ -38,7 +40,10 @@ export default async function HomePage() {
           aria-hidden
         />
         <div className="relative">
-          <p className="chip bg-gold-soft text-gold-strong">Kingshot · #{settings.kingdomNumber}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="chip bg-gold-soft text-gold-strong">Kingshot · #{settings.kingdomNumber}</p>
+            <PageGuide tour={HOME_TOUR} dict={dict} />
+          </div>
           <h1 className="mt-3 text-3xl/tight font-black text-ink md:text-5xl" dir="auto">{pick(settings.kingdomName, locale)}</h1>
           <p className="mt-3 max-w-2xl text-base font-semibold text-ink-muted md:text-lg" dir="auto">{pick(settings.tagline, locale)}</p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -58,7 +63,7 @@ export default async function HomePage() {
       </section>
 
       {/* Server clock & reset */}
-      <section aria-label={dict["time.serverTime"]}>
+      <section aria-label={dict["time.serverTime"]} data-tour="home-clock">
         <ServerClock dict={dict} locale={locale} resetHourUtc={settings.dailyResetUtcHour} />
       </section>
 
@@ -89,7 +94,7 @@ export default async function HomePage() {
       </section>
 
       {/* Alliances */}
-      <section>
+      <section data-tour="home-alliances">
         <SectionTitle icon="🛡️" title={dict["home.alliances"]} />
         <AllianceGrid alliances={alliances} dict={dict} locale={locale} />
       </section>

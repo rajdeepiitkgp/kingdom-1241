@@ -67,15 +67,15 @@ function subscribe(onChange: () => void) {
   };
 }
 
-const find = (target: string) => document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
-/** On the page and drawn (not inside a closed fold-out or a hidden branch). */
-const onPage = (target: string) => (find(target)?.getClientRects().length ?? 0) > 0;
+/** The first element with this marker that is drawn (not hidden by a breakpoint, a closed fold-out or a hidden branch). */
+const find = (target: string) => [...document.querySelectorAll<HTMLElement>(`[data-tour="${target}"]`)].find((element) => element.getClientRects().length > 0) ?? null;
+const onPage = (target: string) => find(target) !== null;
 
 export interface TourOptions {
   /** Keep the "New here?" line and the solid highlight away (e.g. during a running rally). */
   quiet?: boolean;
-  /** Show `labels.open` next to the "?" (where there is room, like the admin bar). */
-  showLabel?: boolean;
+  /** Show `labels.open` next to the "?": always (the admin bar has room), or "wide" from tablet width up (next to a page title). */
+  showLabel?: boolean | "wide";
   /** The open tour's direction when its page forces one (the English-only admin area under /ar). */
   dir?: "ltr" | "rtl";
 }
@@ -120,12 +120,13 @@ export function useGuidedTour(
       // Blue, unlike the page's grey icon buttons, so it is always findable; solid while the tour is new to this device.
       className={clsx(
         "shrink-0 rounded-xl border",
-        showLabel ? "inline-flex h-9 items-center gap-1.5 px-3 text-sm font-extrabold" : "grid size-9 place-items-center",
+        showLabel ? "inline-flex h-9 items-center gap-1.5 text-sm font-extrabold" : "grid size-9 place-items-center",
+        showLabel === "wide" ? "justify-center max-sm:w-9 sm:px-3" : showLabel && "px-3",
         fresh ? "border-primary bg-primary text-primary-ink ring-2 ring-primary/30" : "border-primary/40 bg-primary-soft text-primary hover:border-primary",
       )}
     >
       <CircleHelp className="size-4 shrink-0" aria-hidden />
-      {showLabel && <span>{labels.open}</span>}
+      {showLabel && <span className={clsx(showLabel === "wide" && "max-sm:hidden")}>{labels.open}</span>}
     </button>
   );
   const nudge = fresh && (

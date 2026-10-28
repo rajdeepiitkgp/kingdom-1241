@@ -4,7 +4,9 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { UI_STRINGS } from "@/content/seed/ui-strings";
 import { ADMIN_TOURS } from "@/lib/admin/tours";
+import { KVK_TOURS } from "@/lib/kvk/tours";
 import { RALLY_SYNC_TOURS } from "@/lib/rally-sync/tours";
+import { HOME_TOUR } from "@/lib/tour/home";
 import type { Tour } from "@/lib/tour/tour";
 
 /**
@@ -13,7 +15,7 @@ import type { Tour } from "@/lib/tour/tour";
  * a redesign would shorten a tour without anyone noticing.
  */
 
-const PLAYER_TOURS: Tour[] = Object.values(RALLY_SYNC_TOURS);
+const PLAYER_TOURS: Tour[] = [...Object.values(RALLY_SYNC_TOURS), HOME_TOUR, ...Object.values(KVK_TOURS)];
 const TOURS: Tour[] = [...PLAYER_TOURS, ...Object.values(ADMIN_TOURS)];
 
 const SRC = resolve(__dirname, "../../../src");

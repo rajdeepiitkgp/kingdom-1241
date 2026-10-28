@@ -13,6 +13,7 @@ export function ThemeToggle({ label }: { label: string }) {
   return (
     <button
       type="button"
+      data-tour="site-theme"
       aria-label={label}
       title={label}
       onClick={() => {

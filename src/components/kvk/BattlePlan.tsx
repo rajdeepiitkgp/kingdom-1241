@@ -55,6 +55,7 @@ export function BattlePlan({
       {feedbackHref && (
         <Link
           href={feedbackHref}
+          data-tour="kvk-feedback"
           className="card group flex items-center gap-4 overflow-hidden border-2 border-gold/60 p-4 transition-shadow hover:shadow-lift md:p-5"
         >
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
@@ -73,7 +74,7 @@ export function BattlePlan({
 
       {/* Instructions */}
       {plan.rules.length > 0 && (
-        <section>
+        <section data-tour="kvk-rules">
           <SectionTitle icon="📋" title={dict["kvk.instructions"]} />
           <ol className="grid grid-cols-1 gap-2">
             {plan.rules.map((rule) => (
@@ -93,7 +94,7 @@ export function BattlePlan({
 
       {/* Coordinators */}
       {plan.coordinators.length > 0 && (
-        <section>
+        <section data-tour="kvk-coordinators">
           <SectionTitle icon="📣" title={dict["kvk.coordinators"]} />
           <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["kvk.coordinators.hint"]}</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -139,7 +140,7 @@ export function BattlePlan({
       )}
 
       {/* Formations */}
-      <section>
+      <section data-tour="kvk-formations">
         <SectionTitle icon="⚔️" title={dict["kvk.formations"]} />
         <div className="card mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
           <div className="flex shrink-0 items-center gap-3 self-start rounded-2xl bg-card-soft p-3">
