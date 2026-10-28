@@ -1,7 +1,10 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
+import { cacheLife, cacheTag } from "next/cache";
 import { cookies } from "next/headers";
+import { CACHE_TAGS } from "@/lib/data/cache-tags";
 import { createLogger } from "@/lib/log";
 import { instanceIdFromCookie, isValidRoomToken, roomCookieName } from "./access";
+import { type Capacity, DEFAULT_CAPACITY, parseCapacity } from "./capacity";
 import { isRoomOpen, type LeaderView, normalizeRoomCode, type RoomState, type RoomView } from "./room";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomRow } from "./store";
 
@@ -87,14 +90,38 @@ export function leaderView(leader: LeaderRow): LeaderView {
   };
 }
 
+/** The owner's limits, read right before a write (the database checks them again); the defaults when they can't be read. */
+export async function roomCapacity(store: RallyStore): Promise<Capacity> {
+  try {
+    return parseCapacity(await store.readCapacity());
+  } catch {
+    return DEFAULT_CAPACITY;
+  }
+}
+
+/** The same for what pages show ("3/10 leaders"): cached, since every open page refetches after each change; saving the settings expires it. */
+async function shownCapacity(): Promise<Capacity> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.config);
+  const store = rallyStore();
+  return store ? roomCapacity(store) : DEFAULT_CAPACITY;
+}
+
 /** The room as its page sees it; counts as somebody (this instance) looking at it. */
 export async function roomState(store: RallyStore, room: RoomRow, instance: InstanceRow | null): Promise<RoomState> {
   const now = Date.now();
-  const [leaders] = await Promise.all([store.leaders(room.id), store.touchRoom(room.id, now), instance ? store.touchInstance(instance.id, now) : undefined]);
+  const [leaders, capacity] = await Promise.all([
+    store.leaders(room.id),
+    shownCapacity(),
+    store.touchRoom(room.id, now),
+    instance ? store.touchInstance(instance.id, now) : undefined,
+  ]);
   const seen = Date.parse(room.lastSeenAt) < now - 60_000 ? new Date(now).toISOString() : room.lastSeenAt;
   return {
     room: { ...roomView(room), lastSeenAt: seen },
     leaders: leaders.map(leaderView),
+    leaderLimit: capacity[room.mode].leaders,
     me: instance ? { tag: instance.tag, name: instance.name } : null,
     serverNow: Date.now(),
   };

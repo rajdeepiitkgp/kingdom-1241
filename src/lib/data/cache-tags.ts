@@ -18,6 +18,8 @@ export const CACHE_TAGS = {
   heroes: "content:heroes",
   kvk: "content:kvk",
   retro: "content:kvk_retro",
+  /** The owner's settings (app_config), e.g. the Rally Sync limits a room page shows. */
+  config: "config:app_config",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
@@ -59,6 +61,8 @@ export function cacheTagForTable(table: string): CacheTag | null {
       return CACHE_TAGS.kvk;
     case "kvk_retrospectives":
       return CACHE_TAGS.retro;
+    case "app_config":
+      return CACHE_TAGS.config;
     default:
       return null;
   }

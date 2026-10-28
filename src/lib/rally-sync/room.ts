@@ -35,11 +35,6 @@ export function canSwitchMode(from: RoomMode, to: RoomMode): boolean {
 export const ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const ROOM_CODE_LENGTH = 6;
 
-export const MAX_OPEN_ROOMS = 3;
-export const MAX_LEADERS_PER_ROOM = 10;
-export const MAX_LEADERS_TOTAL = 15;
-/** Browsers (instances) per room, as in migration 0014. */
-export const MAX_INSTANCES_PER_ROOM = 50;
 export const INSTANCE_TAG_LENGTH = 4;
 /** A room closes after this long without anybody on the page … */
 export const IDLE_CLOSE_MS = 30 * MINUTE;
@@ -171,6 +166,8 @@ export interface InstanceSelf {
 export interface RoomState {
   room: RoomView;
   leaders: LeaderView[];
+  /** How many leaders this room takes (the owner's limit for its type). */
+  leaderLimit: number;
   me: InstanceSelf | null;
   /** The server's clock when the answer was made, for the page's clock correction. */
   serverNow: number;

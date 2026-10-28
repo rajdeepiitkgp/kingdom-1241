@@ -9,7 +9,8 @@ import { createRallyRoom, type CreateRoomState, destroyRallyRoom, reissueCoordin
 import type { AdminRallyRoom } from "@/lib/admin/rally-sync-data";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinatorLinkPath, inviteLinkPath, updateDevice, updateDeviceRoom } from "@/lib/rally-sync/device";
-import { formatRoomCode, MAX_OPEN_ROOMS, PASSWORD_MAX, PASSWORD_MIN, ROOM_MODES, type RoomMode, TITLE_MAX } from "@/lib/rally-sync/room";
+import { type Capacity, CAPACITY_MODES } from "@/lib/rally-sync/capacity";
+import { formatRoomCode, PASSWORD_MAX, PASSWORD_MIN, ROOM_MODES, type RoomMode, TITLE_MAX } from "@/lib/rally-sync/room";
 import { formatSeconds, parseDuration } from "@/lib/rally-sync/timing";
 import { formatUtcTime } from "@/lib/time";
 import { useDevice } from "../rally-sync/hooks";
@@ -29,15 +30,23 @@ const MODE_CHIPS: Record<RoomMode, string> = { rally: "Rally", counter: "Counter
  * kept on this device (coordinator token, invite key, password), so "Open as
  * coordinator" works right away; the settings are remembered for the next room.
  */
-export function RallySyncAdmin({ rooms, locale }: { rooms: AdminRallyRoom[]; locale: string }) {
-  const openCount = rooms.filter((r) => r.open).length;
+export function RallySyncAdmin({ rooms, capacity, locale }: { rooms: AdminRallyRoom[]; capacity: Capacity; locale: string }) {
+  const openCount = (mode: RoomMode) => rooms.filter((r) => r.open && r.mode === mode).length;
+  const full = ROOM_MODES.filter((mode) => openCount(mode) >= capacity[mode].rooms);
   return (
     <div className="space-y-5">
-      <CreateRoomForm locale={locale} full={openCount >= MAX_OPEN_ROOMS} />
+      <CreateRoomForm locale={locale} full={full} />
       <section className="space-y-3" data-tour="rs-rooms">
-        <h2 className="text-lg font-extrabold text-ink">
-          Rooms ({openCount}/{MAX_OPEN_ROOMS} open)
-        </h2>
+        <h2 className="text-lg font-extrabold text-ink">Rooms</h2>
+        <p className="text-sm font-semibold text-ink-muted">
+          Open now:{" "}
+          {CAPACITY_MODES.map((mode, i) => (
+            <span key={mode}>
+              {i > 0 && " · "}
+              {MODE_CHIPS[mode]} <span className="tabular">{openCount(mode)}/{capacity[mode].rooms}</span>
+            </span>
+          ))}
+        </p>
         {rooms.length === 0 ? (
           <p className="rounded-xl bg-card-soft px-4 py-3 text-sm font-semibold text-ink-muted">No rooms yet.</p>
         ) : (
@@ -52,9 +61,12 @@ export function RallySyncAdmin({ rooms, locale }: { rooms: AdminRallyRoom[]; loc
   );
 }
 
-function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
+function CreateRoomForm({ locale, full }: { locale: string; full: RoomMode[] }) {
   const device = useDevice();
   const last = device.lastSettings;
+  // Start on a type that still has room, if the last one used is full.
+  const mode = full.includes(last.mode) ? (ROOM_MODES.find((m) => !full.includes(m)) ?? last.mode) : last.mode;
+  const allFull = full.length === ROOM_MODES.length;
   const [state, formAction, pending] = useActionState(async (previous: CreateRoomState, formData: FormData) => {
     const result = await createRallyRoom(previous, formData);
     if (result.created) {
@@ -81,7 +93,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
       <p className="mt-1 mb-4 text-sm text-ink-muted">
         The mode is fixed for the room (rally, counter-rally and garrison are run by different players); the timer and buffer can be changed in the room later. This device remembers them for the next room.
       </p>
-      <form action={formAction} key={JSON.stringify(last)} className="space-y-4">
+      <form action={formAction} key={JSON.stringify({ last, full })} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Title (optional, shown to players after they open the room)" htmlFor="rs-title" error={errors.title} tour="rs-title">
@@ -100,10 +112,11 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
             />
           </Field>
           <Field label="Mode (fixed for this room)" htmlFor="rs-mode" tour="rs-mode">
-            <select id="rs-mode" name="mode" className="input select-chevron" defaultValue={last.mode}>
-              {ROOM_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {MODE_LABELS[mode]}
+            <select id="rs-mode" name="mode" className="input select-chevron" defaultValue={mode}>
+              {ROOM_MODES.map((option) => (
+                <option key={option} value={option} disabled={full.includes(option)}>
+                  {MODE_LABELS[option]}
+                  {full.includes(option) ? " (all open)" : ""}
                 </option>
               ))}
             </select>
@@ -116,10 +129,10 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-3" data-tour="rs-create">
-          <button type="submit" className="btn-primary btn-sm" disabled={pending || full}>
+          <button type="submit" className="btn-primary btn-sm" disabled={pending || allFull}>
             Create room
           </button>
-          {full && <p className="text-sm font-bold text-danger">{MAX_OPEN_ROOMS} rooms are open. Destroy one below first.</p>}
+          {allFull && <p className="text-sm font-bold text-danger">Every kind of room is at its limit. Destroy one below first.</p>}
         </div>
         <Notice state={state} />
       </form>

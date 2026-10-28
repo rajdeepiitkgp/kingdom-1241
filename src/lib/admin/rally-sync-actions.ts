@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { adminPath } from "@/lib/auth/paths";
 import { checkAccess } from "@/lib/auth/server";
 import { hashPassword, hashToken, inviteKey, newChannelKey, newRoomCode, newToken } from "@/lib/rally-sync/access";
-import { isRoomOpen, MAX_OPEN_ROOMS, parsePassword, parseSettings, parseTitle } from "@/lib/rally-sync/room";
+import { isRoomOpen, parsePassword, parseSettings, parseTitle, type RoomMode } from "@/lib/rally-sync/room";
+import { roomCapacity } from "@/lib/rally-sync/session";
 import { RallyStoreError, rallyStore } from "@/lib/rally-sync/store";
 import { parseDuration } from "@/lib/rally-sync/timing";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
@@ -15,8 +16,8 @@ import { formatGameName } from "./profile";
 import { type FieldErrors, localeField, textField, uuidField } from "./forms";
 
 /**
- * Server Actions of the admin Rally Sync page: moderators create rooms (at most
- * three open at once, the database enforces it too), destroy them and hand out
+ * Server Actions of the admin Rally Sync page: moderators create rooms (as many
+ * of each type open at once as the owner allows; the database enforces it too), destroy them and hand out
  * a new coordinator link. The new room's password, invite key and coordinator
  * token come back once, in the action's reply, for the creator to share; the
  * database keeps hashes only. Every action is audited (room code, never a secret).
@@ -40,7 +41,11 @@ export interface ReissueState extends ActionState {
 
 const STORE_MISSING: ActionState = { status: "error", message: "Rally Sync needs the database (migration 0012)." };
 const ROOM_GONE: ActionState = { status: "error", message: "That room no longer exists." };
-const TOO_MANY = `${MAX_OPEN_ROOMS} rooms are open already. Destroy one below first.`;
+const MODE_NAMES: Record<RoomMode, string> = { rally: "rally", counter: "counter-rally", garrison: "garrison" };
+
+function tooMany(mode: RoomMode, limit: number): ActionState {
+  return { status: "error", message: `${limit} ${MODE_NAMES[mode]} ${limit === 1 ? "room is" : "rooms are"} open already. Destroy one below first, or ask the owner for more.` };
+}
 
 function editorPath(locale: string): string {
   return adminPath(locale, "/rally-sync");
@@ -73,7 +78,10 @@ export async function createRallyRoom(_previous: CreateRoomState, formData: Form
   const user = access.user;
   try {
     const now = Date.now();
-    if ((await store.listRooms()).filter((r) => isRoomOpen(r, now)).length >= MAX_OPEN_ROOMS) return { status: "error", message: TOO_MANY };
+    const mode = settings.value.mode;
+    const [rooms, capacity] = await Promise.all([store.listRooms(), roomCapacity(store)]);
+    const limit = capacity[mode].rooms;
+    if (rooms.filter((r) => r.mode === mode && isRoomOpen(r, now)).length >= limit) return tooMany(mode, limit);
 
     const coordinatorToken = newToken();
     const base = {
@@ -103,7 +111,10 @@ export async function createRallyRoom(_previous: CreateRoomState, formData: Form
     }
     return failed(log, "Creating a rally room", { message: "no free room code after 5 tries" });
   } catch (error) {
-    if (error instanceof RallyStoreError && error.problem === "room_limit") return { status: "error", message: TOO_MANY };
+    if (error instanceof RallyStoreError && error.problem === "room_limit") {
+      const mode = settings.value.mode;
+      return tooMany(mode, (await roomCapacity(store))[mode].rooms);
+    }
     return failed(log, "Creating a rally room", { message: error instanceof Error ? error.message : String(error) });
   }
 }

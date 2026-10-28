@@ -4,7 +4,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { LeaderInput, SyncError } from "@/lib/rally-sync/actions";
-import { MAX_LEADERS_PER_ROOM, MAX_LEADERS_TOTAL, NAME_MAX, parseMarch, parseName } from "@/lib/rally-sync/room";
+import { NAME_MAX, parseMarch, parseName } from "@/lib/rally-sync/room";
 import { MAX_MARCH_SECONDS } from "@/lib/rally-sync/timing";
 import { stepKeys } from "./step-keys";
 
@@ -19,6 +19,7 @@ export function LeaderForm({
   submitLabel,
   pending,
   error,
+  leaderLimit,
   onSubmit,
   onInvalid,
   children,
@@ -29,6 +30,8 @@ export function LeaderForm({
   submitLabel: string;
   pending: boolean;
   error: SyncError | null;
+  /** The room's leader limit, for "this room is full" when a new leader doesn't fit. */
+  leaderLimit?: number;
   onSubmit: (input: LeaderInput) => void;
   onInvalid: () => void;
   children?: ReactNode;
@@ -87,7 +90,7 @@ export function LeaderForm({
         </div>
       </div>
       <p className="mt-2 text-xs text-ink-faint">{dict["sync.form.marchHint"]}</p>
-      {error && <ErrorLine dict={dict} error={error} invalidText={dict["sync.error.invalidLeader"]} />}
+      {error && <ErrorLine dict={dict} error={error} invalidText={dict["sync.error.invalidLeader"]} leaderLimit={leaderLimit} />}
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="submit" className="btn-primary btn-sm" disabled={pending}>
           {submitLabel}
@@ -99,15 +102,15 @@ export function LeaderForm({
 }
 
 /** An action's error in the player's language; `invalidText` says what was wrong with this particular form. */
-export function ErrorLine({ dict, error, invalidText }: { dict: Dictionary; error: SyncError; invalidText?: string }) {
+export function ErrorLine({ dict, error, invalidText, leaderLimit }: { dict: Dictionary; error: SyncError; invalidText?: string; leaderLimit?: number }) {
   const text =
     error === "invalid"
       ? (invalidText ?? dict["sync.error.invalid"])
       : error === "leader_limit"
-        ? format(dict["sync.error.leader_limit"], { n: MAX_LEADERS_PER_ROOM })
-        : error === "total_limit"
-          ? format(dict["sync.error.total_limit"], { n: MAX_LEADERS_TOTAL })
-          : dict[`sync.error.${error}`];
+        ? leaderLimit === undefined
+          ? dict["sync.error.too_many"]
+          : format(dict["sync.error.leader_limit"], { n: leaderLimit })
+        : dict[`sync.error.${error}`];
   return (
     <p role="alert" className="mt-2 rounded-xl bg-danger-soft px-3 py-2 text-sm font-bold text-danger">
       {text}

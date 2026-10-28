@@ -30,6 +30,7 @@ export interface BackupTable {
 export const BACKUP_TABLES: readonly BackupTable[] = [
   { table: "languages", primaryKey: "code", restore: "upsert" },
   { table: "site_settings", primaryKey: "key", restore: "upsert" },
+  { table: "app_config", primaryKey: "key", restore: "upsert" },
   { table: "ui_strings", primaryKey: "key", restore: "upsert" },
   { table: "announcements", primaryKey: "id", restore: "upsert" },
   { table: "events", primaryKey: "id", restore: "upsert" },

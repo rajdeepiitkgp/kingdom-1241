@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
+import { type Capacity, DEFAULT_CAPACITY } from "@/lib/rally-sync/capacity";
 import { isRoomOpen, type RoomMode, roomClosesAt } from "@/lib/rally-sync/room";
+import { roomCapacity } from "@/lib/rally-sync/session";
 import { rallyStore } from "@/lib/rally-sync/store";
 
 /**
@@ -26,21 +28,22 @@ export interface AdminRallyRoom {
   hitAt: string | null;
 }
 
-/** Rooms newest first, open and recently closed (not yet deleted); `available` is false without a store. */
-export async function listRallyRooms(): Promise<{ available: boolean; rooms: AdminRallyRoom[] }> {
+/** Rooms newest first, open and recently closed (not yet deleted), with the owner's limits; `available` is false without a store. */
+export async function listRallyRooms(): Promise<{ available: boolean; rooms: AdminRallyRoom[]; capacity: Capacity }> {
   const access = await checkAccess("moderator");
   if ("denied" in access) {
     log.warn("Admin data requested without access", { what: "rally rooms", reason: access.denied });
-    return { available: false, rooms: [] };
+    return { available: false, rooms: [], capacity: DEFAULT_CAPACITY };
   }
   const store = rallyStore();
-  if (!store) return { available: false, rooms: [] };
+  if (!store) return { available: false, rooms: [], capacity: DEFAULT_CAPACITY };
   try {
-    const rows = await store.listRooms();
+    const [rows, capacity] = await Promise.all([store.listRooms(), roomCapacity(store)]);
     const counts = await store.leaderCounts(rows.map((r) => r.id));
     const now = Date.now();
     return {
       available: true,
+      capacity,
       rooms: rows.map((room) => ({
         id: room.id,
         code: room.code,
@@ -57,6 +60,6 @@ export async function listRallyRooms(): Promise<{ available: boolean; rooms: Adm
     };
   } catch (error) {
     log.error("Could not list rally rooms", { error: error instanceof Error ? error.message : String(error) });
-    return { available: false, rooms: [] };
+    return { available: false, rooms: [], capacity: DEFAULT_CAPACITY };
   }
 }

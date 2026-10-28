@@ -44,7 +44,6 @@ import {
   joinStatus,
   type InstanceView,
   leaderEdit,
-  MAX_LEADERS_PER_ROOM,
   normalizeRoomCode,
   parseInstanceName,
   parseMarch,
@@ -58,7 +57,7 @@ import {
   sortInstances,
   statusAfter,
 } from "./room";
-import { findOpenRoom, roomAccess } from "./session";
+import { findOpenRoom, roomAccess, roomCapacity } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
 import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, parseUtcClock, toGameTime } from "./timing";
 
@@ -84,7 +83,6 @@ export type SyncError =
   | "past"
   | "room_limit"
   | "leader_limit"
-  | "total_limit"
   | "instance_limit"
   /** Garrison: the rally has launched, so only a measured landing may change it. */
   | "launched"
@@ -270,11 +268,17 @@ async function openUnlocked(code: string): Promise<Opened | { error: SyncError }
 function storeError(error: unknown, log: Logger, what: string): { ok: false; error: SyncError } {
   if (error instanceof RallyStoreError) {
     const problem = error.problem;
-    if (problem === "room_limit" || problem === "leader_limit" || problem === "total_limit" || problem === "instance_limit") return { ok: false, error: problem };
+    if (problem === "room_limit" || problem === "leader_limit" || problem === "instance_limit") return { ok: false, error: problem };
     if (problem === "room_closed") return { ok: false, error: "closed" };
   }
   log.error(`${what} failed`, { error: error instanceof Error ? error.message : String(error) });
   return { ok: false, error: "failed" };
+}
+
+/** No room for another leader (the owner's limit for this type of room; the database checks again). */
+async function roomFull(store: RallyStore, room: RoomRow): Promise<boolean> {
+  const [leaders, capacity] = await Promise.all([store.leaders(room.id), roomCapacity(store)]);
+  return leaders.length >= capacity[room.mode].leaders;
 }
 
 function parseLeader(input: LeaderInput): LeaderInput | null {
@@ -298,7 +302,7 @@ export async function joinRoom(code: string, input: LeaderInput, gameOffsetSecon
   if (!leader) return { ok: false, error: "invalid" };
   const { store, room } = opened;
   try {
-    if ((await store.leaders(room.id)).length >= MAX_LEADERS_PER_ROOM) return { ok: false, error: "leader_limit" };
+    if (await roomFull(store, room)) return { ok: false, error: "leader_limit" };
     const token = newToken();
     const running = rallyRunning(room.hitAt, toGameTime(Date.now(), clampGameOffset(gameOffsetSeconds)));
     const row = await store.insertLeader({
@@ -527,7 +531,7 @@ export async function coordinate(
       case "addLeader": {
         const leader = parseLeader(op);
         if (!leader) return { ok: false, error: "invalid" };
-        if ((await store.leaders(room.id)).length >= MAX_LEADERS_PER_ROOM) return { ok: false, error: "leader_limit" };
+        if (await roomFull(store, room)) return { ok: false, error: "leader_limit" };
         const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, tokenHash: null });
         return done({ leader: row.id });
       }

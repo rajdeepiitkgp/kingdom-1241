@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
+import type { Capacity } from "./capacity";
 import type { GarrisonState } from "./garrison";
 import type { HitHistoryEntry, LeaderStatus, RoomMode } from "./room";
 
@@ -71,10 +72,10 @@ export type LeaderPatch = Partial<Pick<LeaderRow, "name" | "marchSeconds" | "sta
 export type InstancePatch = Partial<Pick<InstanceRow, "name" | "coordinator">>;
 
 /**
- * Why a write was refused. The first five come from the database's limits;
+ * Why a write was refused. The first four come from the database's limits;
  * `not_migrated` means the table isn't there yet (a deploy that ran ahead of its migration).
  */
-export type StoreProblem = "room_limit" | "leader_limit" | "total_limit" | "instance_limit" | "room_closed" | "duplicate" | "not_migrated" | "failed";
+export type StoreProblem = "room_limit" | "leader_limit" | "instance_limit" | "room_closed" | "duplicate" | "not_migrated" | "failed";
 
 export class RallyStoreError extends Error {
   constructor(
@@ -113,4 +114,9 @@ export interface RallyStore {
   deleteInstances(roomId: string, which: { ids: readonly string[] } | { except: string | null }): Promise<number>;
   /** Deletes rooms that are closed at `now`; returns how many. */
   deleteClosedRooms(now: number): Promise<number>;
+  /** Browsers per room that had it on screen since `since` (ms), for the owner's "open now". */
+  activeInstanceCounts(roomIds: readonly string[], since: number): Promise<Map<string, number>>;
+  /** The owner's limits as stored (app_config, migration 0016), unparsed; null when none are saved. */
+  readCapacity(): Promise<unknown>;
+  writeCapacity(capacity: Capacity): Promise<void>;
 }
