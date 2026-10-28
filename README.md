@@ -33,11 +33,11 @@ src/
   app/api/rally-sync      a Rally Sync room's state for visitors who unlocked it (+ the server clock)
   proxy.ts                sends /, /events, … to the visitor's language; adds x-request-id; refreshes the admin session
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms), tour (the guided-tour "?" and overlay)
-  content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar)
+  content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar) and reviewed machine translations (ui-reviewed.ts)
   lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
   lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile), FormData parsers, shared action replies, audit log
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
-  lib/i18n/               language registry (direction, font), fallback helper, negotiation
+  lib/i18n/               language registry (direction, font, translation style), fallback helper, negotiation, the translation review's checks (ui-review.ts)
   lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers, the prep-week schedule and item × day table (`prep.ts`)
   lib/rally-sync/         Rally Sync: timing maths, garrison refills, the counter-rally order, game-chat texts and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds
   lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, CSV, retention and prune
@@ -56,6 +56,7 @@ supabase/
 scripts/
   seed.ts                 npm run db:seed
   translate.ts            npm run translate
+  ui-review.ts            npm run ui:review (read-only export of the live UI strings for the /translation-review skill)
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
   prune.ts                npm run prune (deletes battle feedback past its retention period and closed Rally Sync rooms, SETUP.md § 9a/9b)
@@ -67,6 +68,7 @@ scripts/
 - The list of offered languages is the `languages` table (seeded with English, German, Korean, Polish, Arabic). Each code maps to a text direction and font stack in `src/lib/i18n/languages.ts`; Arabic renders fully right-to-left.
 - Every translatable field is a JSON object `{"en": …, "de": …}`. English is the source; pages fall back to English for anything missing.
 - Translation happens in `src/lib/translate`: a Supabase webhook (or `npm run translate`) sends the English text with a game-term glossary to the configured provider (Anthropic Claude or Gemini; `TRANSLATION_PROVIDER` switches or turns it off). A hash of the English source is stored on the row, so unchanged rows — including the pipeline's own writes — are skipped.
+- The `/translation-review` skill (`.claude/skills/translation-review/`) reviews the machine-translated interface strings in Claude Code and fixes them through `src/content/seed/ui-reviewed.ts` (applied by `sync-ui`); see SETUP.md § 2.
 
 ### KvK battle plan
 

@@ -14,9 +14,9 @@ const status = uiStep("sync-status", "sync.status");
 const clock = uiStep("sync-clock", "sync.clock");
 const sound = uiStep("sync-sound", "sync.sound");
 const wake = uiStep("sync-wake", "sync.wake");
-const me = uiStep("sync-me", "sync.me");
+const me = uiStep("sync-me", "sync.me", "sync.me.title");
 const coordinator = uiStep("sync-coordinator", "sync.coordinator");
-const more = uiStep("sync-more", "sync.more");
+const more = uiStep("sync-more", "sync.more", "sync.coord.more");
 
 export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
   rally: {
@@ -33,7 +33,7 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
       coordinator,
       uiStep("sync-resync", "sync.resync"),
       uiStep("sync-hit", "sync.hit"),
-      uiStep("sync-copy", "sync.copy"),
+      uiStep("sync-copy", "sync.copy", "sync.copyChat"),
       more,
     ],
   },
@@ -48,7 +48,7 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
       uiStep("gar-march", "gar.march"),
       uiStep("gar-refills", "gar.refills"),
       coordinator,
-      uiStep("gar-windows", "gar.windows"),
+      uiStep("gar-windows", "gar.windows", "sync.gar.windows"),
       uiStep("gar-enemies", "gar.enemies"),
       uiStep("gar-edit", "gar.edit"),
       more,
@@ -57,6 +57,6 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
   counter: {
     id: "sync-counter",
     version: 1,
-    steps: [status, clock, wake, uiStep("counter-focus", "counter.focus"), me, uiStep("counter-order", "counter.order"), coordinator, uiStep("counter-copy", "counter.copy"), more],
+    steps: [status, clock, wake, uiStep("counter-focus", "counter.focus"), me, uiStep("counter-order", "counter.order"), coordinator, uiStep("counter-copy", "counter.copy", "sync.copyChat"), more],
   },
 };

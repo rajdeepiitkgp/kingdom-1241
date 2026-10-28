@@ -31,21 +31,21 @@ export const GLOSSARY: GlossaryEntry[] = [
   { term: "MightPulse", keep: true },
   {
     term: "Kingdom",
-    translations: { de: "Königreich", pl: "Królestwo", ko: "왕국", ar: "المملكة" },
+    translations: { de: "Königreich", pl: "Królestwo", ko: "왕국", ar: "المملكة", fr: "Royaume", it: "Regno", tr: "Krallık", ja: "王国", "zh-TW": "王國" },
     note: "A game server.",
   },
   {
     term: "Alliance",
-    translations: { de: "Allianz", pl: "Sojusz", ko: "연맹", ar: "التحالف" },
+    translations: { de: "Allianz", pl: "Sojusz", ko: "연맹", ar: "التحالف", fr: "Alliance", it: "Alleanza", tr: "İttifak", ja: "同盟", "zh-TW": "聯盟" },
   },
   {
     term: "Governor",
-    translations: { de: "Gouverneur", pl: "Gubernator", ko: "영주", ar: "الحاكم" },
+    translations: { de: "Gouverneur", pl: "Gubernator", ko: "영주", ar: "الحاكم", fr: "Gouverneur", it: "Governatore", tr: "Vali", ja: "領主", "zh-TW": "領主" },
     note: "A player.",
   },
   {
     term: "Governor ID",
-    translations: { de: "Gouverneur-ID", pl: "ID gubernatora", ko: "영주 ID", ar: "معرّف الحاكم" },
+    translations: { de: "Gouverneur-ID", pl: "ID gubernatora", ko: "영주 ID", ar: "معرّف الحاكم", fr: "ID de Gouverneur", it: "ID Governatore", tr: "Vali ID", ja: "領主ID", "zh-TW": "領主ID" },
   },
   {
     term: "Town Center",
@@ -82,26 +82,66 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
   {
     term: "Castle",
-    translations: { de: "Burg", pl: "Zamek", ko: "성", ar: "القلعة" },
+    translations: { de: "Burg", pl: "Zamek", ko: "성", ar: "القلعة", fr: "château", it: "castello", tr: "kale", ja: "城", "zh-TW": "王城" },
     note: "The central castle fought over in KvK.",
   },
   {
     term: "Rally",
-    translations: { de: "Rally", pl: "Rajd", ko: "집결", ar: "الحشد" },
+    translations: { de: "Rally", pl: "Rajd", ko: "집결", ar: "الحشد", fr: "ralliement", it: "rally", tr: "ralli", ja: "集結", "zh-TW": "集結" },
     note: "A group attack started by one player that others join.",
   },
   {
     term: "March",
-    translations: { de: "Marsch", pl: "Marsz", ko: "출정", ar: "المسيرة" },
+    translations: { de: "Marsch", pl: "Marsz", ko: "출정", ar: "المسيرة", fr: "marche", it: "marcia", tr: "sefer", ja: "行軍", "zh-TW": "行軍" },
     note: "A group of troops sent out.",
   },
   {
     term: "Garrison",
-    translations: { de: "Garnison", pl: "Garnizon", ko: "주둔", ar: "الحامية" },
+    translations: { de: "Garnison", pl: "Garnizon", ko: "주둔", ar: "الحامية", fr: "garnison", it: "guarnigione", tr: "garnizon", ja: "駐屯", "zh-TW": "駐防" },
   },
   {
     term: "Reinforce",
     translations: { de: "Verstärken", pl: "Wzmocnić", ko: "지원", ar: "تعزيز" },
+  },
+  {
+    term: "Rally leader",
+    translations: { de: "Rally-Leiter", pl: "lider rajdu", ko: "집결 대장", ar: "قائد الحشد", fr: "chef de ralliement", it: "leader del rally", tr: "ralli lideri", ja: "集結リーダー", "zh-TW": "集結隊長" },
+    note: "The player who starts a rally; not an alliance leader.",
+  },
+  {
+    term: "Coordinator",
+    translations: { de: "Koordinator", pl: "koordynator", ko: "코디네이터", ar: "المنسق", fr: "coordinateur", it: "coordinatore", tr: "koordinatör", ja: "コーディネーター", "zh-TW": "協調員" },
+    note: "Runs a team or a Rally Sync room on battle day; not the commander.",
+  },
+  {
+    term: "Commander",
+    translations: { de: "Kommandant", pl: "dowódca", ko: "지휘관", ar: "القائد", fr: "commandant", it: "comandante", tr: "komutan", ja: "指揮官", "zh-TW": "指揮官" },
+    note: "The one battle commander, above the coordinators.",
+  },
+  {
+    term: "Council",
+    translations: { de: "Rat", pl: "rada", ko: "운영진", ar: "المجلس", fr: "conseil", it: "consiglio", tr: "konsey", ja: "評議会", "zh-TW": "議會" },
+    note: "The kingdom's leadership that runs this site.",
+  },
+  {
+    term: "Pets",
+    translations: { de: "Haustiere", pl: "zwierzaki", ko: "펫", ar: "الحيوانات الأليفة", fr: "familiers", it: "pet", tr: "evcil hayvanlar", ja: "ペット", "zh-TW": "寵物" },
+    note: "In-game pets whose skills boost a march for two hours.",
+  },
+  {
+    term: "Hit time",
+    translations: { de: "Einschlagzeit", pl: "czas uderzenia", ko: "도착 시간", ar: "وقت الإصابة", fr: "heure d'impact", it: "orario d'impatto", tr: "vuruş zamanı", ja: "着弾時刻", "zh-TW": "命中時間" },
+    note: "When the rallies land on the target.",
+  },
+  {
+    term: "Room",
+    translations: { de: "Raum", pl: "pokój", ko: "방", ar: "غرفة", fr: "salon", it: "stanza", tr: "oda", ja: "ルーム", "zh-TW": "房間" },
+    note: "A Rally Sync room.",
+  },
+  {
+    term: "Rally Sync",
+    translations: { de: "Rally-Sync", pl: "Rally Sync", ko: "집결 동기화", ar: "مزامنة الحشود", fr: "Synchro des ralliements", it: "Sincronizzazione Rally", tr: "Ralli Senkronu", ja: "集結同期", "zh-TW": "集結同步" },
+    note: "The site's rally timing tool.",
   },
   {
     term: "Infantry",
@@ -117,7 +157,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
   {
     term: "Hero",
-    translations: { de: "Held", pl: "Bohater", ko: "영웅", ar: "البطل" },
+    translations: { de: "Held", pl: "Bohater", ko: "영웅", ar: "البطل", fr: "héros", it: "eroe", tr: "kahraman", ja: "英雄", "zh-TW": "英雄" },
   },
   {
     term: "Expedition skill",
@@ -139,7 +179,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
   {
     term: "Speedup",
-    translations: { de: "Beschleunigung", pl: "Przyspieszenie", ko: "가속", ar: "التسريع" },
+    translations: { de: "Beschleunigung", pl: "Przyspieszenie", ko: "가속", ar: "التسريع", fr: "accélérateur", it: "acceleratore", tr: "hızlandırma", ja: "加速", "zh-TW": "加速" },
   },
   {
     term: "Gift code",

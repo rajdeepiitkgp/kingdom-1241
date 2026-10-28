@@ -78,8 +78,28 @@ export function cardSide(target: Band, viewportHeight: number, cardHeight: numbe
 
 /** A UI-string pair `tour.<key>.title` + `tour.<key>.body`: the steps players see are translated like every other string. */
 export type TourKey<K = UiKey> = K extends `tour.${infer P}.title` ? (`tour.${P}.body` extends UiKey ? P : never) : never;
+/** A `tour.<key>.body` whose title is the label of the element itself (no `tour.<key>.title`). */
+export type LabelledTourKey<K = UiKey> = K extends `tour.${infer P}.body` ? P : never;
 
-export const uiStep = (target: string | null, key: TourKey): TourStep<UiKey> => ({ target, title: `tour.${key}.title` as UiKey, body: `tour.${key}.body` as UiKey });
+/**
+ * One step from UI strings. A step about a labelled element (a button, a
+ * heading) passes that label's key as its title, so the title always reads
+ * like the element in every language instead of a separate translation.
+ */
+export function uiStep(target: string | null, key: TourKey): TourStep<UiKey>;
+export function uiStep(target: string | null, key: LabelledTourKey, title: UiKey): TourStep<UiKey>;
+export function uiStep(target: string | null, key: string, title?: UiKey): TourStep<UiKey> {
+  return { target, title: title ?? (`tour.${key}.title` as UiKey), body: `tour.${key}.body` as UiKey };
+}
+
+/** `{{ui:<key>}}` in a step's text: the label of that element in the same language (a body that names a button). */
+const UI_LABEL = /\{\{ui:([\w.-]+)\}\}/g;
+
+export const uiLabelKeys = (text: string): string[] => [...text.matchAll(UI_LABEL)].map((m) => m[1]);
+
+export const fillUiLabels = (text: string, dict: Dictionary): string =>
+  text.replace(UI_LABEL, (whole, key: string) => (dict as Record<string, string>)[key] ?? whole);
 
 /** The steps in the visitor's language. */
-export const resolveSteps = (tour: Tour<UiKey>, dict: Dictionary): TourStep[] => tour.steps.map((s) => ({ target: s.target, title: dict[s.title], body: dict[s.body] }));
+export const resolveSteps = (tour: Tour<UiKey>, dict: Dictionary): TourStep[] =>
+  tour.steps.map((s) => ({ target: s.target, title: fillUiLabels(dict[s.title], dict), body: fillUiLabels(dict[s.body], dict) }));

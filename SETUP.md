@@ -44,6 +44,8 @@ The pipeline only runs when content is added or edited, batches small texts toge
 
 **Choosing / switching / turning it off.** The provider is picked automatically: Anthropic if `ANTHROPIC_API_KEY` is set, otherwise Gemini if `GEMINI_API_KEY` is set, otherwise off. Force it with `TRANSLATION_PROVIDER=anthropic | gemini | off` (in Vercel for the webhook, in GitHub *variables* for the Maintenance workflow, in `.env.local` locally). With translation off the site keeps working — players see English for anything not translated — and edits still refresh the cache.
 
+**Reviewing the interface translations (about once a month, free).** The machine translates each string on its own, so it can name a button differently from the button, switch between two words for the same game term, or mix up roles. In Claude Code, run `/translation-review` (`.claude/skills/translation-review/SKILL.md`): it reads the live strings with the public key (`npm run ui:review`, read-only), checks them against the labels the page shows, the glossary and their meaning, writes the fixes into `src/content/seed/ui-reviewed.ts` and opens a PR. It runs on your Claude subscription, not on the API key, and writes nothing to the database. After you merge, wait until Vercel shows the deployment of `main` as *Ready*, then run Maintenance → `sync-ui`: the fixes go live and the pipeline leaves them alone until their English changes. (Run `sync-ui` only once that deployment is live in general: the translation webhooks are answered by whichever deployment is live, and on 28 Oct a sync that ran a minute early was translated by the previous one.) Battle plans and other content are corrected per language in the admin (§ 8.5).
+
 ## 3. Secrets you generate yourself
 
 ```bash
@@ -68,8 +70,9 @@ Without any env vars the site still runs with the bundled English seed content (
 
 | Command | What it does |
 | --- | --- |
-| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change). `-- --overwrite` replaces every seed row, dropping translations. |
+| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change), with the reviewed translations of `src/content/seed/ui-reviewed.ts`. `-- --overwrite` replaces every seed row, dropping translations. |
 | `npm run translate` | Translates everything missing or outdated. `-- --table guides`, `-- --locale de`, `-- --force`, `-- --dry-run`. |
+| `npm run ui:review` | Read-only export of the live interface strings for the translation review (public key only; below). |
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |
 | `npm run backup` | Encrypted dump of every content and admin table into `backups/` (needs `BACKUP_PASSPHRASE`). `-- --restore <file> --yes` writes it back, `-- --decrypt <file>` makes a readable copy. § 10. |

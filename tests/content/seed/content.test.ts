@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSeedContent } from "@/content/seed";
 import { UI_STRINGS } from "@/content/seed/ui-strings";
+import { uiLabelKeys } from "@/lib/tour/tour";
 
 /** Cross-checks between the seed files: what one file refers to must exist in another. */
 
@@ -58,6 +59,14 @@ describe("interface strings", () => {
     for (const [key, text] of Object.entries(UI_STRINGS)) {
       const expected = placeholders(text.en);
       for (const lang of LANGUAGES) expect(placeholders(text[lang]), `${key}.${lang}`).toEqual(expected);
+    }
+  });
+
+  it("name only existing labels with {{ui:…}}, the same ones in every language", () => {
+    for (const [key, text] of Object.entries(UI_STRINGS)) {
+      const expected = uiLabelKeys(text.en).sort();
+      for (const label of expected) expect(label in UI_STRINGS, `${key} names ${label}`).toBe(true);
+      for (const lang of LANGUAGES) expect(uiLabelKeys(text[lang]).sort(), `${key}.${lang}`).toEqual(expected);
     }
   });
 });

@@ -2079,13 +2079,12 @@ export const UI_STRINGS = {
     pl: "Kiedy uderzają wszystkie rajdy, a po dołączeniu także twój czas startu. Rozpocznij rajd, gdy zegar gry go pokaże; odliczanie robi się żółte w ostatniej minucie, czerwone w ostatnich 15 sekundach i zielone przy GO.",
     ar: "متى تصل كل الحشود، وبعد انضمامك وقت البدء الخاص بك. ابدأ حشدك عندما تعرضه ساعة اللعبة؛ يصبح العدّ التنازلي أصفر في الدقيقة الأخيرة وأحمر في آخر 15 ثانية وأخضر عند GO.",
   },
-  "tour.sync.me.title": { en: "Your entry", de: "Dein Eintrag", ko: "내 항목", pl: "Twój wpis", ar: "إدخالك" },
   "tour.sync.me.body": {
-    en: "Join as a rally leader with your name and your march time to the castle. Your entry then shows here: tap Edit to change your march time or to sit a rally out.",
-    de: "Tritt als Rally-Leiter mit deinem Namen und deiner Marschzeit zur Burg bei. Dein Eintrag erscheint dann hier: Tippe auf Bearbeiten, um die Marschzeit zu ändern oder eine Rally auszusetzen.",
-    ko: "이름과 성까지의 행군 시간으로 집결 대장으로 참여하세요. 그러면 내 항목이 여기 표시됩니다. 수정을 탭해 행군 시간을 바꾸거나 집결을 쉬세요.",
-    pl: "Dołącz jako lider rajdu ze swoim imieniem i czasem marszu do zamku. Twój wpis pojawi się wtedy tutaj: dotknij Edytuj, aby zmienić czas marszu albo zrobić pauzę w rajdzie.",
-    ar: "انضم كقائد حشد باسمك وزمن مسيرتك إلى القلعة. سيظهر إدخالك هنا بعدها: اضغط تعديل لتغيير زمن مسيرتك أو للتوقف عن حشد.",
+    en: "Join as a rally leader with your name and your march time to the castle. Your entry then shows here: tap {{ui:sync.edit}} to change your march time or to sit a rally out.",
+    de: "Tritt als Rally-Leiter mit deinem Namen und deiner Marschzeit zur Burg bei. Dein Eintrag erscheint dann hier: Tippe auf {{ui:sync.edit}}, um die Marschzeit zu ändern oder eine Rally auszusetzen.",
+    ko: "이름과 성까지의 행군 시간으로 집결 대장으로 참여하세요. 그러면 내 항목이 여기 표시됩니다. {{ui:sync.edit}}을 탭해 행군 시간을 바꾸거나 집결을 쉬세요.",
+    pl: "Dołącz jako lider rajdu ze swoim imieniem i czasem marszu do zamku. Twój wpis pojawi się wtedy tutaj: dotknij {{ui:sync.edit}}, aby zmienić czas marszu albo zrobić pauzę w rajdzie.",
+    ar: "انضم كقائد حشد باسمك وزمن مسيرتك إلى القلعة. سيظهر إدخالك هنا بعدها: اضغط {{ui:sync.edit}} لتغيير زمن مسيرتك أو للتوقف عن حشد.",
   },
   "tour.sync.leaders.title": { en: "The other leaders", de: "Die anderen Leiter", ko: "다른 대장", pl: "Pozostali liderzy", ar: "القادة الآخرون" },
   "tour.sync.leaders.body": {
@@ -2119,7 +2118,6 @@ export const UI_STRINGS = {
     pl: "Albo wpisz czas uderzenia sam, tak jak pokazuje go zegar gry. Czasy startu wszystkich liderów zmienią się od razu.",
     ar: "أو اكتب وقت الإصابة بنفسك كما تعرضه ساعة اللعبة. تتبعه أوقات بدء كل القادة فورًا.",
   },
-  "tour.sync.copy.title": { en: "Copy for game chat", de: "Für den Spielchat kopieren", ko: "게임 채팅용 복사", pl: "Kopiuj do czatu gry", ar: "انسخ لدردشة اللعبة" },
   "tour.sync.copy.body": {
     en: "Copies the hit time and every leader's start time, ready to paste into the alliance chat.",
     de: "Kopiert die Einschlagzeit und die Startzeit jedes Leiters, bereit zum Einfügen in den Allianzchat.",
@@ -2127,7 +2125,6 @@ export const UI_STRINGS = {
     pl: "Kopiuje czas uderzenia i czas startu każdego lidera, gotowe do wklejenia na czat sojuszu.",
     ar: "ينسخ وقت الإصابة ووقت بدء كل قائد، جاهزًا للصق في دردشة التحالف.",
   },
-  "tour.sync.more.title": { en: "More options", de: "Weitere Optionen", ko: "추가 옵션", pl: "Więcej opcji", ar: "خيارات أخرى" },
   "tour.sync.more.body": {
     en: "The invite link and password, who is in the room, the room's settings, and closing the room.",
     de: "Einladungslink und Passwort, wer im Raum ist, die Raumeinstellungen und den Raum schließen.",
@@ -2145,27 +2142,26 @@ export const UI_STRINGS = {
   },
   "tour.gar.refills.title": { en: "Your refills", de: "Deine Auffüllungen", ko: "내 보충", pl: "Twoje uzupełnienia", ar: "تعزيزاتك" },
   "tour.gar.refills.body": {
-    en: "Once the enemy's rallies are marked, each refill shows when to send so it lands between two hits. The next ones are big: send when the countdown says SEND NOW.",
-    de: "Sobald die gegnerischen Rallys markiert sind, zeigt jede Auffüllung, wann du senden musst, damit sie zwischen zwei Einschlägen ankommt. Die nächsten sind groß: Sende, wenn der Countdown JETZT SENDEN zeigt.",
-    ko: "적의 집결이 표시되면 각 보충이 두 공격 사이에 도착하도록 언제 보낼지 보여 줍니다. 다음 보충은 크게 표시됩니다. 카운트다운에 지금 보내기가 보이면 보내세요.",
-    pl: "Gdy rajdy wroga są oznaczone, każde uzupełnienie pokazuje, kiedy wysłać, aby dotarło między dwoma uderzeniami. Najbliższe są duże: wyślij, gdy odliczanie pokaże WYŚLIJ TERAZ.",
-    ar: "عندما تُحدَّد حشود العدو، يُظهر كل تعزيز متى ترسله ليصل بين إصابتين. التعزيزات التالية كبيرة: أرسل عندما يعرض العدّ التنازلي «أرسل الآن».",
+    en: "Once the enemy's rallies are marked, each refill shows when to send so it lands between two hits. The next ones are big: send when the countdown says {{ui:sync.gar.sendNow}}.",
+    de: "Sobald die gegnerischen Rallys markiert sind, zeigt jede Auffüllung, wann du senden musst, damit sie zwischen zwei Einschlägen ankommt. Die nächsten sind groß: Sende, wenn der Countdown {{ui:sync.gar.sendNow}} zeigt.",
+    ko: "적의 집결이 표시되면 각 보충이 두 공격 사이에 도착하도록 언제 보낼지 보여 줍니다. 다음 보충은 크게 표시됩니다. 카운트다운에 {{ui:sync.gar.sendNow}}가 보이면 보내세요.",
+    pl: "Gdy rajdy wroga są oznaczone, każde uzupełnienie pokazuje, kiedy wysłać, aby dotarło między dwoma uderzeniami. Najbliższe są duże: wyślij, gdy odliczanie pokaże {{ui:sync.gar.sendNow}}.",
+    ar: "عندما تُحدَّد حشود العدو، يُظهر كل تعزيز متى ترسله ليصل بين إصابتين. التعزيزات التالية كبيرة: أرسل عندما يعرض العدّ التنازلي «{{ui:sync.gar.sendNow}}».",
   },
-  "tour.gar.windows.title": { en: "Refill windows", de: "Auffüll-Fenster", ko: "보충 시점", pl: "Okna uzupełnień", ar: "نوافذ التعزيز" },
   "tour.gar.windows.body": {
-    en: "When our refills should land, between the enemy hits. Copy for game chat sends the hits and landing times to the alliance chat.",
-    de: "Wann unsere Auffüllungen ankommen sollen, zwischen den gegnerischen Einschlägen. Mit „Für den Spielchat kopieren“ gehen Einschläge und Ankunftszeiten in den Allianzchat.",
-    ko: "적의 공격 사이에 우리 보충이 도착해야 하는 시간입니다. 게임 채팅용 복사로 공격 시간과 도착 시간을 연맹 채팅에 보냅니다.",
-    pl: "Kiedy nasze uzupełnienia mają dotrzeć, między uderzeniami wroga. Przycisk Kopiuj do czatu gry wysyła uderzenia i czasy dotarcia na czat sojuszu.",
-    ar: "متى يجب أن تصل تعزيزاتنا بين إصابات العدو. زر «انسخ لدردشة اللعبة» يرسل الإصابات وأوقات الوصول إلى دردشة التحالف.",
+    en: "When our refills should land, between the enemy hits. {{ui:sync.copyChat}} sends the hits and landing times to the alliance chat.",
+    de: "Wann unsere Auffüllungen ankommen sollen, zwischen den gegnerischen Einschlägen. Mit „{{ui:sync.copyChat}}“ gehen Einschläge und Ankunftszeiten in den Allianzchat.",
+    ko: "적의 공격 사이에 우리 보충이 도착해야 하는 시간입니다. {{ui:sync.copyChat}}로 공격 시간과 도착 시간을 연맹 채팅에 보냅니다.",
+    pl: "Kiedy nasze uzupełnienia mają dotrzeć, między uderzeniami wroga. Przycisk {{ui:sync.copyChat}} wysyła uderzenia i czasy dotarcia na czat sojuszu.",
+    ar: "متى يجب أن تصل تعزيزاتنا بين إصابات العدو. زر «{{ui:sync.copyChat}}» يرسل الإصابات وأوقات الوصول إلى دردشة التحالف.",
   },
   "tour.gar.enemies.title": { en: "Enemy rally leaders", de: "Gegnerische Rally-Leiter", ko: "적 집결 대장", pl: "Liderzy rajdów wroga", ar: "قادة حشود العدو" },
   "tour.gar.enemies.body": {
-    en: "When one of them starts a rally on us, tap Rally started on their card, then the countdown value the moment the game shows it. Once it launches, the card counts down to the hit.",
-    de: "Startet einer von ihnen eine Rally auf uns, tippe auf seiner Karte auf Rally gestartet und dann auf den Countdown-Wert, sobald das Spiel ihn zeigt. Nach dem Abmarsch zählt die Karte bis zum Einschlag herunter.",
-    ko: "그중 한 명이 우리에게 집결을 시작하면 그 카드에서 집결 시작됨을 탭하고, 게임에 카운트다운 값이 보이는 순간 그 값을 탭하세요. 출발하면 카드가 공격까지 카운트다운합니다.",
-    pl: "Gdy któryś z nich zacznie rajd na nas, dotknij Rajd rozpoczęty na jego karcie, a potem wartości odliczania w chwili, gdy gra ją pokaże. Po wymarszu karta odlicza do uderzenia.",
-    ar: "عندما يبدأ أحدهم حشدًا علينا، اضغط «بدأ الحشد» على بطاقته، ثم قيمة العدّ التنازلي لحظة ظهورها في اللعبة. بعد الانطلاق تعدّ البطاقة تنازليًا حتى الإصابة.",
+    en: "When one of them starts a rally on us, tap {{ui:sync.gar.rallyStarted}} on their card, then the countdown value the moment the game shows it. Once it launches, the card counts down to the hit.",
+    de: "Startet einer von ihnen eine Rally auf uns, tippe auf seiner Karte auf {{ui:sync.gar.rallyStarted}} und dann auf den Countdown-Wert, sobald das Spiel ihn zeigt. Nach dem Abmarsch zählt die Karte bis zum Einschlag herunter.",
+    ko: "그중 한 명이 우리에게 집결을 시작하면 그 카드에서 {{ui:sync.gar.rallyStarted}}을 탭하고, 게임에 카운트다운 값이 보이는 순간 그 값을 탭하세요. 출발하면 카드가 공격까지 카운트다운합니다.",
+    pl: "Gdy któryś z nich zacznie rajd na nas, dotknij {{ui:sync.gar.rallyStarted}} na jego karcie, a potem wartości odliczania w chwili, gdy gra ją pokaże. Po wymarszu karta odlicza do uderzenia.",
+    ar: "عندما يبدأ أحدهم حشدًا علينا، اضغط «{{ui:sync.gar.rallyStarted}}» على بطاقته، ثم قيمة العدّ التنازلي لحظة ظهورها في اللعبة. بعد الانطلاق تعدّ البطاقة تنازليًا حتى الإصابة.",
   },
   "tour.gar.edit.title": { en: "Enemy list", de: "Gegnerliste", ko: "적 목록", pl: "Lista wrogów", ar: "قائمة العدو" },
   "tour.gar.edit.body": {
@@ -2191,7 +2187,6 @@ export const UI_STRINGS = {
     pl: "Wszyscy po kolei, najwolniejszy marsz pierwszy, aby wszystkie kontrrajdy uderzyły w tej samej sekundzie. Pierwszy startuje, gdy główny sojusz da sygnał.",
     ar: "الجميع بالترتيب، الأبطأ مسيرةً أولًا، لتصل كل الحشود المضادة في الثانية نفسها. يبدأ الأول عندما يعطي التحالف الرئيسي الإشارة.",
   },
-  "tour.counter.copy.title": { en: "Copy for game chat", de: "Für den Spielchat kopieren", ko: "게임 채팅용 복사", pl: "Kopiuj do czatu gry", ar: "انسخ لدردشة اللعبة" },
   "tour.counter.copy.body": {
     en: "Two versions of the order: the countdown each leader watches, or the seconds to count after the rally before.",
     de: "Zwei Fassungen der Reihenfolge: der Countdown, auf den jeder Leiter achtet, oder die Sekunden, die man nach der Rally davor zählt.",
@@ -2203,11 +2198,11 @@ export const UI_STRINGS = {
   // Guided tours: Home and the KvK pages (steps in src/lib/tour/home.ts and src/lib/kvk/tours.ts)
   "tour.site.nav.title": { en: "Find your way", de: "Orientierung", ko: "길 찾기", pl: "Gdzie co jest", ar: "اعثر على طريقك" },
   "tour.site.nav.body": {
-    en: "Events, rules, guides, the KvK pages and tools such as Rally Sync. On a phone this menu sits at the bottom of the screen.",
-    de: "Events, Regeln, Guides, die KvK-Seiten und Tools wie Rally-Sync. Auf dem Handy liegt dieses Menü unten am Bildschirm.",
-    ko: "이벤트, 규칙, 가이드, KvK 페이지와 집결 동기화 같은 도구가 있습니다. 휴대폰에서는 이 메뉴가 화면 아래에 있습니다.",
-    pl: "Wydarzenia, zasady, poradniki, strony KvK i narzędzia, takie jak Rally Sync. Na telefonie to menu jest na dole ekranu.",
-    ar: "الفعاليات والقواعد والأدلة وصفحات KvK والأدوات مثل مزامنة الحشود. على الهاتف تجد هذه القائمة أسفل الشاشة.",
+    en: "Events, rules, guides, the KvK pages and tools such as {{ui:kvk.menu.rallySync}}. On a phone this menu sits at the bottom of the screen.",
+    de: "Events, Regeln, Guides, die KvK-Seiten und Tools wie {{ui:kvk.menu.rallySync}}. Auf dem Handy liegt dieses Menü unten am Bildschirm.",
+    ko: "이벤트, 규칙, 가이드, KvK 페이지와 {{ui:kvk.menu.rallySync}} 같은 도구가 있습니다. 휴대폰에서는 이 메뉴가 화면 아래에 있습니다.",
+    pl: "Wydarzenia, zasady, poradniki, strony KvK i narzędzia, takie jak {{ui:kvk.menu.rallySync}}. Na telefonie to menu jest na dole ekranu.",
+    ar: "الفعاليات والقواعد والأدلة وصفحات KvK والأدوات مثل {{ui:kvk.menu.rallySync}}. على الهاتف تجد هذه القائمة أسفل الشاشة.",
   },
   "tour.site.language.title": { en: "Your language", de: "Deine Sprache", ko: "언어", pl: "Twój język", ar: "لغتك" },
   "tour.site.language.body": {
@@ -2307,13 +2302,12 @@ export const UI_STRINGS = {
   },
   "tour.kvk.formations.title": { en: "Formations", de: "Formationen", ko: "진형", pl: "Formacje", ar: "التشكيلات" },
   "tour.kvk.formations.body": {
-    en: "The troop presets to save in the game before the battle. Tap Mark as saved on each one you've saved; your ticks stay on this device.",
-    de: "Die Truppen-Presets, die du vor der Schlacht im Spiel speicherst. Tippe bei jedem gespeicherten auf „Als gespeichert markieren“; deine Haken bleiben auf diesem Gerät.",
-    ko: "전투 전에 게임에 저장할 병력 프리셋입니다. 저장한 것마다 저장함으로 표시를 탭하세요. 표시는 이 기기에 남습니다.",
-    pl: "Zestawy wojsk do zapisania w grze przed bitwą. Przy każdym zapisanym dotknij Oznacz jako zapisane; twoje znaczniki zostają na tym urządzeniu.",
-    ar: "إعدادات القوات التي تحفظها في اللعبة قبل المعركة. اضغط «وضع علامة كمحفوظة» على كل ما حفظته؛ تبقى علاماتك على هذا الجهاز.",
+    en: "The troop presets to save in the game before the battle. Tap {{ui:kvk.markNotSaved}} on each one you've saved; your ticks stay on this device.",
+    de: "Die Truppen-Presets, die du vor der Schlacht im Spiel speicherst. Tippe bei jedem gespeicherten auf „{{ui:kvk.markNotSaved}}“; deine Haken bleiben auf diesem Gerät.",
+    ko: "전투 전에 게임에 저장할 병력 프리셋입니다. 저장한 것마다 {{ui:kvk.markNotSaved}}를 탭하세요. 표시는 이 기기에 남습니다.",
+    pl: "Zestawy wojsk do zapisania w grze przed bitwą. Przy każdym zapisanym dotknij {{ui:kvk.markNotSaved}}; twoje znaczniki zostają na tym urządzeniu.",
+    ar: "إعدادات القوات التي تحفظها في اللعبة قبل المعركة. اضغط «{{ui:kvk.markNotSaved}}» على كل ما حفظته؛ تبقى علاماتك على هذا الجهاز.",
   },
-  "tour.kvk.lock.title": { en: "Lock page", de: "Seite sperren", ko: "페이지 잠그기", pl: "Zablokuj stronę", ar: "قفل الصفحة" },
   "tour.kvk.lock.body": {
     en: "Locks this page again on this device, for example on a shared phone.",
     de: "Sperrt die Seite auf diesem Gerät wieder, zum Beispiel auf einem geteilten Handy.",
@@ -2337,7 +2331,6 @@ export const UI_STRINGS = {
     pl: "Co ma robić każdy lider albo tylko liderzy rajdów lub garnizonów: czasy marszu, kiedy startować, zwierzaki, gdzie stać.",
     ar: "ما يجب على كل قائد، أو قادة الحشد أو الحامية فقط، فعله: أزمنة المسير، ومتى تبدأ، والحيوانات، وأين تقف.",
   },
-  "tour.leaders.glance.title": { en: "At a glance", de: "Auf einen Blick", ko: "한눈에 보기", pl: "W skrócie", ar: "نظرة سريعة" },
   "tour.leaders.glance.body": {
     en: "Who leads which rally, by battle team. Tap a row to jump to that rally.",
     de: "Wer welche Rally leitet, nach Kampfteam. Tippe auf eine Zeile, um zu dieser Rally zu springen.",
@@ -2369,7 +2362,6 @@ export const UI_STRINGS = {
     pl: "Wszystko do zrobienia, według etapów. Odhaczaj zadania na bieżąco: znaczniki zostają na tym urządzeniu, więc każdy koordynator ma własne.",
     ar: "كل ما يجب فعله حسب المرحلة. ضع علامة على المهام أثناء التنفيذ: تبقى العلامات على هذا الجهاز، فلكل منسق علاماته.",
   },
-  "tour.checklist.orders.title": { en: "Commander's orders", de: "Befehle des Kommandanten", ko: "지휘관 명령", pl: "Rozkazy dowódcy", ar: "أوامر القائد" },
   "tour.checklist.orders.body": {
     en: "How the commander runs the battle and directs the rally leaders and joiners.",
     de: "Wie der Kommandant die Schlacht führt und die Rally-Leiter und Rally-Teilnehmer lenkt.",
@@ -2377,7 +2369,6 @@ export const UI_STRINGS = {
     pl: "Jak dowódca prowadzi bitwę i kieruje liderami rajdów oraz dołączającymi.",
     ar: "كيف يدير القائد المعركة ويوجّه قادة الحشود والمنضمين.",
   },
-  "tour.checklist.guidelines.title": { en: "General guidelines", de: "Allgemeine Richtlinien", ko: "일반 지침", pl: "Ogólne wytyczne", ar: "إرشادات عامة" },
   "tour.checklist.guidelines.body": {
     en: "Rules for everyone who coordinates.",
     de: "Regeln für alle, die koordinieren.",
@@ -2409,7 +2400,6 @@ export const UI_STRINGS = {
     pl: "Czego użyć, co też się liczy, co przygotować i co zachować, z punktami za każdy przedmiot i wskazówkami rady.",
     ar: "ما تستخدمه، وما يُحسب أيضًا، وما تجهّزه، وما تدّخره، مع نقاط كل عنصر ونصائح المجلس.",
   },
-  "tour.prep.table.title": { en: "Which day for what", de: "Was an welchem Tag", ko: "언제 무엇을", pl: "Co którego dnia", ar: "ماذا في أي يوم" },
   "tour.prep.table.body": {
     en: "Every item and the days it scores on, at a glance.",
     de: "Jeder Gegenstand und die Tage, an denen er zählt, auf einen Blick.",
@@ -2417,7 +2407,6 @@ export const UI_STRINGS = {
     pl: "Każdy przedmiot i dni, w które się liczy, w jednym miejscu.",
     ar: "كل عنصر والأيام التي يُحسب فيها، في لمحة.",
   },
-  "tour.prep.save.title": { en: "Save these for KvK", de: "Spare das für KvK auf", ko: "KvK를 위해 아껴두세요", pl: "Zachowaj to na KvK", ar: "ادّخر هذه لـ KvK" },
   "tour.prep.save.body": {
     en: "Items to keep for the KvK week instead of using them earlier.",
     de: "Gegenstände, die du für die KvK-Woche aufhebst, statt sie vorher zu nutzen.",
@@ -2433,7 +2422,6 @@ export const UI_STRINGS = {
     pl: "To samo hasło co do planu bitwy.",
     ar: "كلمة مرور خطة المعركة نفسها.",
   },
-  "tour.feedback.you.title": { en: "About you", de: "Über dich", ko: "참가자 정보", pl: "O tobie", ar: "عنك" },
   "tour.feedback.you.body": {
     en: "Your Governor ID from your in-game profile. The page checks it and usually fills in your name; one answer per ID.",
     de: "Deine Gouverneurs-ID aus deinem Spielprofil. Die Seite prüft sie und trägt meist deinen Namen ein; eine Antwort pro ID.",
@@ -2449,7 +2437,6 @@ export const UI_STRINGS = {
     pl: "Od 0 do 5 gwiazdek na pytanie; oznaczone są obowiązkowe.",
     ar: "من 0 إلى 5 نجوم لكل سؤال؛ الأسئلة المعلَّمة إلزامية.",
   },
-  "tour.feedback.texts.title": { en: "In your words", de: "In deinen Worten", ko: "내 생각", pl: "Twoimi słowami", ar: "بكلماتك" },
   "tour.feedback.texts.body": {
     en: "Short answers in any language. They're optional, but they help the council most.",
     de: "Kurze Antworten in jeder Sprache. Freiwillig, aber für den Rat am hilfreichsten.",
