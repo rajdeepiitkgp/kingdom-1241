@@ -51,10 +51,10 @@ export const placeholderSignature = (s: string) => (s.match(PLACEHOLDER) ?? []).
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** A Latin-script word without its ending, so plurals and endings still match ("chefs", "eroi", "ralliements"). */
+/** A Latin-script word without its ending, so plurals and endings still match ("chefs", "eroi", "ralliements", Polish "zamku"). */
 const stem = (word: string) => {
   if (!/^\p{Script=Latin}+$/u.test(word) || word.length < 4) return word;
-  return word.slice(0, word.length - (word.length >= 6 ? 2 : 1));
+  return word.slice(0, word.length - (word.length >= 5 ? 2 : 1));
 };
 
 /** Whether the translation uses the glossary term: every word longer than an article, in the language's own lower case. */

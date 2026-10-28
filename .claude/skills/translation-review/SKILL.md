@@ -11,8 +11,9 @@ The pipeline translates every text on its own with a small model, so what goes w
 
 Read everything in scope, then change only what is wrong:
 
-- **Leave it** when the meaning is right, even if you would phrase it differently.
-- **Fix it** when the meaning differs from the English, a role or game term is wrong or not the glossary's, a button or heading is named differently from the page, a placeholder or the HTML is broken, or Japanese isn't polite (です/ます).
+- **Leave it** when the meaning is right, even if you would phrase it differently: style alone (politeness, a synonym, word order) is no reason to touch a text.
+- **Fix it** when the meaning is clearly different from the English, a role is wrong (a coordinator called "commander"), a word sends players looking for something that isn't there (a button, field or label the page names differently, e.g. a "monarch ID" when the form asks for the Governor ID), or a placeholder or the HTML is broken.
+- In interface strings a game term or label that differs from what the page shows counts as misleading (players look for those words); a synonym in a battle plan doesn't.
 - Findings are hints from simple checks, not verdicts; a capitalised phrase at the start of a sentence can look like a label without naming one.
 - A language marked `manual` was corrected by hand by a moderator: never change it. If it looks clearly wrong, tell the owner.
 
