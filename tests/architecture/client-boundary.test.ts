@@ -42,6 +42,8 @@ const SERVER_ONLY = [
   "lib/config/app-config.ts",
   "lib/config/settings.ts",
   "lib/alliances/sync.ts",
+  "lib/gift-codes/sync.ts",
+  "lib/admin/gift-codes-data.ts",
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
   "lib/translate/provider.ts",

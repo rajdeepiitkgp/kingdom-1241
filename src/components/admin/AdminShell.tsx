@@ -14,6 +14,7 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
     { href: adminPath(locale, "/kvk"), label: "Battle plans", tour: "admin-nav-plans" },
     { href: adminPath(locale, "/feedback"), label: "Feedback", tour: "admin-nav-feedback" },
     { href: adminPath(locale, "/rally-sync"), label: "Rally Sync", tour: "admin-nav-rally" },
+    { href: adminPath(locale, "/gift-codes"), label: "Gift codes", tour: "admin-nav-gift-codes" },
     ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users", tour: "admin-nav-users" }] : []),
     ...(user.isOwner ? [{ href: adminPath(locale, "/settings"), label: "Settings", tour: "admin-nav-settings" }] : []),
   ];

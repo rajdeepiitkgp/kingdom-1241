@@ -10,7 +10,7 @@ import type { Tour } from "@/lib/tour/tour";
  * hasn't been created) are left out when the tour starts.
  */
 
-export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "users" | "settings";
+export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "giftCodes" | "users" | "settings";
 
 export const ADMIN_TOUR_LABELS = {
   open: "Page guide",
@@ -31,12 +31,12 @@ const step = (target: string | null, title: string, body: string) => ({ target, 
 export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   overview: {
     id: "admin-overview",
-    version: 1,
+    version: 2,
     steps: [
       step(
         null,
         "Welcome to the admin area",
-        "This is the council's tool: battle plans with their leader and commander pages, player feedback and Rally Sync rooms. This guide shows where everything is; every admin page has its own guide for the details.",
+        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms and the gift codes on Home. This guide shows where everything is; every admin page has its own guide for the details.",
       ),
       step(
         "admin-role",
@@ -50,6 +50,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
+      step("admin-nav-gift-codes", "Gift codes", "The codes on Home. They come by themselves from kingshot.net every hour; add one here when players have it first."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
       step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
       step("admin-active-plan", "The active plan", "The plan players see on the KvK page right now; Edit opens it. With no active plan, players see “no plan”."),
@@ -271,6 +272,32 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
     ],
   },
+  giftCodes: {
+    id: "admin-gift-codes",
+    version: 1,
+    steps: [
+      step(
+        "gift-codes-check",
+        "Checked every hour",
+        "The site reads kingshot.net's list of working codes every hour: a new code goes on Home, and one it stops listing leaves Home. This line says when it last looked. Check now looks at once, for example right after a code was announced.",
+      ),
+      step(
+        "gift-codes-list",
+        "Codes",
+        "What players see on Home, newest first. From kingshot.net: found there. Added by hand: added here by a moderator.",
+      ),
+      step(
+        "gift-codes-actions",
+        "The buttons",
+        "Edit: write what the code gives, or its expiry. Hide from Home: for a code that doesn't work for our kingdom; the hourly check leaves it hidden. Delete: only for codes added by hand or ended ones, because kingshot.net would bring the others back within the hour.",
+      ),
+      step("gift-codes-add", "Add a code", "For a code from in-game mail, an event or Discord that isn't on the list yet. Once kingshot.net lists it too, the hourly check takes it over and ends it when it stops working."),
+      step("gift-codes-code", "Code", "Exactly as the game writes it, upper and lower case included: codes are case-sensitive. Copy it rather than typing it."),
+      step("gift-codes-rewards", "What it gives", "Optional, one short line in English, such as “200 gems and 3 speedups”. Players read it in their language; the translation follows within a minute."),
+      step("gift-codes-expiry", "Expires", "Optional, in UTC. Leave it empty when the announcement gives no end; the code then stays until it stops working or you hide it."),
+      step("gift-codes-old", "Ended and expired", "Codes that stopped working. They are kept for 30 days, then deleted by themselves."),
+    ],
+  },
   rallySync: {
     id: "admin-rally-sync",
     version: 1,
@@ -433,6 +460,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "kvk") return parts.length === 1 ? "plans" : parts.length === 2 ? "plan" : parts.length === 3 && (sub === "leaders" || sub === "checklist") ? sub : null;
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
+  if (parts.length === 1 && section === "gift-codes") return "giftCodes";
   if (parts.length === 1 && section === "users") return "users";
   // One guide for every tab of the settings: steps for parts not on the open tab are left out.
   if (section === "settings" && (parts.length === 1 || (parts.length === 2 && ["rally-sync", "alliances", "languages"].includes(id)))) return "settings";
