@@ -18,6 +18,7 @@ import type { TranslationSettings } from "@/lib/translate/pause";
 import { isTranslationConfigured, translationProviderLabel } from "@/lib/translate/provider";
 import { TRANSLATABLE_TABLES } from "@/lib/translate/tables";
 import { addCoverage, type TextCoverage } from "./languages";
+import { usageData } from "./usage-data";
 
 /**
  * Uncached reads for the owner's settings page (server only). Nothing without
@@ -128,6 +129,8 @@ export function getGeneralSettings(): Promise<GeneralSettings | null> {
 export const getRallyCapacitySettings = () => forOwner("rally-sync", rallyCapacitySettings);
 export const getAllianceSettings = () => forOwner("alliances", allianceSettings);
 export const getLanguageSettings = () => forOwner("languages", languageSettings);
+/** The Usage tab; also the owner's one-line summary on the Overview. */
+export const getUsageSettings = () => forOwner("usage", async () => usageData(await rallyCapacitySettings()));
 
 const SOURCES = new Set(["seed", "mightpulse", "manual"]);
 

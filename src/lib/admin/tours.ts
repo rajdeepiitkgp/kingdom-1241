@@ -53,6 +53,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("admin-nav-gift-codes", "Gift codes", "The codes on Home. They come by themselves from kingshot.net every hour; add one here when players have it first."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
       step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
+      step("admin-usage", "Usage (only you see this)", "Whether anything about the site's free plans needs you: green, amber or red, with the names of what to look at. Tap it for the Usage tab."),
       step("admin-active-plan", "The active plan", "The plan players see on the KvK page right now; Edit opens it. With no active plan, players see “no plan”."),
       step(
         "admin-profile",
@@ -366,12 +367,32 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   },
   settings: {
     id: "admin-settings",
-    version: 4,
+    version: 5,
     steps: [
       step(
         "settings-tabs",
-        "Four tabs",
-        "General holds the owner, the translation brake, the wrong-password rules and the feedback defaults; Rally Sync, Alliances and Languages have a tab each. Each tab opens only its own part, and has its own link.",
+        "Five tabs",
+        "General holds the owner, the translation brake, the wrong-password rules and the feedback defaults; Usage says whether anything needs you; Rally Sync, Alliances and Languages have a tab each. Each tab opens only its own part, and has its own link.",
+      ),
+      step(
+        "settings-usage-verdict",
+        "At a glance",
+        "One line for everything below: all fine, something to watch (amber) or something that needs action (red), with their names. The same line sits at the top of the admin Overview, so a daily look is one click.",
+      ),
+      step(
+        "settings-usage-database",
+        "Database",
+        "Its size against the free plan's 500 MB, the disk (read-only at 95 %), stored files, open connections and how much is read from memory. Each line says what it means, and links to Supabase's own report.",
+      ),
+      step(
+        "settings-usage-jobs",
+        "Live use and jobs",
+        "Rally Sync browsers against the 180 budget, and when each background job last ran: the weekly backup, the daily cleanup, the alliance sync and the hourly gift-code check. A job that stops turns amber, then red.",
+      ),
+      step(
+        "settings-usage-elsewhere",
+        "Measured elsewhere",
+        "What only Vercel, Supabase and Anthropic know (CPU, data transfer, egress, the AI bill), with a link to each. Worth a look once a week, and whenever they e-mail you.",
       ),
       step(
         "settings-owner",
@@ -463,6 +484,6 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (parts.length === 1 && section === "gift-codes") return "giftCodes";
   if (parts.length === 1 && section === "users") return "users";
   // One guide for every tab of the settings: steps for parts not on the open tab are left out.
-  if (section === "settings" && (parts.length === 1 || (parts.length === 2 && ["rally-sync", "alliances", "languages"].includes(id)))) return "settings";
+  if (section === "settings" && (parts.length === 1 || (parts.length === 2 && ["usage", "rally-sync", "alliances", "languages"].includes(id)))) return "settings";
   return null;
 }
