@@ -25,6 +25,8 @@ export interface LanguageInfo {
   font: FontStack;
   /** Emoji flag shown next to the native name. Purely decorative. */
   flag: string;
+  /** Style rule for the translation prompt, where the general one doesn't fit this language. */
+  style?: string;
 }
 
 export const LANGUAGE_REGISTRY: Record<string, LanguageInfo> = {
@@ -44,8 +46,24 @@ export const LANGUAGE_REGISTRY: Record<string, LanguageInfo> = {
   nl: { code: "nl", name: "Dutch", nativeName: "Nederlands", direction: "ltr", font: "latin", flag: "🇳🇱" },
   vi: { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", direction: "ltr", font: "latin", flag: "🇻🇳" },
   id: { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", direction: "ltr", font: "latin", flag: "🇮🇩" },
-  ja: { code: "ja", name: "Japanese", nativeName: "日本語", direction: "ltr", font: "japanese", flag: "🇯🇵" },
-  "zh-TW": { code: "zh-TW", name: "Chinese (Traditional)", nativeName: "繁體中文", direction: "ltr", font: "chinese", flag: "🇹🇼" },
+  ja: {
+    code: "ja",
+    name: "Japanese",
+    nativeName: "日本語",
+    direction: "ltr",
+    font: "japanese",
+    flag: "🇯🇵",
+    style: "Use the polite です/ます form throughout (instead of the informal register), with no casual endings such as ね or よ.",
+  },
+  "zh-TW": {
+    code: "zh-TW",
+    name: "Chinese (Traditional)",
+    nativeName: "繁體中文",
+    direction: "ltr",
+    font: "chinese",
+    flag: "🇹🇼",
+    style: "Use Traditional Chinese as written in Taiwan.",
+  },
   "zh-CN": { code: "zh-CN", name: "Chinese (Simplified)", nativeName: "简体中文", direction: "ltr", font: "chinese", flag: "🇨🇳" },
   he: { code: "he", name: "Hebrew", nativeName: "עברית", direction: "rtl", font: "latin", flag: "🇮🇱" },
   fa: { code: "fa", name: "Persian", nativeName: "فارسی", direction: "rtl", font: "arabic", flag: "🇮🇷" },

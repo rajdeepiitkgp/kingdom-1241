@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { cardSide, hasSeen, markSeen, parseSeen, resolveSteps, scrollDelta, TOUR_GAP, uiStep } from "@/lib/tour/tour";
+import { cardSide, fillUiLabels, hasSeen, markSeen, parseSeen, resolveSteps, scrollDelta, TOUR_GAP, uiLabelKeys, uiStep } from "@/lib/tour/tour";
 
 const tour = { id: "sync-rally", version: 2 };
 
@@ -58,5 +58,20 @@ describe("steps from UI strings", () => {
     expect(step).toEqual({ target: "sync-status", title: "tour.sync.status.title", body: "tour.sync.status.body" });
     const dict = { "tour.sync.status.title": "Dieser Raum", "tour.sync.status.body": "Name und ID." } as Dictionary;
     expect(resolveSteps({ id: "x", version: 1, steps: [step] }, dict)).toEqual([{ target: "sync-status", title: "Dieser Raum", body: "Name und ID." }]);
+  });
+});
+
+describe("labels inside a step", () => {
+  const dict = { "sync.edit": "Bearbeiten", "sync.gar.sendNow": "JETZT SENDEN" } as unknown as Dictionary;
+
+  it("fills {{ui:…}} with the label in the same language and leaves an unknown key visible", () => {
+    expect(fillUiLabels("Tippe auf {{ui:sync.edit}}, dann {{ui:sync.gar.sendNow}}.", dict)).toBe("Tippe auf Bearbeiten, dann JETZT SENDEN.");
+    expect(fillUiLabels("{{ui:no.such}} and {n}", dict)).toBe("{{ui:no.such}} and {n}");
+    expect(uiLabelKeys("a {{ui:sync.edit}} b {{ui:kvk.lock}} {{date}}")).toEqual(["sync.edit", "kvk.lock"]);
+  });
+
+  it("takes a labelled element's own label as the title", () => {
+    expect(uiStep("sync-copy", "sync.copy", "sync.copyChat")).toEqual({ target: "sync-copy", title: "sync.copyChat", body: "tour.sync.copy.body" });
+    expect(uiStep("kvk-rules", "kvk.rules")).toEqual({ target: "kvk-rules", title: "tour.kvk.rules.title", body: "tour.kvk.rules.body" });
   });
 });

@@ -38,6 +38,7 @@ import {
 import { SEED_LANGUAGES } from "./languages";
 import { SEED_RULE_TOPICS } from "./rules";
 import { SEED_SETTINGS } from "./settings";
+import { withReviewed } from "./ui-reviewed";
 import { UI_STRINGS } from "./ui-strings";
 
 export { SEED_LANGUAGES, SEED_SETTINGS, UI_STRINGS };
@@ -68,7 +69,7 @@ export function buildSeedContent(): SeedContent {
 
   return {
     settings: SEED_SETTINGS,
-    uiStrings: Object.entries(UI_STRINGS).map(([key, text]) => ({ key, text })),
+    uiStrings: Object.entries(UI_STRINGS).map(([key, text]) => ({ key, text: withReviewed(key, text) })),
     announcements: SEED_ANNOUNCEMENTS.map((a) => ({
       id: a.id,
       title: en(a.title),
