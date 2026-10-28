@@ -87,11 +87,15 @@ export function GarrisonBoard({ plan, now, clock, dict }: { plan: PlayerPlan | n
       {march !== null && plan && (
         <>
           {plan.wave.length === 0 ? (
-            <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["sync.gar.waiting"]}</p>
+            <p className="card px-5 py-6 text-center font-semibold text-ink-muted" data-tour="gar-refills">
+              {dict["sync.gar.waiting"]}
+            </p>
           ) : plan.windows.length === 0 ? (
-            <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["sync.gar.noGap"]}</p>
+            <p className="card px-5 py-6 text-center font-semibold text-ink-muted" data-tour="gar-refills">
+              {dict["sync.gar.noGap"]}
+            </p>
           ) : (
-            <ol className="grid grid-cols-1 gap-3">
+            <ol className="grid grid-cols-1 gap-3" data-tour="gar-refills">
               {plan.steps.map((step, index) => (
                 <li key={step.number}>
                   <RefillCard step={step} plan={plan} march={march} big={focus.includes(index)} now={now} clock={clock} dict={dict} />
@@ -138,7 +142,7 @@ function MarchSettings({ dict }: { dict: Dictionary }) {
 
   if (marchSeconds !== null && !editing) {
     return (
-      <p className="text-center text-base text-ink-muted">
+      <p className="text-center text-base text-ink-muted" data-tour="gar-march">
         <Phrase template={dict["sync.gar.summary"]} values={{ march: formatSeconds(marchSeconds), spacing: spacingSeconds }} strong />{" "}
         <button type="button" className="font-bold text-primary underline" onClick={() => setEditing(true)}>
           {dict["sync.edit"]}
@@ -148,7 +152,7 @@ function MarchSettings({ dict }: { dict: Dictionary }) {
   }
 
   return (
-    <form onSubmit={save} key={`${marchSeconds}-${spacingSeconds}`} className="card p-4 md:p-5">
+    <form onSubmit={save} key={`${marchSeconds}-${spacingSeconds}`} className="card p-4 md:p-5" data-tour="gar-march">
       {marchSeconds === null && <p className="mb-3 font-extrabold text-ink">{dict["sync.gar.needMarch"]}</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="min-w-0">
@@ -417,7 +421,7 @@ export function GarrisonControls({
   const card = { now, clock, dict, busy, send, exactNow, runner };
   return (
     <div className="mt-4 space-y-3">
-      <div className="rounded-xl border border-line bg-card-soft px-4 py-3">
+      <div className="rounded-xl border border-line bg-card-soft px-4 py-3" data-tour="gar-windows">
         <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">
           {dict["sync.gar.windows"]} · {clock.label}
         </p>
@@ -451,7 +455,7 @@ export function GarrisonControls({
       </div>
 
       {enemies.length === 0 && (
-        <div className="card-soft p-4 text-center">
+        <div className="card-soft p-4 text-center" data-tour="gar-enemies">
           <p className="text-sm text-ink-muted">{dict["sync.gar.noEnemies"]}</p>
           <button type="button" className="btn-primary btn-sm mt-3" onClick={() => setEditingList(true)}>
             {dict["sync.gar.addFirst"]}
@@ -459,7 +463,7 @@ export function GarrisonControls({
         </div>
       )}
 
-      <ul className="grid grid-cols-1 gap-3">
+      <ul className="grid grid-cols-1 gap-3" data-tour="gar-enemies">
         {active.map((enemy) => (
           <li key={enemy.id}>
             <EnemyCard enemy={enemy} rally={latest(enemy.id)} {...card} />
@@ -474,7 +478,7 @@ export function GarrisonControls({
 
       {enemies.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingList(true)}>
+          <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingList(true)} data-tour="gar-edit">
             <Pencil className="size-4" aria-hidden />
             {dict["sync.gar.editList"]}
           </button>

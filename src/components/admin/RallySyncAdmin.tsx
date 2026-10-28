@@ -34,7 +34,7 @@ export function RallySyncAdmin({ rooms, locale }: { rooms: AdminRallyRoom[]; loc
   return (
     <div className="space-y-5">
       <CreateRoomForm locale={locale} full={openCount >= MAX_OPEN_ROOMS} />
-      <section className="space-y-3">
+      <section className="space-y-3" data-tour="rs-rooms">
         <h2 className="text-lg font-extrabold text-ink">
           Rooms ({openCount}/{MAX_OPEN_ROOMS} open)
         </h2>
@@ -76,7 +76,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
   const errors = state.errors ?? {};
 
   return (
-    <section className="card p-5">
+    <section className="card p-5" data-tour="rs-new">
       <h2 className="text-lg font-extrabold text-ink">New room</h2>
       <p className="mt-1 mb-4 text-sm text-ink-muted">
         The mode is fixed for the room (rally, counter-rally and garrison are run by different players); the timer and buffer can be changed in the room later. This device remembers them for the next room.
@@ -84,10 +84,10 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
       <form action={formAction} key={JSON.stringify(last)} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Title (optional, shown to players after they open the room)" htmlFor="rs-title" error={errors.title}>
+          <Field label="Title (optional, shown to players after they open the room)" htmlFor="rs-title" error={errors.title} tour="rs-title">
             <input id="rs-title" name="title" className="input" maxLength={TITLE_MAX} placeholder="Castle — first wave" autoComplete="off" />
           </Field>
-          <Field label={`Password (${PASSWORD_MIN}+ characters)`} htmlFor="rs-password" error={errors.password} hint="Share it with the room ID, or send the invite link instead.">
+          <Field label={`Password (${PASSWORD_MIN}+ characters)`} htmlFor="rs-password" error={errors.password} hint="Share it with the room ID, or send the invite link instead." tour="rs-password">
             <CodeSuggestInput
               id="rs-password"
               name="password"
@@ -99,7 +99,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
               suggestLabel="Suggest" suggestHint="Fill in a random six-digit code"
             />
           </Field>
-          <Field label="Mode (fixed for this room)" htmlFor="rs-mode">
+          <Field label="Mode (fixed for this room)" htmlFor="rs-mode" tour="rs-mode">
             <select id="rs-mode" name="mode" className="input select-chevron" defaultValue={last.mode}>
               {ROOM_MODES.map((mode) => (
                 <option key={mode} value={mode}>
@@ -108,14 +108,14 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
               ))}
             </select>
           </Field>
-          <Field label="Rally timer (minutes:seconds)" htmlFor="rs-wait" error={errors.rallyWait} hint="The in-game rally wait, usually 5:00. Counter-rally: the timer every counter leader uses (their cues count down from it).">
+          <Field label="Rally timer (minutes:seconds)" htmlFor="rs-wait" error={errors.rallyWait} hint="The in-game rally wait, usually 5:00. Counter-rally: the timer every counter leader uses (their cues count down from it)." tour="rs-wait">
             <input id="rs-wait" name="rallyWait" className="input" defaultValue={formatSeconds(last.rallyWaitSeconds)} autoComplete="off" />
           </Field>
-          <Field label="Buffer for Re-sync (seconds, rally rooms)" htmlFor="rs-buffer" error={errors.buffer} hint="How long the leader with the longest march has to get ready before starting: Re-sync sets the hit to now + rally timer + longest march + buffer. 0 is allowed.">
+          <Field label="Buffer for Re-sync (seconds, rally rooms)" htmlFor="rs-buffer" error={errors.buffer} hint="How long the leader with the longest march has to get ready before starting: Re-sync sets the hit to now + rally timer + longest march + buffer. 0 is allowed." tour="rs-buffer">
             <input id="rs-buffer" name="buffer" className="input" inputMode="numeric" defaultValue={last.bufferSeconds} autoComplete="off" />
           </Field>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3" data-tour="rs-create">
           <button type="submit" className="btn-primary btn-sm" disabled={pending || full}>
             Create room
           </button>
@@ -131,7 +131,7 @@ function CreateRoomForm({ locale, full }: { locale: string; full: boolean }) {
 function CreatedRoom({ created, locale }: { created: NonNullable<CreateRoomState["created"]>; locale: string }) {
   const origin = window.location.origin;
   return (
-    <div className="mt-5 space-y-3 rounded-2xl border-2 border-success bg-success-soft p-4">
+    <div className="mt-5 space-y-3 rounded-2xl border-2 border-success bg-success-soft p-4" data-tour="rs-links">
       <p className="font-extrabold text-ink">Room {formatRoomCode(created.code)} is open. Copy what you need now: the password and links are not shown again.</p>
       <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <Secret label="Room ID" value={formatRoomCode(created.code)} />

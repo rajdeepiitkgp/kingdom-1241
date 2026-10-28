@@ -25,7 +25,7 @@ export function RoleForm({
   const [state, action] = useActionState<ActionState, FormData>(setRole, IDLE_STATE);
   const options = ROLES.filter((r) => r !== "admin" || canGrantAdmin || r === role);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form action={action} className="flex flex-wrap items-center gap-2" data-tour="users-role">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="id" value={id} />
       <select name="role" className="input w-auto select-chevron py-2" defaultValue={role} disabled={Boolean(locked)} aria-label="Role" title={locked ?? undefined}>

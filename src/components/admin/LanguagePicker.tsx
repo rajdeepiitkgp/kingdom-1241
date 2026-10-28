@@ -13,7 +13,7 @@ export function LanguagePicker({ languages, current, href }: { languages: SiteLa
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" data-tour="plan-lang">
       <label htmlFor="edit-lang" className="text-sm font-bold text-ink-muted">
         Editing texts in
       </label>

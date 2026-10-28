@@ -151,7 +151,7 @@ export function CoordinatorPanel({
   };
 
   return (
-    <section className="card border-2 border-gold-strong/60 p-4 md:p-5" aria-labelledby="sync-coord-title">
+    <section className="card border-2 border-gold-strong/60 p-4 md:p-5" aria-labelledby="sync-coord-title" data-tour="sync-coordinator">
       <h2 id="sync-coord-title" className="flex items-center gap-2 text-lg font-extrabold text-ink">
         <Crown className="size-5 text-gold-strong" aria-hidden />
         {dict["sync.coord.title"]}
@@ -164,7 +164,7 @@ export function CoordinatorPanel({
           <p className="text-sm text-ink-muted">{dict["sync.coord.counterOrder"]}</p>
           {/* Two styles for the game chat: the countdown to watch, or the seconds to count. */}
           {counterSteps.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" data-tour="counter-copy">
               <CopyForChat text={counterChat(counterSteps, room.rallyWaitSeconds, dict)} label={dict["sync.counter.copyCues"]} dict={dict} />
               <CopyForChat text={counterChat(counterSteps, room.rallyWaitSeconds, dict, "seconds")} label={dict["sync.counter.copyGaps"]} dict={dict} />
             </div>
@@ -178,6 +178,7 @@ export function CoordinatorPanel({
               className={clsx("w-full py-4 text-lg", confirmingResync ? "btn-primary bg-danger" : "btn-gold")}
               onClick={resync}
               disabled={pending !== null}
+              data-tour="sync-resync"
             >
               <RefreshCw className={clsx("size-5 shrink-0", pending === "resync" && "motion-safe:animate-spin")} aria-hidden />
               {confirmingResync && preview !== null ? <ResyncConfirmLabel template={dict["sync.coord.resyncConfirm"]} time={`${shown(preview)} ${clock.label}`} /> : dict["sync.coord.resync"]}
@@ -205,6 +206,7 @@ export function CoordinatorPanel({
               submit={dict["sync.coord.set"]}
               pending={pending !== null}
               keys={stepKeys("clock", hint, { seed: hitText })}
+              tour="sync-hit"
               onSubmit={fieldSubmit("hit", (text) => ({ type: "hitClock", text }))}
             />
             {errorLine("hit", invalidTime)}
@@ -215,13 +217,13 @@ export function CoordinatorPanel({
             </p>
           )}
           {chat !== null && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2" data-tour="sync-copy">
               <CopyForChat text={chat} dict={dict} />
             </div>
           )}
         </>
       )}
-      <button type="button" className="btn-ghost btn-sm mt-4" aria-expanded={more} onClick={() => setMore((v) => !v)}>
+      <button type="button" className="btn-ghost btn-sm mt-4" aria-expanded={more} onClick={() => setMore((v) => !v)} data-tour="sync-more">
         <ChevronDown className={clsx("size-4 transition-transform", more && "rotate-180")} aria-hidden />
         {dict["sync.coord.more"]}
       </button>
@@ -334,6 +336,7 @@ function TimeForm({
   pending,
   big,
   keys,
+  tour,
   onSubmit,
 }: {
   id: string;
@@ -343,10 +346,12 @@ function TimeForm({
   pending: boolean;
   big?: boolean;
   keys: StepKeys;
+  /** Its guided-tour marker. */
+  tour?: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="max-w-md">
+    <form onSubmit={onSubmit} className="max-w-md" data-tour={tour}>
       <label htmlFor={id} className="label">
         {label}
       </label>

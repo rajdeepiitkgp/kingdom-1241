@@ -47,7 +47,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
         icon="⚔️"
         title="Battle plans"
         action={
-          <Link href={adminPath(locale, "/kvk/new")} className="btn-primary btn-sm">
+          <Link href={adminPath(locale, "/kvk/new")} className="btn-primary btn-sm" data-tour="plans-new">
             New plan
           </Link>
         }
@@ -64,7 +64,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
       {plans.length === 0 ? (
         <EmptyRow>No plans yet.</EmptyRow>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3" data-tour="plans-list">
           {plans.map((plan) => {
             const title = pick(plan.title, "en") || plan.slug;
             return (
@@ -81,7 +81,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
                     {utcLabel(plan.updatedAt)}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2" data-tour="plans-actions">
                   <Link href={adminPath(locale, `/kvk/${plan.id}`)} className="btn-primary btn-sm">
                     Edit
                   </Link>

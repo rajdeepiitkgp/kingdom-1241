@@ -86,7 +86,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
               Settings
             </Link>
             {responses.length > 0 && (
-              <a href={adminPath(locale, `/feedback/${retro.planId}/export`)} className="btn-primary btn-sm" download>
+              <a href={adminPath(locale, `/feedback/${retro.planId}/export`)} className="btn-primary btn-sm" download data-tour="results-export">
                 Export CSV
               </a>
             )}
@@ -99,7 +99,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         </p>
       )}
 
-      <div className="card flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm font-semibold text-ink-muted">
+      <div className="card flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm font-semibold text-ink-muted" data-tour="results-status">
         <span>
           {retro.open ? <span className="chip bg-success-soft text-success">Open</span> : <span className="chip bg-card-soft text-ink-muted">Closed</span>}
         </span>
@@ -117,13 +117,14 @@ async function Results({ locale, params, searchParams }: { locale: string; param
       </div>
 
       <AdminSection
+        tour="results-ai"
         title="AI summary"
         hint="Translates the written answers to English once, then reads every response and summarises the mood, the recurring themes and what to do. Runs only when you click: each run costs tokens."
       >
         <AiSummary retro={retro} responses={responses} locale={locale} labelOf={labelOf} />
       </AdminSection>
 
-      <AdminSection title="Summary" hint="Averages on the 0–5 scale and how the answers spread. The CSV has every row for your own charts.">
+      <AdminSection title="Summary" tour="results-summary" hint="Averages on the 0–5 scale and how the answers spread. The CSV has every row for your own charts.">
         {responses.length === 0 ? (
           <EmptyRow>No responses yet.</EmptyRow>
         ) : (
@@ -199,7 +200,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         )}
       </AdminSection>
 
-      <AdminSection title={`Responses (${responses.length})`} hint="Newest first. Once the AI step has run, texts are shown in English with the original underneath; the chip shows the page language the player used.">
+      <AdminSection title={`Responses (${responses.length})`} tour="results-responses" hint="Newest first. Once the AI step has run, texts are shown in English with the original underneath; the chip shows the page language the player used.">
         {responses.length === 0 ? (
           <EmptyRow>Nothing yet. Share the battle plan link: the feedback card is at its top while the form is open.</EmptyRow>
         ) : (
@@ -212,7 +213,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
       </AdminSection>
 
       {canManageUsers(user.role) && responses.length > 0 && (
-        <AdminSection title="Delete all responses" hint="Removes every answer of this battle now instead of waiting for the retention period. Export the CSV first; this cannot be undone.">
+        <AdminSection title="Delete all responses" tour="results-delete" hint="Removes every answer of this battle now instead of waiting for the retention period. Export the CSV first; this cannot be undone.">
           <DeleteForm
             action={deleteAllResponses}
             hidden={{ locale, planId: retro.planId }}

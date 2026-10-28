@@ -40,6 +40,7 @@ export function DateTimeField({
   error,
   allowPast = false,
   fill,
+  tour,
 }: {
   id: string;
   name: string;
@@ -51,6 +52,8 @@ export function DateTimeField({
   allowPast?: boolean;
   /** A value set from outside (e.g. "standard window"); a new `key` applies it once, then the field is free again. */
   fill?: { value: string; key: number };
+  /** Its guided-tour marker. */
+  tour?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(defaultValue);
@@ -88,7 +91,7 @@ export function DateTimeField({
   };
 
   return (
-    <Field label={label} htmlFor={id} error={error} hint={valid ? undefined : hint}>
+    <Field label={label} htmlFor={id} error={error} hint={valid ? undefined : hint} tour={tour}>
       <div className="flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <CalendarClock className="pointer-events-none absolute inset-y-0 inset-s-4 my-auto size-5 text-ink-faint" aria-hidden />

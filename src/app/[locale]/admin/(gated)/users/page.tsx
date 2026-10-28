@@ -38,6 +38,7 @@ async function Users({ locale }: { locale: string }) {
 
       <AdminSection
         title="Accounts"
+        tour="users-accounts"
         hint="Everyone who has signed in at least once, under the in-game name they set themselves. Roles belong to the Discord account, so check the handle next to the name before promoting someone. The owner (SITE_OWNER) is always an administrator and alone appoints administrators; administrators appoint moderators and can delete plans; moderators edit content and the battle plan; members have no admin access."
       >
         {profiles.length === 0 ? (
@@ -90,6 +91,7 @@ async function Users({ locale }: { locale: string }) {
 
       <AdminSection
         title="Pre-authorisations"
+        tour="users-grants"
         hint="Give someone a role before their first sign-in. Matched by Discord username (the handle, not the display name) or e-mail. A person who already signed in gets the role right away."
       >
         <GrantForm locale={locale} canGrantAdmin={user.isOwner} />

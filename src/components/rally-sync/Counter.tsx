@@ -21,7 +21,7 @@ const BIG_CUE = "mt-1 text-[min(4.5rem,calc(26vw-20px))]/none font-black tabular
 export function CounterFocus({ step, dict }: { step: CounterStep<LeaderView>; dict: Dictionary }) {
   if (step.first === null) {
     return (
-      <section className="rounded-card border-2 border-success bg-success-soft p-5 text-center md:p-6">
+      <section className="rounded-card border-2 border-success bg-success-soft p-5 text-center md:p-6" data-tour="counter-focus">
         <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{dict["sync.counter.youFirst"]}</p>
         <p className="mt-2 text-2xl font-black text-ink">{dict["sync.counter.onGo"]}</p>
         <p className="mt-2 text-sm text-ink-muted">{dict["sync.counter.firstHint"]}</p>
@@ -30,7 +30,7 @@ export function CounterFocus({ step, dict }: { step: CounterStep<LeaderView>; di
   }
   const { first, previous } = step;
   return (
-    <section className="rounded-card border-2 border-primary bg-primary-soft p-5 text-center md:p-6">
+    <section className="rounded-card border-2 border-primary bg-primary-soft p-5 text-center md:p-6" data-tour="counter-focus">
       <p className="text-xs font-bold tracking-wider text-ink-muted uppercase">{format(dict["sync.counter.position"], { n: step.position })}</p>
       {first.seconds > 0 ? (
         <>
@@ -90,7 +90,7 @@ export function CounterSheet({
   const stepOf = new Map(steps.map((s) => [s.leader.id, s]));
   const rows = [...steps.map((s) => s.leader), ...leaders.filter((l) => l.status === "inactive")];
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-tour="counter-order">
       <LeaderList
         leaders={rows}
         title={format(dict["sync.counter.title"], { wait: formatSeconds(rallyWaitSeconds) })}

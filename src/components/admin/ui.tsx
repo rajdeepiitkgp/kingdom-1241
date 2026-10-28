@@ -10,6 +10,7 @@ export function Field({
   error,
   hint,
   className,
+  tour,
   children,
 }: {
   label: string;
@@ -17,6 +18,8 @@ export function Field({
   error?: string;
   hint?: string;
   className?: string;
+  /** Its guided-tour marker. */
+  tour?: string;
   children: ReactNode;
 }) {
   // A single control child gets the error announced with it (aria-invalid + aria-describedby).
@@ -26,7 +29,7 @@ export function Field({
       ? cloneElement(children as ReactElement<Record<string, unknown>>, { "aria-invalid": true, "aria-describedby": errorId })
       : children;
   return (
-    <div className={clsx("flex min-w-0 flex-col gap-1", className)}>
+    <div className={clsx("flex min-w-0 flex-col gap-1", className)} data-tour={tour}>
       <label htmlFor={htmlFor} className="label">
         {label}
       </label>
@@ -58,9 +61,9 @@ export function Notice({ state, className }: { state: ActionState; className?: s
   );
 }
 
-export function AdminSection({ id, title, hint, children }: { id?: string; title: string; hint?: string; children: ReactNode }) {
+export function AdminSection({ id, title, hint, tour, children }: { id?: string; title: string; hint?: string; tour?: string; children: ReactNode }) {
   return (
-    <section id={id} className="card scroll-mt-24 p-5">
+    <section id={id} className="card scroll-mt-24 p-5" data-tour={tour}>
       <h2 className="text-lg font-extrabold text-ink">{title}</h2>
       {hint && <p className="mt-1 mb-4 text-sm text-ink-muted">{hint}</p>}
       {children}
