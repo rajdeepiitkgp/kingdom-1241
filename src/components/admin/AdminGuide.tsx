@@ -16,7 +16,7 @@ const NO_TOUR = { id: "admin-none", version: 1, steps: [] };
 export function AdminGuide() {
   const page = adminPageFor(usePathname());
   const tour = page ? ADMIN_TOURS[page] : NO_TOUR;
-  const guide = useGuidedTour(tour, tour.steps, ADMIN_TOUR_LABELS, { showLabel: true, dir: "ltr" });
+  const guide = useGuidedTour(tour, tour.steps, ADMIN_TOUR_LABELS, { showLabel: true, dir: "ltr", lang: "en" });
   if (!page) return null;
   return (
     <>
