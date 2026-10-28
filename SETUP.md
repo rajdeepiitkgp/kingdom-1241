@@ -28,7 +28,7 @@ Two things are decided once, before the first deploy, and never in the site.
 
 ## 1. Supabase — database and image storage
 
-1. Go to <https://supabase.com/dashboard>, **New project**. Pick a region close to most players (e.g. Frankfurt). **Save the database password** — CI needs it (step 6).
+1. Go to <https://supabase.com/dashboard>, **New project**. Pick a region close to most players (e.g. Frankfurt). The site's server code runs in Frankfurt too (`vercel.json`, § 5); with another region, change `regions` there to the Vercel region in the same city. **Save the database password** — CI needs it (step 6).
 2. Note the values you'll need:
    - **Project Settings → General → Project ID** (the `abcdefghijklmnop` part of `https://abcdefghijklmnop.supabase.co`) → `SUPABASE_PROJECT_ID`
    - **Project Settings → API Keys**:
@@ -114,6 +114,8 @@ Without any env vars the site still runs with the bundled English seed content (
 From now on Vercel deploys **every push to `main` to production** and **every pull request to a preview URL** (the link appears on the PR). Vercel's build doesn't wait for GitHub Actions, so protect `main` (step 6c) — then only code that passed CI can reach `main`.
 
 The site sends `noindex` headers and a `robots.txt` that blocks every crawler; it is only reachable through the shared link.
+
+**Region.** Pages and files come from Vercel's network nearest to each visitor, but the server code (admin pages, unlocking, Rally Sync, the webhooks) runs in one region, and the free plan allows exactly one. `vercel.json` sets it to Frankfurt (`fra1`), next to the database: a request makes several database calls one after another (a Rally Sync Re-sync about eight), and from Vercel's default Washington each one crossed the Atlantic, which cost about two seconds per Re-sync. Keep the two in the same city; if the database moves, change `regions` with it. To check: a response's `x-vercel-id` header has the visitor's edge first and the code's region second (`arn1::fra1::…`).
 
 **Old deployments.** Every build is stored (about 150 MB: every page in every language), and the Hobby plan has 10 GB of Deployment Storage. Vercel keeps each deployment for 30 days, and when the team goes over 10 GB it can block new deployments. The **Prune deployments** workflow (step 6) therefore deletes old ones after every finished deployment and once a day. It keeps the live deployment, the one before it (for a rollback from **Deployments → ⋯ → Instant Rollback**), the newest preview of each open pull request and anything still building. Deleted deployments stay under **Settings → Security → Recently Deleted** for a while (a day up to 30 days, depending on their age) and can be restored there. It needs one token:
 

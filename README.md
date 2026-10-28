@@ -68,6 +68,7 @@ scripts/
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
   prune.ts                npm run prune (deletes battle feedback past its retention period and closed Rally Sync rooms, SETUP.md § 9a/9b)
   prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
+vercel.json               runs the server code in Frankfurt (fra1), next to the database (SETUP.md § 5)
 .github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Prune deployments (old Vercel deployments, after every deploy); dependabot.yml for updates
 ```
 
