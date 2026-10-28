@@ -78,7 +78,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         icon="📝"
         title={title}
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-x-2 gap-y-3">
             <Link href={adminPath(locale, "/feedback")} className="btn-ghost btn-sm">
               ← All feedback
             </Link>

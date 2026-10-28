@@ -202,7 +202,7 @@ function RoomRow({ room, locale }: { room: AdminRallyRoom; locale: string }) {
             {room.open && ` · closes ${utc(room.closesAt)} if nobody opens it`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
           {room.open && (
             <Link href={localePath(locale, `/tools/rally-sync/${room.code}`)} className="btn-ghost btn-sm">
               <ExternalLink className="size-4" aria-hidden />

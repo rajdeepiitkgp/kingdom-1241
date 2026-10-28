@@ -18,12 +18,12 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
   ];
   return (
     <div dir="ltr">
-      <div className="card-soft mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+      <div className="card-soft mb-6 flex flex-wrap items-center gap-3 px-4 py-3">
         <span className="text-base font-black text-ink">🛠️ Admin</span>
         <Suspense fallback={null}>
           <AdminGuide />
         </Suspense>
-        <nav className="flex flex-wrap gap-1" aria-label="Admin sections">
+        <nav className="flex flex-wrap gap-x-2 gap-y-3" aria-label="Admin sections">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className="btn-ghost btn-sm" data-tour={link.tour}>
               {link.label}

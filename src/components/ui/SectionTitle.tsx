@@ -12,8 +12,8 @@ export function SectionTitle({
   as?: "h1" | "h2" | "h3";
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-3">
-      <Tag className="flex items-center gap-2.5 text-xl font-extrabold text-ink md:text-2xl">
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <Tag className="flex min-w-0 items-center gap-2.5 text-xl font-extrabold text-ink md:text-2xl">
         {icon && <span className="grid size-9 place-items-center rounded-xl bg-gold-soft text-lg" aria-hidden>{icon}</span>}
         {title}
       </Tag>

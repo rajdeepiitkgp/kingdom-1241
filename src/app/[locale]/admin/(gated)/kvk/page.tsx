@@ -81,7 +81,7 @@ async function PlanList({ locale, searchParams }: { locale: string; searchParams
                     {utcLabel(plan.updatedAt)}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2" data-tour="plans-actions">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-3" data-tour="plans-actions">
                   <Link href={adminPath(locale, `/kvk/${plan.id}`)} className="btn-primary btn-sm">
                     Edit
                   </Link>

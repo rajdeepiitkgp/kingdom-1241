@@ -120,7 +120,7 @@ async function PlanEditor({
         icon="⚔️"
         title={pick(plan.title, "en") || plan.slug}
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-x-2 gap-y-3">
             <Link href={adminPath(locale, "/kvk")} className="btn-ghost btn-sm">
               ← Back to plans
             </Link>
