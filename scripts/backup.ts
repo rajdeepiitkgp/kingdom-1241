@@ -45,8 +45,14 @@ async function fetchAll(supabase: Supabase, table: string, primaryKey: string): 
 }
 
 async function backup() {
-  const [{ createAdminClient }, { supabaseUrl }, { backupFileName, encryptBackup, isBackupPassphrase }, { BACKUP_TABLES, buildBackupFile, summarize }] =
-    await Promise.all([import("@/lib/supabase/admin"), import("@/lib/supabase/env"), import("@/lib/backup/crypto"), import("@/lib/backup/tables")]);
+  const [{ createAdminClient }, { supabaseUrl }, { backupFileName, encryptBackup, isBackupPassphrase }, { BACKUP_TABLES, buildBackupFile, summarize }, { writeConfig }] =
+    await Promise.all([
+      import("@/lib/supabase/admin"),
+      import("@/lib/supabase/env"),
+      import("@/lib/backup/crypto"),
+      import("@/lib/backup/tables"),
+      import("@/lib/config/app-config"),
+    ]);
   const secret = passphrase(isBackupPassphrase);
   const supabase = createAdminClient();
   const now = new Date();
@@ -58,6 +64,13 @@ async function backup() {
   writeFileSync(out, encryptBackup(JSON.stringify(file), secret));
   console.log(summarize(file).join("\n"));
   console.log(`\nEncrypted backup written: ${out}`);
+  // When the last backup ran, for the owner's Usage tab; never fails the backup.
+  const rows = Object.values(tables).reduce((n, list) => n + list.length, 0);
+  try {
+    await writeConfig(supabase, "last_backup", { at: now.toISOString(), tables: BACKUP_TABLES.length, rows });
+  } catch (error) {
+    console.warn(`Could not note the backup for the Usage tab: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function decrypt(path: string) {
