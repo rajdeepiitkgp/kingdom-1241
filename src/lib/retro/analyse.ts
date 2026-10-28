@@ -20,13 +20,13 @@ import {
 import { type RetroConfig, shownTexts } from "./questions";
 
 /**
- * The AI step, in two parts. "Translate answers" (any moderator; the small
- * model, cheap): every response with text and no English version yet is
- * translated (batches, a few in parallel, each stored as soon as it is back,
- * so a run that stops halfway has still made progress). "Translate and
- * analyse" (the owner only: the large model reads every answer, and a run has
- * cost dollars, not cents) does that first, then produces one summary over
- * every response and stores it on the retrospective. Both are idempotent:
+ * The AI step, in two parts. "Translate answers" (any moderator, cheap):
+ * every response with text and no English version yet is translated
+ * (batches, a few in parallel, each stored as soon as it is back, so a run
+ * that stops halfway has still made progress). "Translate and analyse" (the
+ * owner only: one request reads every answer, the biggest AI call on the
+ * site) does that first, then produces one summary over every response and
+ * stores it on the retrospective. Both are idempotent:
  * running again only pays for new translations (and one more summary).
  * Server only; the model calls are injectable for tests.
  */

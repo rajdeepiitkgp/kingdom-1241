@@ -9,13 +9,22 @@ import { buildPrompt, SYSTEM_INSTRUCTION, type TranslateFieldsOptions } from "./
  * a map of English fields in, the same keys translated out.
  *
  * - Structured output (`output_config.format`) guarantees the JSON shape.
+ * - Claude Haiku by default, like every AI job on the site: a fraction of the
+ *   larger models' price, good enough for short texts with a glossary.
+ *   ANTHROPIC_MODEL picks another model.
  * - Low effort: translation doesn't need deep reasoning; keeps latency and cost down.
- * - `fallbacks: "default"`: if a safety classifier declines a request, the API
- *   re-runs it on Anthropic's recommended fallback model instead of failing.
+ * - `fallbacks: "default"` (models that have one): if a safety classifier
+ *   declines a request, the API re-runs it on Anthropic's recommended fallback
+ *   model instead of failing.
  * - Token usage is accumulated so the CLI can print what a run cost.
  */
 
-export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL?.trim() || "claude-opus-5-5";
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL?.trim() || "claude-haiku-5-5";
+
+/** Claude Haiku has no server-side refusal fallback; the other current models route a declined request to a fallback model. */
+export function fallbackOptions(model: string): { betas: ["server-side-fallback-2026-07-01"]; fallbacks: "default" } | Record<string, never> {
+  return model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
+}
 
 const log = createLogger("anthropic");
 
@@ -46,8 +55,7 @@ export async function translateFields(
   const response = await getClient().beta.messages.create({
     model: ANTHROPIC_MODEL,
     max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...fallbackOptions(ANTHROPIC_MODEL),
     system: SYSTEM_INSTRUCTION,
     output_config: {
       effort: "low",

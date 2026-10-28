@@ -2,8 +2,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 import type { RetroResponse } from "@/lib/data/types";
-import { RETRO_ANALYSIS_MODEL, RETRO_TRANSLATE_MODEL, type GenerateJsonRequest } from "@/lib/retro/ai";
+import { RETRO_TRANSLATE_MODEL, type GenerateJsonRequest } from "@/lib/retro/ai";
 import { translateResponses } from "@/lib/retro/analyse";
+import { TRANSLATION_SYSTEM } from "@/lib/retro/analysis";
 
 const response = (id: string, wentWell: string, textsEn: RetroResponse["textsEn"] = null): RetroResponse => ({
   id,
@@ -39,7 +40,8 @@ describe("translating feedback answers", () => {
       },
     });
     expect(calls.map((c) => c.model)).toEqual([RETRO_TRANSLATE_MODEL]);
-    expect(calls.some((c) => c.model === RETRO_ANALYSIS_MODEL)).toBe(false);
+    // Both models may be the same (Haiku by default), so the summary request is told apart by its prompt.
+    expect(calls.every((c) => c.system === TRANSLATION_SYSTEM)).toBe(true);
     expect([...result.translated.keys()]).toEqual(["a"]);
     expect(written).toEqual(["a"]);
     expect(result.usage).toEqual({ requests: 1, inputTokens: 100, outputTokens: 20 });

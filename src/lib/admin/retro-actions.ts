@@ -160,8 +160,8 @@ export async function deleteAllResponses(formData: FormData): Promise<void> {
  * is audited with its token usage. Identity never goes to the model: the
  * responses are loaded without it.
  */
-/** The summary uses the large model over every answer (a run has cost tens of dollars), so only the owner starts it; everyone sees the stored result. */
-const SUMMARY_OWNER_ONLY = "Only the owner runs the AI summary: each run costs several dollars. You can still translate the answers.";
+/** The summary is the biggest AI request (one call over every answer), so only the owner starts it; everyone sees the stored result. */
+const SUMMARY_OWNER_ONLY = "Only the owner runs the AI summary. You can still translate the answers.";
 
 /** "Translate answers": English versions of new written answers only (the small model, cheap); any moderator. */
 export async function translateRetrospective(_previous: ActionState, formData: FormData): Promise<ActionState> {

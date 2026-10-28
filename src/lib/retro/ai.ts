@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import { createLogger, elapsedMs } from "@/lib/log";
+import { fallbackOptions } from "@/lib/translate/anthropic";
 import { GEMINI_MODEL } from "@/lib/translate/gemini";
 import { isTranslationConfigured, translationProvider, withRetry } from "@/lib/translate/provider";
 
@@ -11,14 +12,15 @@ import { isTranslationConfigured, translationProvider, withRetry } from "@/lib/t
  * Gemini, else off). Server only.
  *
  * Models (Anthropic): RETRO_TRANSLATE_MODEL for the bulk translation of short
- * player texts (default Claude Haiku 5.5: a few cents for hundreds of
- * responses) and RETRO_ANALYSIS_MODEL for the summary (default Claude Opus
- * 5.5: one request per run, where quality matters). Gemini uses GEMINI_MODEL
- * for both. Token usage is returned so the action can log and store the cost.
+ * player texts and RETRO_ANALYSIS_MODEL for the summary, both Claude Haiku 5.5
+ * by default (cents per run; a larger model writes a somewhat better summary
+ * at many times the price, so it is a variable away, not the default). Gemini
+ * uses GEMINI_MODEL for both. Token usage is returned so the action can log
+ * and store the cost.
  */
 
 export const RETRO_TRANSLATE_MODEL = process.env.RETRO_TRANSLATE_MODEL?.trim() || "claude-haiku-5-5";
-export const RETRO_ANALYSIS_MODEL = process.env.RETRO_ANALYSIS_MODEL?.trim() || "claude-opus-5-5";
+export const RETRO_ANALYSIS_MODEL = process.env.RETRO_ANALYSIS_MODEL?.trim() || "claude-haiku-5-5";
 
 export interface GenerateJsonRequest {
   system: string;
@@ -44,10 +46,12 @@ export function retroAiConfigured(): boolean {
   return isTranslationConfigured();
 }
 
-/** "anthropic / claude-haiku-5-5 + claude-opus-5-5", for the page and the audit log. */
+/** "anthropic / claude-haiku-5-5" (or "… / translation + summary" when they differ), for the page and the audit log. */
 export function retroAiLabel(): string {
   const provider = translationProvider();
-  if (provider === "anthropic") return `anthropic / ${RETRO_TRANSLATE_MODEL} + ${RETRO_ANALYSIS_MODEL}`;
+  if (provider === "anthropic") {
+    return RETRO_TRANSLATE_MODEL === RETRO_ANALYSIS_MODEL ? `anthropic / ${RETRO_ANALYSIS_MODEL}` : `anthropic / ${RETRO_TRANSLATE_MODEL} + ${RETRO_ANALYSIS_MODEL}`;
+  }
   if (provider === "gemini") return `gemini / ${GEMINI_MODEL}`;
   return "off";
 }
@@ -68,11 +72,6 @@ function anthropicClient(): Anthropic {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set (see SETUP.md).");
   if (!anthropic) anthropic = new Anthropic({ apiKey });
   return anthropic;
-}
-
-/** Claude Haiku has no server-side refusal fallback; the other current models route a declined request to a fallback model. */
-function fallbackOptions(model: string): { betas: ["server-side-fallback-2026-07-01"]; fallbacks: "default" } | Record<string, never> {
-  return model.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 }
 
 async function viaAnthropic(request: GenerateJsonRequest): Promise<GenerateJsonResult> {
