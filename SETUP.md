@@ -327,6 +327,15 @@ The alliances on Home are a list the owner keeps, and their numbers come from [M
 
 Home shows the alliances strongest first, so the rank badge matches the game. Descriptions, requirements and Discord links are not part of the sync and stay as they are in the table.
 
+### 9d. Gift codes (Admin → Gift codes)
+
+Home lists the gift codes that work right now. They come from [kingshot.net](https://kingshot.net/gift-codes), a fan site that keeps a list of working Kingshot codes and offers it without a key; Home credits it and links the game's official redeem page.
+
+- **Every hour, at minute 23.** The **Gift codes** workflow (its own, so its 24 runs a day don't fill the Maintenance history) asks the site (`POST /api/gift-codes/sync`, with `SITE_URL` and `TRANSLATE_WEBHOOK_SECRET`, no new secret) to read kingshot.net's list. A new code goes on Home within the hour; a code kingshot.net stops listing leaves Home (it shows as *Ended* on the admin page and is deleted 30 days later, like an expired one). Home is only rebuilt when something changed.
+- **When kingshot.net is down** nothing changes and the run still passes; it is tried again the next hour. Only after six hours without an answer (or when the database is the problem) does the run fail, so GitHub e-mails you. kingshot.net's list has no official documentation, so if its format changes the check stops changing anything (it never reads a new format as "no codes") and the admin page says the last check failed: add codes by hand meanwhile and tell a developer.
+- **The admin page** (moderators and up) shows the last check with **Check now**, the codes on Home and the ended ones. Moderators **add a code** kingshot.net doesn't list yet (from in-game mail or Discord; codes are case-sensitive), write **what it gives** (English, translated by itself) and its **expiry** if known, **hide** a code from Home, and **delete** codes they added or that ended. A code kingshot.net still lists can only be hidden: deleted, it would come back within the hour. Once kingshot.net lists a hand-added code, the hourly check takes it over and ends it when it stops working.
+- **Run it by hand:** Actions → Gift codes → Run workflow, or Check now on the page (once a minute).
+
 ## 10. Backups
 
 Supabase's free plan keeps no backups of its own, so the site makes one. Every Monday the **Maintenance** workflow runs `npm run backup`, which dumps every content and admin table (languages, settings, interface strings, announcements, events, rules, guides, alliances, gift codes, heroes, the battle plans with their instructions, coordinators and formations, the feedback forms and their answers, profiles, pre-authorisations and the audit log; not the wrong-password counters) into one JSON file, encrypts it with `BACKUP_PASSPHRASE` and keeps it as a workflow artifact for 90 days. Translations are part of the rows, so they come back too. The list of tables is `BACKUP_TABLES` in `src/lib/backup/tables.ts`; a test fails when a migration adds a table that is in neither that list nor `NOT_BACKED_UP`.
