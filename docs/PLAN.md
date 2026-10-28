@@ -86,5 +86,5 @@ A community website for Kingshot Kingdom 1241, inspired by 1424.win. Free to hos
 ## Open questions
 
 - Alliance descriptions, requirements and Discord links (tags, names, power, leaders and member counts come from MightPulse daily).
-- Real event times and rules for 1241; the exact dates of the castle battle / KvK two-week cycle.
+- Real event times and rules for 1241. (The battle cycle is settled: the castle battle on Saturday 24 Oct 2026, then every second Saturday alternating with KvK, first on Saturday 7 Nov 2026.)
 - Site address: free subdomain or a custom domain.
