@@ -1,6 +1,7 @@
 # Tasks you would otherwise run from a laptop with .env.local, the weekly
-# content backup and the daily feedback prune. Actions → Maintenance → Run
-# workflow → pick a task; the schedules below run `backup` and `prune` on their own.
+# content backup, the daily feedback prune and the daily alliance sync.
+# Actions → Maintenance → Run workflow → pick a task; the schedules below run
+# `backup`, `prune` and `alliances` on their own.
 #
 # Secrets (SETUP.md § 6): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY,
 # ANTHROPIC_API_KEY (or GEMINI_API_KEY), SITE_URL, TRANSLATE_WEBHOOK_SECRET,
@@ -32,6 +33,7 @@ on:
           - prune-dry-run
           - webhooks
           - config-push
+          - alliances
       language:
         description: "translate / translate-dry-run: only this language code (e.g. fr), also a hidden one; empty = every shown language"
         type: string
@@ -43,19 +45,21 @@ on:
     - cron: "17 4 * * 1"
     # Daily prune of battle feedback past its retention period (SETUP.md § 9).
     - cron: "41 5 * * *"
+    # Daily alliance sync from MightPulse (SETUP.md § 9c); keep DAILY_SYNC_UTC in src/lib/alliances/sync-plan.ts in step.
+    - cron: "7 6 * * *"
 
 permissions:
   contents: read
 
 env:
-  # A scheduled run has no input: the daily schedule is the prune, the Monday one the backup.
-  TASK: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune' || 'backup') }}
+  # A scheduled run has no input: 05:41 is the prune, 06:07 the alliance sync, the Monday one the backup.
+  TASK: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune') || (github.event.schedule == '7 6 * * *' && 'alliances') || 'backup' }}
   # Pinned like deploy-database.yml; bump both together.
   SUPABASE_CLI_VERSION: 2.122.0
 
 jobs:
   run:
-    name: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune' || 'backup') }}
+    name: ${{ inputs.task || (github.event.schedule == '41 5 * * *' && 'prune') || (github.event.schedule == '7 6 * * *' && 'alliances') || 'backup' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # Secrets are handed to the steps that use them, never to the whole job: `npm ci`
@@ -70,13 +74,13 @@ jobs:
       # --- Node tasks (the scripts in scripts/) ---------------------------------
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: env.TASK != 'revalidate' && env.TASK != 'webhooks' && env.TASK != 'config-push'
+        if: env.TASK != 'revalidate' && env.TASK != 'webhooks' && env.TASK != 'config-push' && env.TASK != 'alliances'
         with:
           node-version-file: .nvmrc
           cache: npm
 
       - name: Install
-        if: env.TASK != 'revalidate' && env.TASK != 'webhooks' && env.TASK != 'config-push'
+        if: env.TASK != 'revalidate' && env.TASK != 'webhooks' && env.TASK != 'config-push' && env.TASK != 'alliances'
         run: npm ci
 
       - name: Seed database
@@ -178,6 +182,17 @@ jobs:
           curl --fail --silent --show-error -X POST "$SITE_URL/api/revalidate" \
             -H "Authorization: Bearer $TRANSLATE_WEBHOOK_SECRET" \
             -H "Content-Type: application/json" -d '{}'
+
+      # The site does the sync (the MightPulse key stays in Vercel); a 503 means MightPulse
+      # or the database couldn't be reached, and the alliances stay as they were.
+      - name: Sync alliances from MightPulse
+        if: env.TASK == 'alliances'
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TRANSLATE_WEBHOOK_SECRET: ${{ secrets.TRANSLATE_WEBHOOK_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 180 -X POST "$SITE_URL/api/alliances/sync" \
+            -H "Authorization: Bearer $TRANSLATE_WEBHOOK_SECRET"
 
       # --- Supabase CLI tasks ---------------------------------------------------
 

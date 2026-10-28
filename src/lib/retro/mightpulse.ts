@@ -22,7 +22,8 @@ import { type GovernorProfile, parseMightPulsePlayer } from "./governor";
 
 export type GovernorLookup = { status: "found"; profile: GovernorProfile } | { status: "unknown" } | { status: "unavailable" };
 
-const BASE_URL = "https://api.mightpulse.com/v1";
+/** MightPulse's API root, shared with the alliance sync (src/lib/alliances/sync.ts). */
+export const MIGHTPULSE_API = "https://api.mightpulse.com/v1";
 const DEFAULT_TIMEOUT_MS = 25_000;
 
 const log = createLogger("mightpulse");
@@ -37,7 +38,7 @@ export async function lookupGovernor(governorId: string, options: { fetchImpl?: 
   const fetchImpl = options.fetchImpl ?? fetch;
   const started = performance.now();
   try {
-    const response = await fetchImpl(`${BASE_URL}/players/${encodeURIComponent(governorId)}?include=base`, {
+    const response = await fetchImpl(`${MIGHTPULSE_API}/players/${encodeURIComponent(governorId)}?include=base`, {
       headers: { "X-Api-Key": key, Accept: "application/json" },
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       cache: "no-store",

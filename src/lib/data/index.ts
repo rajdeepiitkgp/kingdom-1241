@@ -235,7 +235,13 @@ export async function getAlliances(): Promise<Alliance[]> {
   if (!isSupabaseConfigured()) return buildSeedContent().alliances;
   try {
     const supabase = createPublicClient()!;
-    const { data, error } = await supabase.from("alliances").select("*").eq("published", true).order("sort_order");
+    // Strongest first, like the in-game ranking (the daily MightPulse sync keeps power current).
+    const { data, error } = await supabase
+      .from("alliances")
+      .select("*")
+      .eq("published", true)
+      .order("power", { ascending: false, nullsFirst: false })
+      .order("sort_order");
     if (error) throw error;
     return (data ?? []).map(mapAlliance);
   } catch (error) {

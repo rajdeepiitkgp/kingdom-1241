@@ -26,6 +26,20 @@ export const KVK_SATURDAY = {
   shieldEndHour: 22,
 } as const;
 
+/**
+ * Every second Saturday is a battle day: KvK on the Saturday of each round,
+ * the internal castle battle on the Saturdays in between (24 Oct 2026, 21 Nov
+ * 2026, …). For a battle the players move into the battle alliances [KvK] and
+ * [TMP] (always for KvK, often for the castle battle).
+ */
+export const BATTLE_EVERY_DAYS = 14;
+
+/** `time` falls on a battle Saturday (UTC date). */
+export function isBattleSaturday(time: number): boolean {
+  const days = Math.floor((time - (FIRST_PREP_ROUND + 6 * DAY)) / DAY);
+  return ((days % BATTLE_EVERY_DAYS) + BATTLE_EVERY_DAYS) % BATTLE_EVERY_DAYS === 0;
+}
+
 export type PrepDay = 0 | 1 | 2 | 3 | 4 | 5;
 export type ScoringDay = Exclude<PrepDay, 0>;
 export const PREP_DAYS: readonly PrepDay[] = [0, 1, 2, 3, 4, 5];
