@@ -17,6 +17,7 @@ import { getRetrospectiveByPlan, listResponses } from "@/lib/admin/retro-data";
 import { adminPath } from "@/lib/auth/paths";
 import { canManageUsers } from "@/lib/auth/roles";
 import { requireEditor } from "@/lib/auth/server";
+import { getTranslationSettings } from "@/lib/config/settings";
 import type { RetroResponse } from "@/lib/data/types";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
@@ -58,7 +59,11 @@ async function Results({ locale, params, searchParams }: { locale: string; param
   if (!retro) notFound();
   // "Hide names" is applied here, not in the browser: the names never reach a screenshot or a printout.
   const view = parseResultsView(query);
-  const [responses, en] = await Promise.all([listResponses(retro.id, { identity: user.isOwner && !view.namesHidden }), getDictionary("en")]);
+  const [responses, en, translation] = await Promise.all([
+    listResponses(retro.id, { identity: user.isOwner && !view.namesHidden }),
+    getDictionary("en"),
+    getTranslationSettings(),
+  ]);
   const shown = pageWindow(view.page, responses.length, view.size);
   const base = adminPath(locale, `/feedback/${retro.planId}`);
 
@@ -141,7 +146,7 @@ async function Results({ locale, params, searchParams }: { locale: string; param
         title="AI summary"
         hint="Translate answers turns the written answers into English (cheap; anyone here can run it). The summary reads every response and gives the mood, the recurring themes and what to do; only the owner runs it, since it is the biggest AI request here. Nothing runs by itself."
       >
-        <AiSummary retro={retro} responses={responses} locale={locale} labelOf={labelOf} isOwner={user.isOwner} />
+        <AiSummary retro={retro} responses={responses} locale={locale} labelOf={labelOf} isOwner={user.isOwner} paused={translation.paused} />
       </AdminSection>
 
       <AdminSection title="Summary" tour="results-summary" hint="Averages on the 0–5 scale and how the answers spread. The CSV has every row for your own charts.">
@@ -388,6 +393,7 @@ function AiSummary({
   locale,
   labelOf,
   isOwner,
+  paused,
 }: {
   retro: NonNullable<Awaited<ReturnType<typeof getRetrospectiveByPlan>>>;
   responses: RetroResponse[];
@@ -395,14 +401,19 @@ function AiSummary({
   labelOf: (key: string) => string;
   /** Only the owner starts a summary (the biggest AI request); everyone reads the stored one and may translate. */
   isOwner: boolean;
+  /** The owner paused machine translation (Admin → Settings): both buttons wait. */
+  paused: boolean;
 }) {
   const analysis = retro.analysis;
   const withText = responses.filter(hasText).length;
   const untranslated = responses.filter((r) => hasText(r) && !r.textsEn).length;
   const newSince = analysis && retro.analysisCount !== null ? Math.max(0, responses.length - retro.analysisCount) : 0;
+  const pausedReason = "Paused: the owner has paused machine translation in Settings.";
   const disabledReason = !retroAiConfigured()
     ? "Turned off: no ANTHROPIC_API_KEY or GEMINI_API_KEY is set."
-    : responses.length === 0
+    : paused
+      ? pausedReason
+      : responses.length === 0
       ? "Nothing to analyse yet."
       : null;
   const hint =
@@ -494,7 +505,7 @@ function AiSummary({
         </EmptyRow>
       )}
       {untranslated > 0 && (
-        <AnalyseButton mode="translate" planId={retro.planId} locale={locale} label="Translate answers" hint={translateHint} disabledReason={retroAiConfigured() ? null : disabledReason} />
+        <AnalyseButton mode="translate" planId={retro.planId} locale={locale} label="Translate answers" hint={translateHint} disabledReason={!retroAiConfigured() ? disabledReason : paused ? pausedReason : null} />
       )}
       {isOwner ? (
         <AnalyseButton mode="analyse" planId={retro.planId} locale={locale} label={analysis ? "Update analysis" : "Translate and analyse"} hint={hint} disabledReason={disabledReason} />

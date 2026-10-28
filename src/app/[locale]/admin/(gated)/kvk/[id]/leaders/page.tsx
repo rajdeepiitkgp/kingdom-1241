@@ -19,9 +19,10 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { deleteLeaderRule, deleteRallyLeader } from "@/lib/admin/kvk-actions";
 import { type AdminLeaderPlan, getLeaderPlanForEditing } from "@/lib/admin/kvk-data";
 import { utcLabel } from "@/lib/admin/format";
-import { introSourceFor, parseEditLang, TEXT_LIMITS } from "@/lib/admin/translation";
+import { introSourceFor, parseEditLang, TEXT_LIMITS, pendingNote } from "@/lib/admin/translation";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
+import { getTranslationSettings } from "@/lib/config/settings";
 import { getAlliances, getHeroes, getLanguages } from "@/lib/data";
 import { pick, type Localized } from "@/lib/i18n/localized";
 import { battleMinutes } from "@/lib/kvk/battle-window";
@@ -223,19 +224,20 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
 }
 
 /** One language other than English: the leaders' instructions, rally names and notes, each next to the English. */
-function TranslationMode({ plan, locale, lang, langLabel }: { plan: AdminLeaderPlan; locale: string; lang: string; langLabel: string }) {
+async function TranslationMode({ plan, locale, lang, langLabel }: { plan: AdminLeaderPlan; locale: string; lang: string; langLabel: string }) {
   const brief = plan.brief!;
   const common = { locale, planId: plan.planId, lang, langLabel };
   const text = (value: Localized | undefined, code: string) => (typeof value?.[code] === "string" ? value[code] : "");
   const anyPending = brief.pendingColumns.length > 0 || Object.keys(plan.pendingRows).length > 0;
+  const { paused } = await getTranslationSettings();
   const rowPending = (id: string, column: string) => (plan.pendingRows[id] ?? []).includes(column);
 
   return (
     <>
-      <PendingRefresher active={anyPending} />
+      <PendingRefresher active={anyPending && !paused} />
       <p className="rounded-xl bg-card-soft px-3 py-2 text-sm font-bold text-ink-muted">
         Corrections saved here apply to {langLabel} only and are never overwritten until the English text changes again.
-        {anyPending && " Some texts are still being machine-translated; they unlock automatically."}
+        {anyPending && pendingNote(paused)}
       </p>
 
       <AdminSection title="Leader page">

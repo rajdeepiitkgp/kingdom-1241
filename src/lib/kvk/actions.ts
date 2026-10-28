@@ -5,7 +5,9 @@ import { systemAudit } from "@/lib/admin/audit";
 import { notifyCouncil } from "@/lib/alerts";
 import { getActiveChecklistPlan, getActiveKvkPlan, getActiveLeaderPlan } from "@/lib/data";
 import { areaAccessToken, KVK_AREA_COOKIES, KVK_COOKIE_MAX_AGE, type KvkArea, passwordMatches } from "@/lib/kvk/access";
-import { ADDRESS_POLICY, addressScope, countFailure, PLAN_ALERT, planScope, retryAfter, shouldAlert, triesLeft } from "@/lib/kvk/throttle";
+import { getPasswordRules } from "@/lib/config/settings";
+import { passwordPolicies } from "@/lib/kvk/password-rules";
+import { addressScope, countFailure, planScope, retryAfter, shouldAlert, triesLeft } from "@/lib/kvk/throttle";
 import { addressHash, clearThrottle, countRecentAddresses, takeTry, updateThrottle } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
 
@@ -92,8 +94,9 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
 
   const now = Date.now();
   const scopes = { address: addressScope(page.planId, addressHash(requestHeaders), area), plan: planScope(page.planId, area) };
+  const policies = passwordPolicies(await getPasswordRules());
   // The try is counted before the password is checked, so parallel requests can't outrun the lockout.
-  const attempt = await takeTry(scopes.address, now, ADDRESS_POLICY);
+  const attempt = await takeTry(scopes.address, now, policies.address);
   if (!attempt.allowed) {
     log.info("Unlock refused: address locked", { reqId, area, plan: page.slug, waitMs: attempt.retryAt - now });
     return { status: "throttled", retryAt: attempt.retryAt };
@@ -102,8 +105,8 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
   if (!passwordMatches(password, page.password)) {
     let alert = false;
     const plan = await updateThrottle(scopes.plan, (state) => {
-      const next = countFailure(state, now, PLAN_ALERT);
-      alert = shouldAlert(next, PLAN_ALERT);
+      const next = countFailure(state, now, policies.alert);
+      alert = shouldAlert(next, policies.alert);
       if (alert) next.alertedAt = now;
       return next;
     });
@@ -112,7 +115,7 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
     log.info("Unlock failed: wrong password", { reqId, area, plan: page.slug, addressFailures: attempt.state?.failures, planFailures, lockMs: lock });
     if (plan.status === "ok" && alert) await reportBruteForce(area, page, planFailures, plan.after?.windowStartedAt ?? now);
     if (lock > 0) return { status: "throttled", retryAt: now + lock };
-    return { status: "wrong", triesLeft: triesLeft(attempt.state, now, ADDRESS_POLICY) };
+    return { status: "wrong", triesLeft: triesLeft(attempt.state, now, policies.address) };
   }
 
   (await cookies()).set({

@@ -1,6 +1,7 @@
 import { revalidateTag } from "next/cache";
 import { after, NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
+import { getTranslationSettings } from "@/lib/config/settings";
 import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
 import { createLogger, elapsedMs, requestId, type Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -81,6 +82,13 @@ export async function POST(request: Request) {
     revalidate(tag, log);
     log.info("Translation is off, revalidated only", { table, provider: translationProvider() });
     return reply({ ok: true, action: "revalidated", table, translation: "off" });
+  }
+
+  if ((await getTranslationSettings()).paused) {
+    // The owner's brake (Admin → Settings): edits still show up, in English; a translate run after resuming fills them in.
+    revalidate(tag, log);
+    log.info("Translation is paused, revalidated only", { table });
+    return reply({ ok: true, action: "revalidated", table, translation: "paused" });
   }
 
   const id = payload.id ?? (payload.record ? (payload.record[config.primaryKey] as string | undefined) : undefined);

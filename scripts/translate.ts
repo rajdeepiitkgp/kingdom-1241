@@ -4,7 +4,7 @@
  *
  *   npm run translate                         # everything that is missing or outdated
  *   npm run translate -- --table guides       # one table only
- *   npm run translate -- --locale de          # one language only
+ *   npm run translate -- --locale de          # one language only (also a hidden one, before showing it)
  *   npm run translate -- --force              # re-translate even if up to date
  *   npm run translate -- --dry-run            # show what would be translated
  *
@@ -19,12 +19,13 @@ loadEnv();
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, provider] =
+  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, provider, { getTranslationSettings }] =
     await Promise.all([
       import("@/lib/supabase/admin"),
       import("@/lib/translate/tables"),
       import("@/lib/translate/translate-row"),
       import("@/lib/translate/provider"),
+      import("@/lib/config/settings"),
     ]);
 
   // Fail safe: `--dry-run=true` or `--dry-run 1` must not start a real, paid run.
@@ -33,6 +34,9 @@ async function main() {
     throw new Error(
       "Translation is off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY), or TRANSLATION_PROVIDER=anthropic|gemini (see SETUP.md).",
     );
+  }
+  if (!dryRun && (await getTranslationSettings()).paused) {
+    throw new Error("Machine translation is paused (Admin → Settings → Machine translation). Resume it there first.");
   }
   console.log(`Provider: ${await provider.translationProviderLabel()}`);
 

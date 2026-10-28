@@ -51,6 +51,13 @@ export function pendingColumns(table: string, row: Record<string, unknown>): str
   return staleColumns(source, row.source_hash);
 }
 
+/** The editor's note on texts still waiting for the machine (a different one while the owner has paused it). */
+export function pendingNote(paused: boolean): string {
+  return paused
+    ? " Machine translation is paused (Settings): edited texts show in English in the other languages and unlock once it runs again."
+    : " Some texts are still being machine-translated; they unlock automatically.";
+}
+
 /** True while any column of the row is still being translated. */
 export function translationPending(table: string, row: Record<string, unknown>): boolean {
   return pendingColumns(table, row).length > 0;

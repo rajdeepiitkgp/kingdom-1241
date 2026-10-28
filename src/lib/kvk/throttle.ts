@@ -9,7 +9,8 @@ import type { KvkArea } from "./access";
  *
  *   - one address: five wrong tries within 15 minutes lock that address for
  *     an hour, and every further lockout lasts twice as long (2 h, 4 h … up
- *     to a day). The form shows a countdown.
+ *     to a day). The form shows a countdown. These are the defaults; the owner
+ *     can change them in Settings (password-rules.ts).
  *   - the plan as a whole: wrong tries from every address are counted per
  *     hour. Past a threshold the site records a "brute-force attempt" entry
  *     in the admin change log and alerts the council (Discord webhook), who

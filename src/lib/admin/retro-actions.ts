@@ -9,7 +9,9 @@ import { markdownToHtml } from "@/lib/html";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { type Localized, pick } from "@/lib/i18n/localized";
 import { elapsedMs, type Logger } from "@/lib/log";
+import { getTranslationSettings } from "@/lib/config/settings";
 import { retroAiConfigured } from "@/lib/retro/ai";
+import { PAUSED_MESSAGE } from "@/lib/translate/pause";
 import { translateAndAnalyse, translateResponses } from "@/lib/retro/analyse";
 import type { AnalysisContext } from "@/lib/retro/analysis";
 import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
@@ -175,6 +177,7 @@ export async function translateRetrospective(_previous: ActionState, formData: F
   const planId = uuidField(formData, "planId");
   if (!planId) return PLAN_GONE;
   if (!retroAiConfigured()) return { status: "error", message: "The AI step is turned off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY) in Vercel." };
+  if ((await getTranslationSettings()).paused) return { status: "error", message: PAUSED_MESSAGE };
   const retro = await getRetrospectiveByPlan(planId);
   if (!retro) return { status: "error", message: "This feedback form no longer exists." };
   const responses = await listResponses(retro.id, { identity: false });
@@ -209,6 +212,7 @@ export async function analyseRetrospective(_previous: ActionState, formData: For
   const planId = uuidField(formData, "planId");
   if (!planId) return PLAN_GONE;
   if (!retroAiConfigured()) return { status: "error", message: "The AI step is turned off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY) in Vercel." };
+  if ((await getTranslationSettings()).paused) return { status: "error", message: PAUSED_MESSAGE };
   const retro = await getRetrospectiveByPlan(planId);
   if (!retro) return { status: "error", message: "This feedback form no longer exists." };
   const responses = await listResponses(retro.id, { identity: false });
