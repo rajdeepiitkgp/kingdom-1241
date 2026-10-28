@@ -46,14 +46,15 @@ export interface ReviewInput {
 }
 
 const PLACEHOLDER = /\{\{?[\w.:-]+\}?\}/g;
-const placeholders = (s: string) => (s.match(PLACEHOLDER) ?? []).sort().join(" ");
+/** The placeholders of a text, sorted: `{n}`, `{{date}}`, `{{ui:key}}` must survive translation unchanged. */
+export const placeholderSignature = (s: string) => (s.match(PLACEHOLDER) ?? []).sort().join(" ");
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** A Latin-script word without its ending, so plurals and endings still match ("chefs", "eroi", "ralliements"). */
+/** A Latin-script word without its ending, so plurals and endings still match ("chefs", "eroi", "ralliements", Polish "zamku"). */
 const stem = (word: string) => {
   if (!/^\p{Script=Latin}+$/u.test(word) || word.length < 4) return word;
-  return word.slice(0, word.length - (word.length >= 6 ? 2 : 1));
+  return word.slice(0, word.length - (word.length >= 5 ? 2 : 1));
 };
 
 /** Whether the translation uses the glossary term: every word longer than an article, in the language's own lower case. */
@@ -158,7 +159,7 @@ export function reviewItems(input: ReviewInput, keyFilter: (key: string) => bool
       if (outdated) findings.push("live: the site still has older English (run sync-ui)");
       else if (!text.trim()) findings.push("missing: no translation yet");
       else {
-        if (placeholders(text) !== placeholders(en)) findings.push("placeholders differ from the English");
+        if (placeholderSignature(text) !== placeholderSignature(en)) findings.push("placeholders differ from the English");
         findings.push(...glossaryFindings(en, text, locale, input.glossary));
         findings.push(...labelFindings(key, en, text, locale, input.english, input.live));
         findings.push(...styleFindings(text, locale));

@@ -30,6 +30,7 @@ describe("glossary check", () => {
     ];
     expect(glossaryFindings("The alliance chat", "ittifak sohbeti", "tr", terms)).toEqual([]);
     expect(glossaryFindings("Enemy rally leaders and heroes", "Leader dei rally nemici e gli eroi", "it", terms)).toEqual([]);
+    expect(glossaryFindings("Don't attack the castle", "Nie atakuj zamku", "pl", [{ term: "Castle", translations: { pl: "Zamek" } }])).toEqual([]);
   });
 
   it("says nothing for a language the glossary has no word for", () => {
