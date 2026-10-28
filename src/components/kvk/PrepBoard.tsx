@@ -73,7 +73,7 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
       <PrepStatus dict={dict} locale={locale} />
 
       <section aria-label={dict["prep.title"]}>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" data-tour="prep-days">
           {PREP_DAYS.map((day) => {
             const active = day === shown;
             return (
@@ -101,17 +101,17 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
           })}
         </div>
         {/* Hidden until the clock has picked today, so visitors don't see Day 0 flash first. */}
-        <div className={clsx("mt-4 transition-opacity duration-300", !now && picked === null && "opacity-0")}>
+        <div className={clsx("mt-4 transition-opacity duration-300", !now && picked === null && "opacity-0")} data-tour="prep-day">
           <DayPanel day={shown} round={round} isToday={shown === today} dict={dict} locale={locale} />
         </div>
       </section>
 
-      <section>
+      <section data-tour="prep-table">
         <SectionTitle icon="📋" title={dict["prep.tableTitle"]} />
         <PrepTable today={today} dict={dict} />
       </section>
 
-      <section>
+      <section data-tour="prep-save">
         <SectionTitle icon="🎒" title={dict["prep.saveTitle"]} />
         <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["prep.saveHint"]}</p>
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -137,7 +137,7 @@ function PrepStatus({ dict, locale }: { dict: Dictionary; locale: string }) {
   const view = phase ? phaseView(phase, dict) : null;
 
   return (
-    <div className="card relative overflow-hidden border-2 border-gold/60 p-5 md:p-6">
+    <div className="card relative overflow-hidden border-2 border-gold/60 p-5 md:p-6" data-tour="prep-status">
       <div className="pointer-events-none absolute -inset-e-10 -top-10 size-36 rounded-full bg-gold/20 blur-2xl" aria-hidden />
       <div className="relative flex flex-wrap items-start gap-4">
         <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gold text-4xl shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>

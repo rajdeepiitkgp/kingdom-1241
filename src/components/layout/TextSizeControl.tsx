@@ -51,6 +51,7 @@ export function TextSizeControl({
     <div
       role="group"
       aria-label={labels.group}
+      data-tour="site-text"
       className="flex h-10 shrink-0 items-center overflow-hidden rounded-full border border-line bg-card shadow-[0_4px_0_0_var(--line)]"
     >
       <button

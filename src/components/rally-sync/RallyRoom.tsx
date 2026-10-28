@@ -12,7 +12,7 @@ import { joinRoom, leaveRoom, renameMe, setMyActive, updateMyLeader } from "@/li
 import { NOTABLE_OFFSET_MS } from "@/lib/rally-sync/clock";
 import { counterOrder } from "@/lib/rally-sync/counter";
 import { parseRoomHash, updateDevice, updateDeviceRoom } from "@/lib/rally-sync/device";
-import { playerPlan, refillCues } from "@/lib/rally-sync/garrison";
+import { currentWave, playerPlan, refillCues } from "@/lib/rally-sync/garrison";
 import type { LinkStatus } from "@/lib/rally-sync/realtime";
 import {
   formatRoomCode,
@@ -26,6 +26,9 @@ import {
 } from "@/lib/rally-sync/room";
 import { CuePlayer } from "@/lib/rally-sync/sound";
 import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, soundCues, withStartTimes } from "@/lib/rally-sync/timing";
+import { RALLY_SYNC_TOURS } from "@/lib/rally-sync/tours";
+import { resolveSteps } from "@/lib/tour/tour";
+import { tourLabels, useGuidedTour } from "../tour/GuidedTour";
 import { CoordinatorPanel } from "./CoordinatorPanel";
 import { CounterFocus, CounterSheet } from "./Counter";
 import { GarrisonBoard } from "./Garrison";
@@ -150,6 +153,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       sound={device.sound}
       soundReady={soundReady}
       wakeLock={device.wakeLock}
+      quietTour={now !== null && (garrison ? currentWave(room.garrison.rallies, now).length > 0 : rallyRunning(room.hitAt, now))}
       dict={dict}
     />
   );
@@ -226,7 +230,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       {statusBar}
 
       {/* Pinned under the site header (h-16 + border) in the last minute, wherever the page is scrolled. */}
-      <div className={clsx(urgent && "sticky top-17 z-30")}>
+      <div className={clsx(urgent && "sticky top-17 z-30")} data-tour="sync-focus">
         <FocusBlock me={myLeader} room={room} now={now} clock={clock} dict={dict} />
       </div>
 
@@ -236,22 +240,24 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
 
       {coordinatorPanel}
 
-      <LeaderList
-        leaders={others}
-        title={
-          <>
-            {myLeader ? dict["sync.leaders.others"] : dict["sync.leaders.title"]}{" "}
-            <span className="tabular">{myLeader ? `(${others.length})` : `(${others.length}/${MAX_LEADERS_PER_ROOM})`}</span>
-          </>
-        }
-        empty={myLeader ? null : dict["sync.leaders.empty"]}
-        code={code}
-        coordinatorToken={coordinatorToken}
-        gameOffsetSeconds={clock.offsetSeconds}
-        dict={dict}
-        onChanged={sync.refresh}
-        row={(leader, onEdit) => <LeaderRow leader={leader} now={now} room={room} quiet={!coordinatorToken} dict={dict} onEdit={onEdit} />}
-      />
+      <div data-tour="sync-leaders">
+        <LeaderList
+          leaders={others}
+          title={
+            <>
+              {myLeader ? dict["sync.leaders.others"] : dict["sync.leaders.title"]}{" "}
+              <span className="tabular">{myLeader ? `(${others.length})` : `(${others.length}/${MAX_LEADERS_PER_ROOM})`}</span>
+            </>
+          }
+          empty={myLeader ? null : dict["sync.leaders.empty"]}
+          code={code}
+          coordinatorToken={coordinatorToken}
+          gameOffsetSeconds={clock.offsetSeconds}
+          dict={dict}
+          onChanged={sync.refresh}
+          row={(leader, onEdit) => <LeaderRow leader={leader} now={now} room={room} quiet={!coordinatorToken} dict={dict} onEdit={onEdit} />}
+        />
+      </div>
     </div>
   );
 }
@@ -329,7 +335,11 @@ function BrowserName({
   );
 }
 
-/** One slim line: which room, whether updates are live, the clock, and icon switches for sound, screen and the game clock. */
+/**
+ * One slim line: which room, whether updates are live, the clock, icon switches
+ * for sound, screen and the game clock, and the "?" of the room's guided tour
+ * (its "New here?" line stays away while a rally runs or enemy rallies come in).
+ */
 function StatusBar({
   room,
   now,
@@ -339,6 +349,7 @@ function StatusBar({
   sound,
   soundReady,
   wakeLock,
+  quietTour,
   dict,
 }: {
   room: RoomState["room"];
@@ -349,14 +360,17 @@ function StatusBar({
   sound: boolean;
   soundReady: boolean;
   wakeLock: boolean;
+  quietTour: boolean;
   dict: Dictionary;
 }) {
   const [clockOpen, setClockOpen] = useState(false);
+  const roomTour = RALLY_SYNC_TOURS[room.mode];
+  const tour = useGuidedTour(roomTour, resolveSteps(roomTour, dict), tourLabels(dict), { quiet: quietTour });
   const canWakeLock = useSyncExternalStore(noSubscribe, () => "wakeLock" in navigator, () => false);
   const iconButton = "grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-card text-ink-muted hover:text-ink";
 
   return (
-    <section className="card px-4 py-3">
+    <section className="card px-4 py-3" data-tour="sync-status">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-0 flex-1 basis-40">
           <h2 className="font-extrabold wrap-break-word text-ink" dir="auto">
@@ -380,7 +394,7 @@ function StatusBar({
           </p>
         </div>
         <div className="ms-auto flex items-center gap-1.5">
-          <button type="button" className="me-1 text-end" onClick={() => setClockOpen((v) => !v)} aria-expanded={clockOpen} title={dict["sync.clockPanel.title"]}>
+          <button type="button" className="me-1 text-end" onClick={() => setClockOpen((v) => !v)} aria-expanded={clockOpen} title={dict["sync.clockPanel.title"]} data-tour="sync-clock">
             <span className="block text-xl/tight font-black text-ink tabular" dir="ltr">
               {now === null ? "--:--:--" : shown(now)}
             </span>
@@ -403,6 +417,7 @@ function StatusBar({
             type="button"
             className={iconButton}
             aria-pressed={sound}
+            data-tour="sync-sound"
             aria-label={sound ? dict["sync.sound.on"] : dict["sync.sound.off"]}
             title={sound ? dict["sync.sound.on"] : dict["sync.sound.off"]}
             onClick={() => updateDevice((d) => ({ ...d, sound: !d.sound }))}
@@ -415,6 +430,7 @@ function StatusBar({
               type="button"
               className={clsx(iconButton, !wakeLock && "opacity-50")}
               aria-pressed={wakeLock}
+              data-tour="sync-wake"
               aria-label={wakeLock ? dict["sync.wake.on"] : dict["sync.wake.off"]}
               title={wakeLock ? dict["sync.wake.on"] : dict["sync.wake.off"]}
               onClick={() => updateDevice((d) => ({ ...d, wakeLock: !d.wakeLock }))}
@@ -422,10 +438,13 @@ function StatusBar({
               <MonitorSmartphone className="size-4" aria-hidden />
             </button>
           )}
+          {tour.button}
         </div>
       </div>
+      {tour.nudge && <div className="mt-2">{tour.nudge}</div>}
       {sound && !soundReady && room.mode !== "counter" && <p className="mt-2 text-xs font-bold text-gold-ink">{dict["sync.sound.tap"]}</p>}
       {clockOpen && <ClockPanel now={now} clock={clock} offsetMs={offsetMs} dict={dict} />}
+      {tour.overlay}
     </section>
   );
 }
@@ -509,13 +528,13 @@ function MyEntry({
   if (!myLeader || !token) {
     if (!open) {
       return (
-        <button type="button" className={clsx("w-full", prominent ? "btn-primary" : "btn-ghost btn-sm")} onClick={() => setOpen(true)}>
+        <button type="button" className={clsx("w-full", prominent ? "btn-primary" : "btn-ghost btn-sm")} onClick={() => setOpen(true)} data-tour="sync-me">
           {dict["sync.join.toggle"]}
         </button>
       );
     }
     return (
-      <section className="card p-4 md:p-5">
+      <section className="card p-4 md:p-5" data-tour="sync-me">
         <h2 className="text-base font-extrabold text-ink">{dict["sync.join.leader"]}</h2>
         <p className="mt-1 mb-3 text-sm text-ink-muted">{dict["sync.join.leaderHint"]}</p>
         <LeaderForm
@@ -549,7 +568,7 @@ function MyEntry({
 
   if (!open) {
     return (
-      <section className="flex items-center gap-3 rounded-card border-2 border-primary/50 bg-primary-soft px-4 py-3">
+      <section className="flex items-center gap-3 rounded-card border-2 border-primary/50 bg-primary-soft px-4 py-3" data-tour="sync-me">
         <div className="min-w-0 flex-1">
           <p className="text-lg font-black wrap-break-word text-ink" dir="auto">
             {myLeader.name}
@@ -585,7 +604,7 @@ function MyEntry({
   const inRunningRally = runningHitAt !== null && myLeader.status === "active";
 
   return (
-    <section className="card p-4 md:p-5">
+    <section className="card p-4 md:p-5" data-tour="sync-me">
       <h2 className="text-base font-extrabold text-ink">{dict["sync.me.title"]}</h2>
       {inRunningRally ? (
         <p className="mt-2 mb-3 rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink">

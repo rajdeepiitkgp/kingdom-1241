@@ -55,7 +55,7 @@ async function FeedbackList({ locale, searchParams }: { locale: string; searchPa
           </Link>
         </EmptyRow>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3" data-tour="feedback-list">
           {plans.map((plan) => {
             const retro = retroByPlan.get(plan.id) ?? null;
             const title = pick(plan.title, "en") || plan.slug;
@@ -86,7 +86,7 @@ async function FeedbackList({ locale, searchParams }: { locale: string; searchPa
                     )}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2" data-tour="feedback-actions">
                   {retro ? (
                     <>
                       <Link href={adminPath(locale, `/feedback/${plan.id}`)} className="btn-primary btn-sm">

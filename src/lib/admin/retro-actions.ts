@@ -10,7 +10,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { type Localized, pick } from "@/lib/i18n/localized";
 import { elapsedMs, type Logger } from "@/lib/log";
 import { retroAiConfigured } from "@/lib/retro/ai";
-import { translateAndAnalyse } from "@/lib/retro/analyse";
+import { translateAndAnalyse, translateResponses } from "@/lib/retro/analyse";
 import type { AnalysisContext } from "@/lib/retro/analysis";
 import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -160,9 +160,47 @@ export async function deleteAllResponses(formData: FormData): Promise<void> {
  * is audited with its token usage. Identity never goes to the model: the
  * responses are loaded without it.
  */
+/** The summary is the biggest AI request (one call over every answer), so only the owner starts it; everyone sees the stored result. */
+const SUMMARY_OWNER_ONLY = "Only the owner runs the AI summary. You can still translate the answers.";
+
+/** "Translate answers": English versions of new written answers only (the small model, cheap); any moderator. */
+export async function translateRetrospective(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const locale = localeField(formData);
+  const planId = uuidField(formData, "planId");
+  if (!planId) return PLAN_GONE;
+  if (!retroAiConfigured()) return { status: "error", message: "The AI step is turned off: set ANTHROPIC_API_KEY (or GEMINI_API_KEY) in Vercel." };
+  const retro = await getRetrospectiveByPlan(planId);
+  if (!retro) return { status: "error", message: "This feedback form no longer exists." };
+  const responses = await listResponses(retro.id, { identity: false });
+  const started = performance.now();
+  try {
+    const result = await translateResponses(createAdminClient(), responses, { log });
+    await audit(access.user, "retro.translate", "kvk_retrospectives", retro.id, {
+      slug: retro.plan.slug,
+      translated: result.translated.size,
+      translationFailures: result.translationFailures,
+      requests: result.usage.requests,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      elapsedMs: elapsedMs(started),
+      summary: `${result.translated.size} responses translated`,
+    });
+    revalidatePath(resultsPath(locale, planId));
+    const failures = result.translationFailures > 0 ? ` ${result.translationFailures} could not be translated; try again later.` : "";
+    return { status: "saved", message: `Translated ${result.translated.size} response${result.translated.size === 1 ? "" : "s"}.${failures}` };
+  } catch (error) {
+    log.error("Translating the answers failed", { retro: retro.id, error: error instanceof Error ? error.message : String(error), elapsedMs: elapsedMs(started) });
+    return { status: "error", message: "Translating failed. Translations already stored are kept; try again in a moment." };
+  }
+}
+
 export async function analyseRetrospective(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
+  if (!access.user.isOwner) return { status: "error", message: SUMMARY_OWNER_ONLY };
   const log = await actionLogger();
   const locale = localeField(formData);
   const planId = uuidField(formData, "planId");

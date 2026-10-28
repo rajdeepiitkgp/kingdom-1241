@@ -24,6 +24,9 @@ const PAGES = {
     introHint:
       "Shown above the rallies. **bold**, *italics*, lists with “- ”. {{when}}, {{date}}, {{time}} and {{utc}} show the battle time in each leader's own words and time zone. Translated automatically after saving.",
     published: "Published — leaders can open the page while this plan is active",
+    passwordTour: "leaders-password",
+    introTour: "leaders-intro",
+    publishTour: "leaders-publish",
     save: "Save leader page",
     create: "Create leader page",
   },
@@ -36,6 +39,9 @@ const PAGES = {
     introHint:
       "Shown above the checklist. **bold**, *italics*, lists with “- ”. {{when}}, {{date}}, {{time}} and {{utc}} show the battle time in each reader's own words and time zone. Translated automatically after saving.",
     published: "Published — the commander and coordinators can open the page while this plan is active",
+    passwordTour: "checklist-password",
+    introTour: "checklist-intro",
+    publishTour: "checklist-publish",
     save: "Save checklist page",
     create: "Create checklist page",
   },
@@ -58,7 +64,7 @@ export function PageBriefForm({ area, locale, planId, brief }: { area: keyof typ
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
 
-      <Field label={page.passwordLabel} htmlFor={`${area}-password`} error={errors.password} hint={page.passwordHint}>
+      <Field label={page.passwordLabel} htmlFor={`${area}-password`} error={errors.password} hint={page.passwordHint} tour={page.passwordTour}>
         <CodeSuggestInput
           id={`${area}-password`}
           name="password"
@@ -73,11 +79,11 @@ export function PageBriefForm({ area, locale, planId, brief }: { area: keyof typ
         />
       </Field>
 
-      <Field label={page.introLabel} htmlFor={`${area}-intro`} error={errors.introSource} hint={page.introHint}>
+      <Field label={page.introLabel} htmlFor={`${area}-intro`} error={errors.introSource} hint={page.introHint} tour={page.introTour}>
         <textarea id={`${area}-intro`} name="introSource" className="input min-h-40 font-mono text-sm" defaultValue={brief?.introSource ?? ""} dir="ltr" />
       </Field>
 
-      <label className="flex items-center gap-2 text-sm font-bold text-ink">
+      <label className="flex items-center gap-2 text-sm font-bold text-ink" data-tour={page.publishTour}>
         <input key={`published-${String(brief?.published ?? true)}`} type="checkbox" name="published" defaultChecked={brief?.published ?? true} className="size-4" />
         {page.published}
       </label>

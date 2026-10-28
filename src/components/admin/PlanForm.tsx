@@ -39,7 +39,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
       {plan && <input type="hidden" name="id" value={plan.id} />}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Title (English)" htmlFor="title" error={errors.title}>
+        <Field label="Title (English)" htmlFor="title" error={errors.title} tour="plan-title">
           <input id="title" name="title" className="input" defaultValue={pick(plan?.title, "en")} required maxLength={120} />
         </Field>
         <Field label="Event" htmlFor="eventType">
@@ -59,6 +59,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           hint="Enter the UTC time, in the future; players see it in their own time zone."
           error={errors.battleAt}
           fill={windowFill?.start}
+          tour="plan-time"
         />
         <DateTimeField
           id="battleEndAt"
@@ -76,13 +77,13 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           </button>
           <span className="text-xs text-ink-faint">On the start date you picked (or the next day). Change either time afterwards if this battle differs.</span>
         </div>
-        <Field label="Minimum hero stars" htmlFor="minHeroStars" error={errors.minHeroStars}>
+        <Field label="Minimum hero stars" htmlFor="minHeroStars" error={errors.minHeroStars} tour="plan-heroes">
           <input id="minHeroStars" name="minHeroStars" type="number" min={0} max={5} className="input" defaultValue={plan?.minHeroStars ?? 4} required />
         </Field>
         <Field label="Top expedition skill level" htmlFor="minSkillLevel" error={errors.minSkillLevel} hint="The top-right skill with the flag icon.">
           <input id="minSkillLevel" name="minSkillLevel" type="number" min={0} max={5} className="input" defaultValue={plan?.minSkillLevel ?? 5} required />
         </Field>
-        <Field label="Shared password" htmlFor="password" error={errors.password} hint="Changing it logs every player out of the plan page.">
+        <Field label="Shared password" htmlFor="password" error={errors.password} hint="Changing it logs every player out of the plan page." tour="plan-password">
           <CodeSuggestInput
             id="password"
             name="password"
@@ -103,12 +104,13 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
       <Field
         label="Introduction (English, Markdown)"
         htmlFor="introSource"
+        tour="plan-intro"
         hint="**bold**, *italics*, lists with “- ”, quotes with “> ”. Write {{when}}, {{date}}, {{time}} or {{utc}} instead of “tomorrow” or a time: every player sees the battle time in their own words and time zone (“tomorrow”, “Sunday, November 8”, “15:00”, “14:00 UTC”), so the text never goes stale. Translated into the other languages automatically after saving."
       >
         <textarea id="introSource" name="introSource" className="input min-h-56 font-mono text-sm" defaultValue={plan?.introSource ?? ""} dir="ltr" />
       </Field>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-ink">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-ink" data-tour="plan-flags">
         <label className="flex items-center gap-2">
           <input key={`active-${String(plan?.active ?? false)}`} type="checkbox" name="active" defaultChecked={plan?.active ?? false} className="size-4" />
           Active — the plan players see on /kvk (only one can be active)
@@ -119,7 +121,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3" data-tour="plan-save">
         <SubmitButton>{plan ? "Save plan" : "Create plan"}</SubmitButton>
         <button type="reset" className="btn-ghost btn-sm">
           Discard changes

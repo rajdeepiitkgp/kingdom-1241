@@ -289,6 +289,11 @@ body {
   .prose-game tbody td { @apply border-t border-line px-3 py-2 align-top; }
   .prose-game tbody tr:nth-child(even) td { background-color: color-mix(in oklab, var(--card-soft) 60%, transparent); }
   .prose-game .table-wrap { @apply overflow-x-auto; }
+
+  /* Guided tours (GuidedTour.tsx): the highlighted element shows through a ring; the spread shadow dims everything else. */
+  .tour-spot {
+    box-shadow: 0 0 0 3px var(--primary), 0 0 0 200vmax rgb(0 0 0 / 0.6);
+  }
 }
 
 /* View transitions: a short crossfade for route changes (the "page" class comes from the

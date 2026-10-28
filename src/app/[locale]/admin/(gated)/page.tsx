@@ -34,7 +34,7 @@ async function Overview({ locale }: { locale: string }) {
 
   return (
     <div className="space-y-6">
-      <section>
+      <section data-tour="admin-active-plan">
         <SectionTitle
           icon="⚔️"
           title="Battle plan"
@@ -67,11 +67,11 @@ async function Overview({ locale }: { locale: string }) {
         )}
       </section>
 
-      <AdminSection title="Your profile" hint="Your in-game name is shown in the user list and on every change you make.">
+      <AdminSection title="Your profile" tour="admin-profile" hint="Your in-game name is shown in the user list and on every change you make.">
         <ProfileForm gameName={user.gameName} allianceTag={user.allianceTag} alliances={alliances} path={adminPath(locale)} />
       </AdminSection>
 
-      <AdminSection title="Recent changes" hint="The last edits made in the admin area, newest first.">
+      <AdminSection title="Recent changes" tour="admin-audit" hint="The last edits made in the admin area, newest first.">
         {entries.length === 0 ? (
           <EmptyRow>Nothing yet.</EmptyRow>
         ) : (

@@ -39,7 +39,7 @@ export function ChecklistPlan({ plan, dict, locale }: { plan: KvkChecklistPlan; 
         locale={locale}
       />
 
-      <section>
+      <section data-tour="checklist-board">
         <SectionTitle icon="✅" title={dict["checklist.items"]} />
         {groups.length === 0 ? (
           <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["checklist.empty"]}</p>
@@ -52,7 +52,7 @@ export function ChecklistPlan({ plan, dict, locale }: { plan: KvkChecklistPlan; 
       </section>
 
       {commander.length > 0 && (
-        <section>
+        <section data-tour="checklist-orders">
           <SectionTitle icon="🎖️" title={dict["checklist.commander"]} />
           <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["checklist.commanderHint"]}</p>
           <RuleLines rules={commander} dict={dict} locale={locale} />
@@ -60,7 +60,7 @@ export function ChecklistPlan({ plan, dict, locale }: { plan: KvkChecklistPlan; 
       )}
 
       {general.length > 0 && (
-        <section>
+        <section data-tour="checklist-guidelines">
           <SectionTitle icon="📌" title={dict["checklist.guidelines"]} />
           <RuleLines rules={general} dict={dict} locale={locale} />
         </section>

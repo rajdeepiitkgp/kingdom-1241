@@ -40,7 +40,7 @@ export function LanguageSwitcher({
   const current = languages.find((l) => l.code === locale);
 
   return (
-    <label className="relative inline-flex shrink-0 items-center rounded-full has-focus-visible:ring-4 has-focus-visible:ring-primary/40">
+    <label className="relative inline-flex shrink-0 items-center rounded-full has-focus-visible:ring-4 has-focus-visible:ring-primary/40" data-tour="site-language">
       <span className="sr-only">{label}</span>
       <span
         className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-card px-3 text-sm font-extrabold text-ink shadow-[0_4px_0_0_var(--line)]"

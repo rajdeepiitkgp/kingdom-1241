@@ -1,27 +1,31 @@
 import Link from "next/link";
 import { formatGameName } from "@/lib/admin/profile";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { signOut } from "@/lib/auth/actions";
 import { adminPath } from "@/lib/auth/paths";
 import { canManageUsers, ROLE_LABELS } from "@/lib/auth/roles";
 import type { CurrentUser } from "@/lib/auth/server";
+import { AdminGuide } from "./AdminGuide";
 
-/** Admin top bar: section links, who is signed in, sign-out. English only (council tool). */
+/** Admin top bar: section links, the page's guide, who is signed in, sign-out. English only (council tool). */
 export function AdminShell({ user, locale, children }: { user: CurrentUser; locale: string; children: ReactNode }) {
   const links = [
     { href: adminPath(locale), label: "Overview" },
-    { href: adminPath(locale, "/kvk"), label: "Battle plans" },
-    { href: adminPath(locale, "/feedback"), label: "Feedback" },
-    { href: adminPath(locale, "/rally-sync"), label: "Rally Sync" },
-    ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users" }] : []),
+    { href: adminPath(locale, "/kvk"), label: "Battle plans", tour: "admin-nav-plans" },
+    { href: adminPath(locale, "/feedback"), label: "Feedback", tour: "admin-nav-feedback" },
+    { href: adminPath(locale, "/rally-sync"), label: "Rally Sync", tour: "admin-nav-rally" },
+    ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users", tour: "admin-nav-users" }] : []),
   ];
   return (
     <div dir="ltr">
       <div className="card-soft mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         <span className="text-base font-black text-ink">🛠️ Admin</span>
+        <Suspense fallback={null}>
+          <AdminGuide />
+        </Suspense>
         <nav className="flex flex-wrap gap-1" aria-label="Admin sections">
           {links.map((link) => (
-            <Link key={link.href} href={link.href} className="btn-ghost btn-sm">
+            <Link key={link.href} href={link.href} className="btn-ghost btn-sm" data-tour={link.tour}>
               {link.label}
             </Link>
           ))}
@@ -29,7 +33,9 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
         <div className="ms-auto flex flex-wrap items-center gap-2 text-sm">
           <span className="font-bold text-ink">{formatGameName(user.gameName, user.allianceTag) ?? user.displayName}</span>
           {user.gameName && <span className="text-xs text-ink-faint">({user.displayName})</span>}
-          <span className="chip bg-card">{user.isOwner ? "Owner" : ROLE_LABELS[user.role]}</span>
+          <span className="chip bg-card" data-tour="admin-role">
+            {user.isOwner ? "Owner" : ROLE_LABELS[user.role]}
+          </span>
           <form action={signOut}>
             <input type="hidden" name="locale" value={locale} />
             <button type="submit" className="btn-ghost btn-sm">

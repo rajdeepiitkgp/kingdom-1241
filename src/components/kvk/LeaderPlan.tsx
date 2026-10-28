@@ -73,7 +73,7 @@ export function LeaderPlan({
 
       {/* Instructions, by audience */}
       {ruleGroups.length > 0 && (
-        <section>
+        <section data-tour="leaders-rules">
           <SectionTitle icon="📋" title={dict["leaders.instructions"]} />
           <div className="grid grid-cols-1 gap-4">
             {ruleGroups.map((group) => (
@@ -99,14 +99,14 @@ export function LeaderPlan({
       )}
 
       {plan.rallies.length === 0 ? (
-        <section>
+        <section data-tour="leaders-rallies">
           <SectionTitle icon="👑" title={dict["leaders.rallies"]} />
           <p className="card px-5 py-6 text-center font-semibold text-ink-muted">{dict["leaders.empty"]}</p>
         </section>
       ) : (
         <>
           {/* At a glance: who leads what, by battle team; each row jumps to the card */}
-          <section>
+          <section data-tour="leaders-glance">
             <SectionTitle icon="🗺️" title={dict["leaders.glance"]} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {teams.map((group) => (
@@ -141,7 +141,7 @@ export function LeaderPlan({
 
           {/* One card per rally, by battle team */}
           {teams.map((group) => (
-            <section key={group.team}>
+            <section key={group.team} data-tour="leaders-rallies">
               <SectionTitle icon={group.team === "kvk" ? "⚔️" : "🔁"} title={dict[`kvk.coordinators.${group.team}`]} />
               {group.team === teams[0].team && <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["leaders.ralliesHint"]}</p>}
               <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">

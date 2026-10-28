@@ -80,7 +80,7 @@ async function ChecklistEditor({
             <Link href={adminPath(locale, "/kvk")} className="btn-ghost btn-sm">
               ← Back to plans
             </Link>
-            <Link href={`/${locale}/kvk/checklist`} className="btn-ghost btn-sm" target="_blank" rel="noopener">
+            <Link href={`/${locale}/kvk/checklist`} className="btn-ghost btn-sm" target="_blank" rel="noopener" data-tour="plan-view">
               View page ↗
             </Link>
           </div>
@@ -118,7 +118,7 @@ async function ChecklistEditor({
   return (
     <div className="space-y-6">
       {header}
-      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active && plan.brief?.published ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`}>
+      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active && plan.brief?.published ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`} data-tour="checklist-status">
         {!plan.brief
           ? "This battle has no commander checklist yet: set its password below to create it."
           : plan.active && plan.brief.published
@@ -135,6 +135,7 @@ async function ChecklistEditor({
       {plan.brief && (
         <AdminSection
           id="checklist-items"
+          tour="checklist-items"
           title={`Checklist (${plan.items.length})`}
           hint="Everything that has to be done, by phase: before battle day, on battle day before the start, during and after the battle. The page groups the tasks by phase in this order; the commander ticks them off on their own device."
         >
@@ -163,6 +164,7 @@ async function ChecklistEditor({
       {plan.brief && (
         <AdminSection
           id="checklist-rules"
+          tour="checklist-rules"
           title="Commander's orders and guidelines"
           hint="Do / don't / info lines below the checklist: how the battle commander runs the battle and directs rally leaders and joiners, and the general guidelines for everyone who coordinates."
         >

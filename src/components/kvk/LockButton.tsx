@@ -9,7 +9,7 @@ const ACTIONS = { plan: lockKvk, leaders: lockLeaders, checklist: lockChecklist 
 /** Clears the page's access cookie (for shared devices). The page re-renders locked. */
 export function LockButton({ label, area = "plan" }: { label: string; area?: KvkArea }) {
   return (
-    <form action={ACTIONS[area]}>
+    <form action={ACTIONS[area]} data-tour="kvk-lock">
       <button type="submit" className="btn-ghost btn-sm">
         <LockKeyhole className="size-4" aria-hidden />
         {label}

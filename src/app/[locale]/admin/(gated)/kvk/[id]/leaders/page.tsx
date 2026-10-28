@@ -79,7 +79,7 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
             <Link href={adminPath(locale, "/kvk")} className="btn-ghost btn-sm">
               ← Back to plans
             </Link>
-            <Link href={`/${locale}/kvk/leaders`} className="btn-ghost btn-sm" target="_blank" rel="noopener">
+            <Link href={`/${locale}/kvk/leaders`} className="btn-ghost btn-sm" target="_blank" rel="noopener" data-tour="plan-view">
               View page ↗
             </Link>
           </div>
@@ -117,7 +117,7 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
   return (
     <div className="space-y-6">
       {header}
-      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active && plan.brief?.published ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`}>
+      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active && plan.brief?.published ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`} data-tour="leaders-status">
         {!plan.brief
           ? "This battle has no rally-leader page yet: set its password below to create it."
           : plan.active && plan.brief.published
@@ -134,6 +134,7 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
       {plan.brief && (
         <AdminSection
           id="leader-rules"
+          tour="leaders-rules"
           title="Leader instructions"
           hint="Do / don't / info lines above the rallies, for every leader or only rally leads or garrison leads: march time, when to start, pets, where to teleport, how to lead."
         >
@@ -160,7 +161,7 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
       )}
 
       {plan.brief && (
-        <AdminSection id="rallies" title={`Rallies (${plan.rallies.length})`} hint="One entry per rally: which rally, battle team, who leads it, where they stand, when they start, when they use pets, their own heroes and troop ratio.">
+        <AdminSection id="rallies" tour="leaders-rallies" title={`Rallies (${plan.rallies.length})`} hint="One entry per rally: which rally, battle team, who leads it, where they stand, when they start, when they use pets, their own heroes and troop ratio.">
           {plan.rallies.length === 0 ? (
             <EmptyRow>No rallies yet.</EmptyRow>
           ) : (

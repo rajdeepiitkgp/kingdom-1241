@@ -41,7 +41,7 @@ export function UnlockCard({ dict, area = "plan" }: { dict: Dictionary; area?: K
       : null;
 
   return (
-    <form action={formAction} className="card mx-auto max-w-md p-6 text-center md:p-8">
+    <form action={formAction} className="card mx-auto max-w-md p-6 text-center md:p-8" data-tour="kvk-unlock">
       <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
         <LockKeyhole className="size-8" />
       </span>

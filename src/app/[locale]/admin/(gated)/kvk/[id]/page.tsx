@@ -124,7 +124,7 @@ async function PlanEditor({
             <Link href={adminPath(locale, "/kvk")} className="btn-ghost btn-sm">
               ← Back to plans
             </Link>
-            <Link href={`/${locale}/kvk`} className="btn-ghost btn-sm" target="_blank" rel="noopener">
+            <Link href={`/${locale}/kvk`} className="btn-ghost btn-sm" target="_blank" rel="noopener" data-tour="plan-view">
               View page ↗
             </Link>
           </div>
@@ -154,7 +154,7 @@ async function PlanEditor({
   return (
     <div className="space-y-6">
       {header}
-      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`}>
+      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${plan.active ? "bg-success-soft text-success" : "bg-card-soft text-ink-muted"}`} data-tour="plan-status">
         {plan.active
           ? "This is the active plan: every save reaches players within seconds (translations follow shortly after)."
           : "This plan is not active: players don't see it until you tick “Active” and save."}
@@ -163,7 +163,7 @@ async function PlanEditor({
 
       <PlanForm plan={plan} locale={locale} />
 
-      <AdminSection id="rules" title="Battle-day instructions" hint="Short do / don't / info lines, shown as a checklist above the formations.">
+      <AdminSection id="rules" tour="plan-rules" title="Battle-day instructions" hint="Short do / don't / info lines, shown as a checklist above the formations.">
         {plan.rules.length === 0 ? (
           <EmptyRow>No instructions yet.</EmptyRow>
         ) : (
@@ -185,7 +185,7 @@ async function PlanEditor({
         </div>
       </AdminSection>
 
-      <AdminSection id="coordinators" title="Coordinators" hint="Who players listen to on battle day. [KvK] rallies the castle, [TMP] counter-rallies.">
+      <AdminSection id="coordinators" tour="plan-coordinators" title="Coordinators" hint="Who players listen to on battle day. [KvK] rallies the castle, [TMP] counter-rallies.">
         {plan.coordinators.length === 0 ? (
           <EmptyRow>No coordinators yet.</EmptyRow>
         ) : (
@@ -213,6 +213,7 @@ async function PlanEditor({
 
       <AdminSection
         id="formations"
+        tour="plan-formations"
         title={`Formations (${plan.formations.length} of ${MAX_FORMATIONS})`}
         hint="One entry per troop-ratio preset players save in the game. Leave a hero slot on “Any hero” when players may choose."
       >
@@ -287,6 +288,7 @@ async function PlanEditor({
 
       <AdminSection
         id="feedback"
+        tour="plan-feedback"
         title="Player feedback (retrospective)"
         hint="A short form players fill in after the battle, behind the same password as the plan: star ratings and a few optional lines. Open it after the battle, read the results under “Feedback”."
       >

@@ -20,12 +20,15 @@ import {
 import { type RetroConfig, shownTexts } from "./questions";
 
 /**
- * "Translate and analyse": first every response with text and no English
- * version yet is translated (batches, a few in parallel, each stored as soon
- * as it is back, so a run that stops halfway has still made progress), then
- * one summary over every response is produced and stored on the
- * retrospective. Idempotent: running it again only pays for new translations
- * and one more summary. Server only; the model calls are injectable for tests.
+ * The AI step, in two parts. "Translate answers" (any moderator, cheap):
+ * every response with text and no English version yet is translated
+ * (batches, a few in parallel, each stored as soon as it is back, so a run
+ * that stops halfway has still made progress). "Translate and analyse" (the
+ * owner only: one request reads every answer, the biggest AI call on the
+ * site) does that first, then produces one summary over every response and
+ * stores it on the retrospective. Both are idempotent:
+ * running again only pays for new translations (and one more summary).
+ * Server only; the model calls are injectable for tests.
  */
 
 export interface AnalyseOptions {
@@ -34,6 +37,13 @@ export interface AnalyseOptions {
   now?: Date;
   /** How many translation batches run at the same time. */
   concurrency?: number;
+}
+
+export interface TranslateResult {
+  /** The English texts stored in this run, by response id. */
+  translated: Map<string, Record<string, string>>;
+  translationFailures: number;
+  usage: AnalysisUsage;
 }
 
 export interface AnalyseResult {
@@ -57,7 +67,8 @@ function addUsage(total: AnalysisUsage, result: { inputTokens: number; outputTok
   total.outputTokens += result.outputTokens;
 }
 
-export async function translateAndAnalyse(admin: SupabaseClient, retro: AnalyseTarget, responses: readonly RetroResponse[], options: AnalyseOptions = {}): Promise<AnalyseResult> {
+/** Part one alone: English versions of the responses that have none yet. */
+export async function translateResponses(admin: SupabaseClient, responses: readonly RetroResponse[], options: AnalyseOptions = {}): Promise<TranslateResult> {
   const generate = options.generate ?? defaultGenerate;
   const log = options.log;
   const now = options.now ?? new Date();
@@ -65,7 +76,7 @@ export async function translateAndAnalyse(admin: SupabaseClient, retro: AnalyseT
   const translated = new Map<string, Record<string, string>>();
   let translationFailures = 0;
 
-  // 1. Translations, in parallel groups of batches.
+  // In parallel groups of batches.
   const batches = translationBatches(responses);
   const concurrency = Math.max(1, options.concurrency ?? 3);
   for (let i = 0; i < batches.length; i += concurrency) {
@@ -102,8 +113,15 @@ export async function translateAndAnalyse(admin: SupabaseClient, retro: AnalyseT
       }),
     );
   }
+  return { translated, translationFailures, usage };
+}
 
-  // 2. The summary over everything, with the fresh translations applied in memory.
+export async function translateAndAnalyse(admin: SupabaseClient, retro: AnalyseTarget, responses: readonly RetroResponse[], options: AnalyseOptions = {}): Promise<AnalyseResult> {
+  const generate = options.generate ?? defaultGenerate;
+  const now = options.now ?? new Date();
+  const { translated, translationFailures, usage } = await translateResponses(admin, responses, options);
+
+  // The summary over everything, with the fresh translations applied in memory.
   const withEnglish = responses.map((r) => (translated.has(r.id) ? { ...r, textsEn: translated.get(r.id) as RetroResponse["textsEn"] } : r));
   const textKeys = shownTexts(retro.config).map((t) => t.key);
   const input = analysisPrompt(withEnglish, retro.config, retro.context);

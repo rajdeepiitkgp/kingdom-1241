@@ -10,7 +10,7 @@ export function PlanEditorTabs({ locale, planId, current }: { locale: string; pl
     { key: "checklist", href: adminPath(locale, `/kvk/${planId}/checklist`), label: "🎖️ Commander checklist" },
   ] as const;
   return (
-    <nav className="flex flex-wrap gap-2 rounded-2xl bg-card-soft p-1.5" aria-label="Pages of this battle">
+    <nav className="flex flex-wrap gap-2 rounded-2xl bg-card-soft p-1.5" aria-label="Pages of this battle" data-tour="plan-tabs">
       {tabs.map((tab) => (
         <Link
           key={tab.key}
