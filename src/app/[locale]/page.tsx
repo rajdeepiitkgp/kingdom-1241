@@ -100,7 +100,7 @@ export default async function HomePage() {
       </section>
 
       {/* Gift codes */}
-      <section>
+      <section data-tour="home-gift-codes">
         <SectionTitle icon="🎁" title={dict["home.giftCodes"]} />
         <GiftCodes codes={giftCodes} dict={dict} locale={locale} />
       </section>

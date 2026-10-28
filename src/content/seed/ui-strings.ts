@@ -61,6 +61,14 @@ export const UI_STRINGS = {
   "home.noGiftCodes": { en: "No active gift codes right now.", de: "Aktuell keine aktiven Geschenkcodes.", ko: "현재 사용 가능한 선물 코드가 없습니다.", pl: "Brak aktywnych kodów.", ar: "لا توجد رموز هدايا نشطة حاليًا." },
   "home.expires": { en: "Expires", de: "Läuft ab", ko: "만료", pl: "Wygasa", ar: "ينتهي" },
   "home.noExpiry": { en: "No known expiry", de: "Kein bekanntes Ablaufdatum", ko: "만료일 미정", pl: "Brak znanej daty wygaśnięcia", ar: "لا يوجد تاريخ انتهاء معروف" },
+  "home.giftCodesSource": {
+    en: "New codes come from {site}, checked every hour.",
+    de: "Neue Codes kommen von {site}, jede Stunde geprüft.",
+    ko: "새 코드는 {site}에서 매시간 확인해 가져옵니다.",
+    pl: "Nowe kody pochodzą z {site}, sprawdzane co godzinę.",
+    ar: "تأتي الرموز الجديدة من {site}، ويُتحقَّق منها كل ساعة.",
+  },
+  "home.giftCodesRedeem": { en: "Redeem on the official website", de: "Auf der offiziellen Website einlösen", ko: "공식 웹사이트에서 사용", pl: "Użyj na oficjalnej stronie", ar: "استبدلها على الموقع الرسمي" },
   "home.joinDiscord": { en: "Join our Discord", de: "Zu unserem Discord", ko: "디스코드 참여", pl: "Dołącz do Discorda", ar: "انضم إلى ديسكورد" },
 
   // Alliances
@@ -2252,6 +2260,13 @@ export const UI_STRINGS = {
     ko: "왕국 1241의 연맹들입니다.",
     pl: "Sojusze Królestwa 1241.",
     ar: "تحالفات المملكة 1241.",
+  },
+  "tour.home.giftCodes.body": {
+    en: "Gift codes that work right now, newest first; new ones appear by themselves within the hour. {{ui:common.copy}} puts a code on your clipboard. Then, in the game, open your profile, Settings and Gift Code, and paste it.",
+    de: "Geschenkcodes, die gerade funktionieren, die neuesten zuerst; neue erscheinen innerhalb einer Stunde von selbst. {{ui:common.copy}} legt einen Code in die Zwischenablage. Öffne dann im Spiel dein Profil, die Einstellungen und Geschenkcode und füge ihn ein.",
+    ko: "지금 사용할 수 있는 선물 코드이며 최신 코드가 먼저 나옵니다. 새 코드는 한 시간 안에 자동으로 나타납니다. {{ui:common.copy}}를 누르면 코드가 클립보드에 복사됩니다. 그런 다음 게임에서 프로필, 설정, 선물 코드를 차례로 열고 붙여 넣으세요.",
+    pl: "Kody podarunkowe, które teraz działają, najnowsze na górze; nowe pojawiają się same w ciągu godziny. {{ui:common.copy}} kopiuje kod do schowka. Potem w grze otwórz profil, Ustawienia i Kod podarunkowy, i wklej go.",
+    ar: "رموز الهدايا التي تعمل الآن، الأحدث أولًا؛ وتظهر الرموز الجديدة تلقائيًا خلال ساعة. {{ui:common.copy}} ينسخ الرمز إلى الحافظة. ثم افتح في اللعبة ملفك الشخصي، ثم الإعدادات، ثم رمز الهدية، والصقه.",
   },
   "tour.kvk.unlock.title": { en: "The password", de: "Das Passwort", ko: "비밀번호", pl: "Hasło", ar: "كلمة المرور" },
   "tour.kvk.unlock.body": {
