@@ -35,8 +35,9 @@ src/
   components/             layout (header, bottom tab bar, language switcher, theme), home, kvk, tools, admin (forms), tour (the guided-tour "?" and overlay, with its read-aloud speaker)
   content/seed/           boilerplate content, heroes, placeholder battle plan, UI strings (en/de/ko/pl/ar) and reviewed machine translations (ui-reviewed.ts)
   lib/auth/               Supabase Auth session (cookies), identity → profile, roles, pre-authorisations, sign-in actions
-  lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile, owner settings), FormData parsers, shared action replies, audit log
+  lib/admin/              uncached admin loaders, Server Actions (plan editor, users, profile, owner settings: Rally Sync capacity, languages, translation pause, password rules, feedback defaults), FormData parsers, shared action replies, audit log
   lib/data/               cached loaders ('use cache' + tags), cache tags per table, Supabase ↔ app type mappers
+  lib/config/             the owner's settings (table app_config): read and write, tolerant number settings, the readers the site uses (defaults on any problem)
   lib/i18n/               language registry (direction, font, translation style), fallback helper, negotiation, the translation review's checks (ui-review.ts, content-review.ts)
   lib/kvk/                password locks (one signed cookie per page: plan, leaders, checklist), Server Actions, formation helpers, the prep-week schedule and item × day table (`prep.ts`)
   lib/rally-sync/         Rally Sync: timing maths, garrison refills, the counter-rally order, game-chat texts and room rules (pure), password/cookie/invite signatures, storage (Supabase or in-memory for local review), Server Actions, a small Realtime client, device memory, countdown sounds, the room limits per type (capacity)
