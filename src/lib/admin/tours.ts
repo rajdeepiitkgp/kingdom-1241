@@ -22,6 +22,7 @@ export const ADMIN_TOUR_LABELS = {
   done: "Done",
   close: "Close the guide",
   step: "Step {n} of {total}",
+  empty: "Nothing on this page to walk through right now.",
 };
 
 const step = (target: string | null, title: string, body: string) => ({ target, title, body });

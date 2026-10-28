@@ -39,7 +39,7 @@ export async function RetroGate({ dict, locale }: { dict: Dictionary; locale: st
   return (
     <div className="space-y-6">
       <KvkTabs locale={locale} dict={dict} current="feedback" />
-      <section className="card relative overflow-hidden p-5 md:p-7">
+      <section className="card relative overflow-hidden p-5 md:p-7" data-tour="retro-header">
         <div className="pointer-events-none absolute -inset-e-12 -top-12 size-44 rounded-full bg-gold/25 blur-2xl" aria-hidden />
         <div className="relative">
           <p className="flex flex-wrap items-center gap-2">
@@ -67,7 +67,7 @@ export async function RetroGate({ dict, locale }: { dict: Dictionary; locale: st
           locale={locale}
         />
       ) : (
-        <Note icon="🔒" text={dict["retro.closed"]} />
+        <Note icon="🔒" text={dict["retro.closed"]} tour="retro-closed" />
       )}
 
       <p className="text-center">
@@ -79,9 +79,9 @@ export async function RetroGate({ dict, locale }: { dict: Dictionary; locale: st
   );
 }
 
-function Note({ icon, text }: { icon: string; text: string }) {
+function Note({ icon, text, tour }: { icon: string; text: string; tour?: string }) {
   return (
-    <p className="card mx-auto max-w-md px-5 py-8 text-center font-semibold text-ink-muted">
+    <p className="card mx-auto max-w-md px-5 py-8 text-center font-semibold text-ink-muted" data-tour={tour}>
       <span className="mb-2 block text-4xl" aria-hidden>
         {icon}
       </span>

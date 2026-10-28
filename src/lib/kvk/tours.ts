@@ -18,6 +18,7 @@ export const KVK_TOURS = {
     version: 1,
     steps: [
       uiStep("kvk-unlock", "kvk.unlock"),
+      uiStep("kvk-tabs", "kvk.tabs"),
       header,
       uiStep("kvk-feedback", "kvk.feedback"),
       uiStep("kvk-rules", "kvk.rules"),
@@ -53,6 +54,10 @@ export const KVK_TOURS = {
     version: 1,
     steps: [
       uiStep("kvk-unlock", "feedback.unlock"),
+      uiStep("kvk-tabs", "kvk.tabs"),
+      uiStep("retro-header", "feedback.header"),
+      uiStep("retro-done", "feedback.done"),
+      uiStep("retro-closed", "feedback.closed"),
       uiStep("retro-you", "feedback.you"),
       uiStep("retro-ratings", "feedback.ratings"),
       uiStep("retro-texts", "feedback.texts"),

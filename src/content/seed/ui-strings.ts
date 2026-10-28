@@ -2465,6 +2465,39 @@ export const UI_STRINGS = {
     pl: "Rada czyta odpowiedzi bez imion; tylko właściciel strony widzi, kto co napisał.",
     ar: "يقرأ المجلس الإجابات بلا أسماء؛ مالك الموقع وحده يرى من كتب ماذا.",
   },
+  "tour.empty": { en: "Nothing on this page to walk through right now.", de: "Auf dieser Seite gibt es gerade nichts zu zeigen.", ko: "지금은 이 페이지에서 안내할 내용이 없습니다.", pl: "Na tej stronie nie ma teraz nic do pokazania.", ar: "لا يوجد في هذه الصفحة الآن ما يمكن شرحه." },
+  "tour.kvk.tabs.title": { en: "Plan and feedback", de: "Plan und Feedback", ko: "계획과 피드백", pl: "Plan i opinie", ar: "الخطة والرأي" },
+  "tour.kvk.tabs.body": {
+    en: "While the feedback form is open, switch here between the battle plan and the form.",
+    de: "Solange das Feedback-Formular offen ist, wechselst du hier zwischen Schlachtplan und Formular.",
+    ko: "피드백 양식이 열려 있는 동안 여기서 전투 계획과 양식을 오갈 수 있습니다.",
+    pl: "Póki formularz opinii jest otwarty, przełączasz się tu między planem bitwy a formularzem.",
+    ar: "ما دام نموذج الرأي مفتوحًا، تنتقل هنا بين خطة المعركة والنموذج.",
+  },
+  "tour.feedback.header.title": { en: "The battle", de: "Die Schlacht", ko: "전투", pl: "Bitwa", ar: "المعركة" },
+  "tour.feedback.header.body": {
+    en: "The battle this form is about and what the council wants to learn from you.",
+    de: "Um welche Schlacht es geht und was der Rat von dir erfahren möchte.",
+    ko: "이 양식이 다루는 전투와 운영진이 알고 싶은 내용입니다.",
+    pl: "Jakiej bitwy dotyczy formularz i czego rada chce się od ciebie dowiedzieć.",
+    ar: "المعركة التي يخصها هذا النموذج وما يريد المجلس معرفته منك.",
+  },
+  "tour.feedback.done.title": { en: "Sent", de: "Gesendet", ko: "보냄", pl: "Wysłano", ar: "أُرسلت" },
+  "tour.feedback.done.body": {
+    en: "Your answer is in, thank you. The council reads every answer; there is one per Governor ID.",
+    de: "Deine Antwort ist da, danke. Der Rat liest jede Antwort; pro Gouverneurs-ID gibt es eine.",
+    ko: "답변이 접수되었습니다. 감사합니다. 운영진은 모든 답변을 읽으며, 영주 ID당 한 번만 답할 수 있습니다.",
+    pl: "Twoja odpowiedź dotarła, dziękujemy. Rada czyta każdą odpowiedź; jedna na ID gubernatora.",
+    ar: "وصلت إجابتك، شكرًا. يقرأ المجلس كل إجابة؛ إجابة واحدة لكل معرّف حاكم.",
+  },
+  "tour.feedback.closed.title": { en: "Closed", de: "Geschlossen", ko: "마감됨", pl: "Zamknięte", ar: "مغلق" },
+  "tour.feedback.closed.body": {
+    en: "The form is closed for this battle. The council opens a new one after the next battle.",
+    de: "Das Formular ist für diese Schlacht geschlossen. Nach der nächsten Schlacht öffnet der Rat ein neues.",
+    ko: "이 전투의 양식은 마감되었습니다. 다음 전투가 끝나면 운영진이 새 양식을 엽니다.",
+    pl: "Formularz dla tej bitwy jest zamknięty. Po następnej bitwie rada otworzy nowy.",
+    ar: "النموذج مغلق لهذه المعركة. يفتح المجلس نموذجًا جديدًا بعد المعركة القادمة.",
+  },
 } satisfies Record<string, Localized>;
 
 export type UiKey = keyof typeof UI_STRINGS;

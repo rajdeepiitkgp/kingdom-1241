@@ -11,7 +11,7 @@ export function KvkTabs({ locale, dict, current }: { locale: string; dict: Dicti
     { key: "feedback", href: localePath(locale, "/kvk/feedback"), label: dict["kvk.tab.feedback"], Icon: MessageSquareHeart },
   ] as const;
   return (
-    <nav className="flex gap-2 rounded-2xl bg-card-soft p-1.5" aria-label={dict["kvk.title"]}>
+    <nav className="flex gap-2 rounded-2xl bg-card-soft p-1.5" aria-label={dict["kvk.title"]} data-tour="kvk-tabs">
       {tabs.map(({ key, href, label, Icon }) => {
         const active = key === current;
         return (

@@ -20,6 +20,8 @@ export interface TourLabels {
   close: string;
   /** With `{n}` and `{total}`. */
   step: string;
+  /** The one card shown when none of the tour's parts is on the page (a "?" never does nothing). */
+  empty: string;
 }
 
 export const tourLabels = (dict: Dictionary): TourLabels => ({
@@ -32,6 +34,7 @@ export const tourLabels = (dict: Dictionary): TourLabels => ({
   done: dict["tour.done"],
   close: dict["tour.close"],
   step: dict["tour.step"],
+  empty: dict["tour.empty"],
 });
 
 const CHANGE_EVENT = "kd1241:tours";
@@ -102,7 +105,7 @@ export function useGuidedTour(
   function start() {
     rememberSeen(tour);
     const shown = steps.filter((step) => step.target === null || onPage(step.target));
-    if (shown.length > 0) setOpen(shown);
+    setOpen(shown.length > 0 ? shown : [{ target: null, title: labels.open, body: labels.empty }]);
   }
   function close() {
     setOpen(null);
@@ -256,8 +259,8 @@ function TourOverlay({ steps, labels, dir, onClose }: { steps: TourStep[]; label
         <div key={index}>
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold tracking-wider text-ink-faint uppercase">{format(labels.step, { n: index + 1, total: steps.length })}</p>
-              <h2 id="tour-title" className="mt-0.5 text-lg font-extrabold wrap-break-word text-ink">
+              {steps.length > 1 && <p className="text-xs font-bold tracking-wider text-ink-faint uppercase">{format(labels.step, { n: index + 1, total: steps.length })}</p>}
+              <h2 id="tour-title" className={clsx("text-lg font-extrabold wrap-break-word text-ink", steps.length > 1 && "mt-0.5")}>
                 {step.title}
               </h2>
             </div>

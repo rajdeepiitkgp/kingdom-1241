@@ -124,7 +124,7 @@ export function RetroForm({
 
   if (storedDone || state.status === "ok") {
     return (
-      <section className="card p-6 text-center md:p-8" aria-live="polite">
+      <section className="card p-6 text-center md:p-8" aria-live="polite" data-tour="retro-done">
         <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-success-soft text-success" aria-hidden>
           <CircleCheck className="size-9" />
         </span>
