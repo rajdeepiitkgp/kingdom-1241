@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOwnerIdentity, parseOwner, parseOwners } from "@/lib/auth/owner";
+import { isOwnerIdentity, ownerLabel, parseOwner, parseOwners, productionOwnerProblem } from "@/lib/auth/owner";
 
 describe("owner configuration", () => {
   it("parses a Discord handle or an e-mail", () => {
@@ -29,5 +29,21 @@ describe("owner configuration", () => {
     expect(isOwnerIdentity({ discordUsername: null, email: "dev-admin@kingdom1241.local" }, owners)).toBe(true);
     expect(isOwnerIdentity({ discordUsername: "someone", email: "other@x.y" }, owners)).toBe(false);
     expect(parseOwners("")).toEqual([]);
+  });
+
+  it("lets a production build through only with exactly one Discord user id", () => {
+    expect(productionOwnerProblem("123456789012345678")).toBeNull();
+    expect(productionOwnerProblem(" 123456789012345678 ")).toBeNull();
+    expect(productionOwnerProblem(undefined)).toContain("not set");
+    expect(productionOwnerProblem(" ")).toContain("not set");
+    expect(productionOwnerProblem("rudy_1241")).toContain("Discord user id");
+    expect(productionOwnerProblem("dev-admin@kingdom1241.local")).toContain("Discord user id");
+    expect(productionOwnerProblem("123456789012345678,dev-admin@kingdom1241.local")).toContain("more than one");
+  });
+
+  it("shows an owner entry only in part on the settings page", () => {
+    expect(ownerLabel(parseOwner("123456789012345678")!)).toEqual({ kind: "discord_id", shown: "…5678" });
+    expect(ownerLabel(parseOwner("Dev-Admin@kingdom1241.local")!)).toEqual({ kind: "email", shown: "d…@kingdom1241.local" });
+    expect(ownerLabel(parseOwner("@Rudy_1241")!)).toEqual({ kind: "discord_handle", shown: "rudy_1241" });
   });
 });

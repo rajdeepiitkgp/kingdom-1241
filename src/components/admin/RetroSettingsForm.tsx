@@ -6,12 +6,11 @@ import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { saveRetrospective } from "@/lib/admin/retro-actions";
 import type { AdminRetrospective } from "@/lib/admin/retro-data";
+import type { FeedbackDefaults } from "@/lib/retro/form-defaults";
 import { adminPath } from "@/lib/auth/paths";
 import { pick } from "@/lib/i18n/localized";
 import {
   configFieldName,
-  DEFAULT_MAX_RESPONSES,
-  DEFAULT_RETENTION_DAYS,
   defaultConfig,
   INTRO_MAX,
   MAX_RESPONSES_LIMIT,
@@ -36,12 +35,15 @@ export function RetroSettingsForm({
   planTitle,
   locale,
   labels,
+  defaults,
 }: {
   retro: AdminRetrospective | null;
   planId: string;
   planTitle: string;
   locale: string;
   labels: Record<string, string>;
+  /** What a new form starts with (the owner's setting). */
+  defaults: FeedbackDefaults;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(saveRetrospective, IDLE_STATE);
   // Submitted inside a transition: React would otherwise reset the uncontrolled fields to
@@ -80,7 +82,7 @@ export function RetroSettingsForm({
           error={errors.closesAt}
         />
         <Field label="Maximum responses" htmlFor="retro-max" error={errors.maxResponses} hint="The form closes itself at this number; one answer per Governor ID.">
-          <input id="retro-max" name="maxResponses" type="number" min={1} max={MAX_RESPONSES_LIMIT} className="input" defaultValue={retro?.maxResponses ?? DEFAULT_MAX_RESPONSES} required />
+          <input id="retro-max" name="maxResponses" type="number" min={1} max={MAX_RESPONSES_LIMIT} className="input" defaultValue={retro?.maxResponses ?? defaults.maxResponses} required />
         </Field>
         <Field
           label="Keep answers for (days after the battle)"
@@ -88,7 +90,7 @@ export function RetroSettingsForm({
           error={errors.retentionDays}
           hint="The daily Maintenance task deletes the answers after this; export them before."
         >
-          <input id="retro-retention" name="retentionDays" type="number" min={RETENTION_RANGE.min} max={RETENTION_RANGE.max} className="input" defaultValue={retro?.retentionDays ?? DEFAULT_RETENTION_DAYS} required />
+          <input id="retro-retention" name="retentionDays" type="number" min={RETENTION_RANGE.min} max={RETENTION_RANGE.max} className="input" defaultValue={retro?.retentionDays ?? defaults.retentionDays} required />
         </Field>
       </div>
 

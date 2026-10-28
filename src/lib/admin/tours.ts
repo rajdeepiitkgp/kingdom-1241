@@ -339,7 +339,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   },
   settings: {
     id: "admin-settings",
-    version: 1,
+    version: 2,
     steps: [
       step(
         "settings-owner",
@@ -362,6 +362,27 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Every browser in a room keeps one live connection, and Supabase's free plan allows 200. So all rooms together, if full, may hold 180 browsers. Over that the box turns red, outlines the numbers and offers one to lower.",
       ),
       step("settings-save", "Save", "Save waits until the total fits. Undo changes goes back to what is saved; Use the recommended numbers puts back the battle-day defaults."),
+      step(
+        "settings-languages",
+        "Languages",
+        "The order of the language menu, and which languages players can pick. Hide one and nothing is translated into it any more; Show brings it back. A new language comes as a code change, with its game words and a review.",
+      ),
+      step(
+        "settings-languages-save",
+        "Save the languages",
+        "Arrange the list first: the arrows, Hide and Show change nothing for players until you press Save, which updates the menu on every page at once. Undo changes puts the list back as it is on the site.",
+      ),
+      step(
+        "settings-translation",
+        "Machine translation",
+        "A brake on the AI bill. While paused, edited texts show in English in the other languages and the feedback AI buttons wait. After resuming, run the Maintenance translate task once to fill the gaps.",
+      ),
+      step(
+        "settings-passwords",
+        "Wrong passwords",
+        "How quickly guessing a page or room password is slowed down for one address, and when the council is alerted. The line under the numbers says in plain words what they do.",
+      ),
+      step("settings-feedback", "Feedback forms", "What a new battle feedback form starts with: how long its answers are kept, and the most answers per battle."),
       step(
         null,
         "Good practice",

@@ -22,10 +22,11 @@ import { TranslationForm } from "@/components/admin/TranslationForm";
 import { getPlanForEditing, type AdminKvkPlan } from "@/lib/admin/kvk-data";
 import { type AdminRetrospective, getRetrospectiveByPlan } from "@/lib/admin/retro-data";
 import { utcLabel } from "@/lib/admin/format";
-import { introSourceFor, parseEditLang, TEXT_LIMITS } from "@/lib/admin/translation";
+import { introSourceFor, parseEditLang, TEXT_LIMITS, pendingNote } from "@/lib/admin/translation";
 import { MAX_FORMATIONS, nextFreeLabel } from "@/lib/admin/kvk-forms";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
+import { getFeedbackDefaults, getTranslationSettings } from "@/lib/config/settings";
 import { getAlliances, getHeroes, getLanguages } from "@/lib/data";
 import type { FormationRole, FormationSide } from "@/lib/data/types";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
@@ -98,13 +99,14 @@ async function PlanEditor({
     );
   }
 
-  const [plan, heroes, alliances, languages, retro, en] = await Promise.all([
+  const [plan, heroes, alliances, languages, retro, en, feedbackDefaults] = await Promise.all([
     getPlanForEditing(id),
     getHeroes(),
     getAlliances(),
     getLanguages(),
     getRetrospectiveByPlan(id),
     getDictionary("en"),
+    getFeedbackDefaults(),
   ]);
   if (!plan) notFound();
   const enabled = languages.filter((l) => l.enabled);
@@ -304,6 +306,7 @@ async function PlanEditor({
           planTitle={pick(plan.title, "en") || plan.slug}
           locale={locale}
           labels={Object.fromEntries([...RATING_QUESTIONS, ...TEXT_PROMPTS].map((q) => [q.key, en[q.labelKey]]))}
+          defaults={feedbackDefaults}
         />
       </AdminSection>
     </div>
@@ -315,7 +318,7 @@ async function PlanEditor({
  * next to its English source. Rows whose machine translation is still running
  * are locked and the page refreshes itself until they are done.
  */
-function TranslationMode({
+async function TranslationMode({
   plan,
   retro,
   locale,
@@ -331,16 +334,17 @@ function TranslationMode({
   const common = { locale, planId: plan.id, lang, langLabel };
   const text = (value: Localized | undefined, code: string) => (typeof value?.[code] === "string" ? value[code] : "");
   const anyPending = plan.pendingColumns.length > 0 || Object.keys(plan.pendingRows).length > 0 || (retro?.pendingColumns.length ?? 0) > 0;
+  const { paused } = await getTranslationSettings();
   const rowPending = (id: string, column: string) => (plan.pendingRows[id] ?? []).includes(column);
   const coordinators = plan.coordinators.filter((c) => text(c.note, "en").trim());
   const formations = plan.formations.filter((f) => text(f.note, "en").trim());
 
   return (
     <>
-      <PendingRefresher active={anyPending} />
+      <PendingRefresher active={anyPending && !paused} />
       <p className="rounded-xl bg-card-soft px-3 py-2 text-sm font-bold text-ink-muted">
         Corrections saved here apply to {langLabel} only and are never overwritten until the English text changes again.
-        {anyPending && " Some texts are still being machine-translated; they unlock automatically."}
+        {anyPending && pendingNote(paused)}
       </p>
 
       <AdminSection title="Plan texts">

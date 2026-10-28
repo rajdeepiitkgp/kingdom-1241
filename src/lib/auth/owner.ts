@@ -47,3 +47,36 @@ export function isOwnerIdentity(
     return Boolean(candidate.email) && identity.email === candidate.email;
   });
 }
+
+export type OwnerKind = "discord_id" | "discord_handle" | "email";
+
+/**
+ * What the settings page shows of an owner entry: its kind, and the value only
+ * as much as it takes to recognise it (the id's last four digits, the
+ * e-mail's first letter and domain), so a screenshot carries nothing to copy.
+ */
+export function ownerLabel(owner: OwnerIdentity): { kind: OwnerKind; shown: string } {
+  if (owner.discordId) return { kind: "discord_id", shown: `…${owner.discordId.slice(-4)}` };
+  if (owner.discordUsername) return { kind: "discord_handle", shown: owner.discordUsername };
+  const [local = "", domain = ""] = (owner.email ?? "").split("@");
+  return { kind: "email", shown: `${local.slice(0, 1)}…@${domain}` };
+}
+
+/**
+ * Why SITE_OWNER can't go to production, or null. The owner is decided when
+ * the site is set up (SETUP.md, step 0), and a production build without one
+ * fails rather than run a site nobody owns: exactly one entry, the Discord
+ * user id (a handle can be renamed and then registered by someone else).
+ */
+export function productionOwnerProblem(value: string | null | undefined): string | null {
+  const entries = (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (entries.length === 0) return "SITE_OWNER is not set. Set it to the owner's Discord user id in Vercel (SETUP.md, step 0).";
+  if (entries.length > 1) return "SITE_OWNER holds more than one owner. Production takes exactly one: the owner's Discord user id.";
+  if (!parseOwner(entries[0])?.discordId) {
+    return "SITE_OWNER must be the owner's Discord user id (a 17–20 digit number from Discord → Settings → Advanced → Developer Mode → Copy User ID), not a username or e-mail.";
+  }
+  return null;
+}

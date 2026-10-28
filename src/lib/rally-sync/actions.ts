@@ -6,7 +6,9 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { localeField } from "@/lib/admin/forms";
 import { localePath } from "@/lib/i18n/paths";
-import { ADDRESS_POLICY, retryAfter, triesLeft } from "@/lib/kvk/throttle";
+import { getPasswordRules } from "@/lib/config/settings";
+import { passwordPolicies } from "@/lib/kvk/password-rules";
+import { retryAfter, triesLeft } from "@/lib/kvk/throttle";
 import { addressHash, clearThrottle, loadThrottle, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId, type Logger } from "@/lib/log";
 import {
@@ -186,14 +188,15 @@ export async function unlockRoom(_previous: UnlockRoomState, formData: FormData)
   const opened = "room" in found ? found : null;
   // Every try is counted before anything is checked, so parallel requests can't outrun the lockout.
   const scope = opened ? roomScope(opened.room.id, address) : codeScope(address);
-  const attempt = throttling ? await takeTry(scope, now, ADDRESS_POLICY) : ({ allowed: true, state: null } as const);
+  const policy = passwordPolicies(await getPasswordRules()).address;
+  const attempt = throttling ? await takeTry(scope, now, policy) : ({ allowed: true, state: null } as const);
   if (!attempt.allowed) return { status: "error", error: "throttled", retryAt: attempt.retryAt };
 
   if (!opened || !(await verifyPassword(password, opened.room.passwordHash))) {
     log.info("Room unlock failed", { room: code, reason: opened ? "password" : "code", failures: attempt.state?.failures });
     const lock = retryAfter(attempt.state, now);
     if (lock > 0) return { status: "error", error: "throttled", retryAt: now + lock };
-    return { status: "error", error: "wrong", triesLeft: triesLeft(attempt.state, now, ADDRESS_POLICY) };
+    return { status: "error", error: "wrong", triesLeft: triesLeft(attempt.state, now, policy) };
   }
 
   const { store, room } = opened;
@@ -212,7 +215,7 @@ export async function unlockRoomWithKey(code: string, key: string): Promise<Sync
   const { store, room } = found;
   const scope = roomScope(room.id, address);
   const now = Date.now();
-  const attempt = store.kind === "supabase" ? await takeTry(scope, now, ADDRESS_POLICY) : ({ allowed: true, state: null } as const);
+  const attempt = store.kind === "supabase" ? await takeTry(scope, now, passwordPolicies(await getPasswordRules()).address) : ({ allowed: true, state: null } as const);
   if (!attempt.allowed) return { ok: false, error: "throttled", retryAt: attempt.retryAt };
 
   if (!isValidInviteKey(typeof key === "string" ? key : "", room.id, room.passwordHash)) {

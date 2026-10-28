@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { format } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
-import { negotiateLocale, parseAcceptLanguage } from "@/lib/i18n/negotiate";
+import { negotiateLocale, parseAcceptLanguage, pathInLocale } from "@/lib/i18n/negotiate";
 import { localePath, stripLocale, switchLocaleInPath } from "@/lib/i18n/paths";
 
 describe("pick", () => {
@@ -38,6 +38,24 @@ describe("negotiateLocale", () => {
     expect(parseAcceptLanguage("en-US,en;q=0.9,pl;q=0.8,*;q=0.1")).toEqual(["en-US", "en", "pl"]);
     expect(parseAcceptLanguage("de;q=0, pl")).toEqual(["pl"]);
     expect(parseAcceptLanguage(null)).toEqual([]);
+  });
+});
+
+describe("pathInLocale", () => {
+  it("puts the language in front of a path without one", () => {
+    expect(pathInLocale("/", "de")).toBe("/de");
+    expect(pathInLocale("/events", "de")).toBe("/de/events");
+    expect(pathInLocale("/tools/rally-sync/ABC234", "en")).toBe("/en/tools/rally-sync/ABC234");
+  });
+
+  it("swaps a language the site knows but doesn't show for the visitor's, so a hidden language's link opens the same page", () => {
+    expect(pathInLocale("/fr/kvk/prep", "en")).toBe("/en/kvk/prep");
+    expect(pathInLocale("/zh-TW", "ko")).toBe("/ko");
+  });
+
+  it("keeps a first segment that only looks like a language", () => {
+    expect(pathInLocale("/xx/events", "en")).toBe("/en/xx/events");
+    expect(pathInLocale("/constructor", "en")).toBe("/en/constructor");
   });
 });
 

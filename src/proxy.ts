@@ -4,8 +4,8 @@ import { SEED_LANGUAGES } from "@/content/seed/languages";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/auth/cookies";
 import { ADMIN_MARKER_COOKIE, markerCookieOptions } from "@/lib/auth/session-hint";
 import { loginPath } from "@/lib/auth/paths";
-import { LOCALE_COOKIE } from "@/lib/i18n/languages";
-import { negotiateLocale } from "@/lib/i18n/negotiate";
+import { isKnownLanguage, LOCALE_COOKIE } from "@/lib/i18n/languages";
+import { negotiateLocale, pathInLocale } from "@/lib/i18n/negotiate";
 import { createLogger, requestId } from "@/lib/log";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 
@@ -20,15 +20,19 @@ const log = createLogger("proxy");
  * then English.
  *
  * The enabled languages are read from Supabase (REST, cached in memory for a
- * few minutes) and fall back to the seed list when Supabase isn't configured.
+ * minute) and fall back to the seed list when Supabase isn't configured. The
+ * pages themselves check the language against the fresh list (root layout),
+ * so this copy only decides where a request goes.
  */
 
-const LIST_TTL_MS = 5 * 60 * 1000;
+const LIST_TTL_MS = 60 * 1000;
+/** A known language missing from the list may have just been shown: the list is read again, at most this often. */
+const RECHECK_MS = 10 * 1000;
 let cachedLocales: { codes: string[]; fetchedAt: number } | null = null;
 
-async function getEnabledLocales(): Promise<string[]> {
+async function getEnabledLocales(maxAge = LIST_TTL_MS): Promise<string[]> {
   const now = Date.now();
-  if (cachedLocales && now - cachedLocales.fetchedAt < LIST_TTL_MS) return cachedLocales.codes;
+  if (cachedLocales && now - cachedLocales.fetchedAt < maxAge) return cachedLocales.codes;
 
   const fallback = SEED_LANGUAGES.filter((l) => l.enabled).map((l) => l.code);
   const url = supabaseUrl();
@@ -59,7 +63,9 @@ async function getEnabledLocales(): Promise<string[]> {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const segments = pathname.split("/").filter(Boolean);
-  const locales = await getEnabledLocales();
+  let locales = await getEnabledLocales();
+  // Shown on the settings page since this list was read? The menu already offers it.
+  if (segments[0] && isKnownLanguage(segments[0]) && !locales.includes(segments[0])) locales = await getEnabledLocales(RECHECK_MS);
 
   // One id per request, forwarded to the page/action and echoed back, so a
   // player's screenshot of an error can be matched with the server log.
@@ -95,7 +101,7 @@ export async function proxy(request: NextRequest) {
     request.headers.get("accept-language"),
   );
   const url = request.nextUrl.clone();
-  url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
+  url.pathname = pathInLocale(pathname, locale);
   url.search = search;
   return NextResponse.redirect(url, 307);
 }

@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { productionOwnerProblem } from "./src/lib/auth/owner";
+
+// The owner is part of the setup (SETUP.md, step 0): a production build without a valid one fails
+// (the live deployment stays as it is); a preview build only warns. CI and local builds aren't checked.
+const ownerProblem = productionOwnerProblem(process.env.SITE_OWNER);
+if (ownerProblem && process.env.VERCEL_ENV === "production") throw new Error(ownerProblem);
+if (ownerProblem && process.env.VERCEL_ENV === "preview") console.warn(`Warning: ${ownerProblem}`);
 
 /** The Supabase project host, for the image optimiser's allow-list (empty when unknown, e.g. CI builds). */
 const supabaseHost = (() => {
