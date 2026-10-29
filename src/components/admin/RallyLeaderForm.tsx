@@ -10,6 +10,7 @@ import { DateTimeField } from "./DateTimeField";
 import { HeroSlotFields, type HeroSlots, type Ratio, RatioFields } from "./HeroRatioFields";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 const EMPTY_SLOTS: HeroSlots = [null, null, null];
 const DEFAULT_RATIO: Ratio = { infantry: 50, cavalry: 0, archers: 50 };
@@ -54,11 +55,13 @@ export function RallyLeaderForm({
     }
     return result;
   }, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = rally ? `rally-${rally.id}` : "rally-new";
   const errors = state.errors ?? {};
 
   return (
-    <form action={action} className="min-w-0 flex-1 space-y-4">
+    <form action={action} onSubmit={rally ? submit : undefined} className="min-w-0 flex-1 space-y-4">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {rally && <input type="hidden" name="id" value={rally.id} />}

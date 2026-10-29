@@ -7,13 +7,16 @@ import type { KvkChecklistItem } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 /** One task on the commander checklist: when it is due, what to do and an optional note. */
 export function ChecklistItemForm({ locale, planId, item }: { locale: string; planId: string; item: KvkChecklistItem | null }) {
   const [state, action] = useActionState<ActionState, FormData>(saveChecklistItem, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = item ? `citem-${item.id}` : "citem-new";
   return (
-    <form action={action} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[12rem_1fr_auto_auto] md:items-end">
+    <form action={action} onSubmit={item ? submit : undefined} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[12rem_1fr_auto_auto] md:items-end">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {item && <input type="hidden" name="id" value={item.id} />}
