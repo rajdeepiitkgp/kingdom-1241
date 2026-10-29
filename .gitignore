@@ -50,3 +50,10 @@ supabase/.branches
 
 # Translation review: hashes of secret battle-plan texts stay on this machine
 .claude/skills/translation-review/*.local.json
+
+# browser tests (npm run e2e)
+/playwright-report
+/test-results
+/blob-report
+/playwright/.cache
+/reports

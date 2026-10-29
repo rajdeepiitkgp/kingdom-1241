@@ -25,6 +25,21 @@ describe("rally sync limits (in-memory store, same rules as the database trigger
     delete (globalThis as { __rallySyncMemory?: unknown }).__rallySyncMemory;
   });
 
+  it("opens a fresh demo room for a browser test's code, of the mode its third letter names", async () => {
+    const store = memoryStore();
+    expect((await store.roomByCode("E2RAAB"))?.mode).toBe("rally");
+    expect((await store.roomByCode("E2GAAB"))?.mode).toBe("garrison");
+    expect((await store.roomByCode("E2CAAB"))?.mode).toBe("counter");
+    expect((await store.roomByCode("TEST23"))?.mode).toBe("rally");
+    expect((await store.roomByCode("DEFEND"))?.mode).toBe("garrison");
+    // Each code is its own room with its own placeholder leaders.
+    const [a, b] = [await store.roomByCode("E2RAAB"), await store.roomByCode("E2RACD")];
+    expect(a?.id).not.toBe(b?.id);
+    expect(await store.leaders(a!.id)).toHaveLength(3);
+    expect(await store.roomByCode("E2XAAB")).toBeNull();
+    expect(await store.roomByCode("K7M4QX")).toBeNull();
+  });
+
   it("limits open rooms per type, as the owner set them", async () => {
     const store = memoryStore();
     const codes = ["AAAAAA", "BBBBBB", "CCCCCC", "DDDDDD", "EEEEEE"];
