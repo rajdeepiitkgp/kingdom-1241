@@ -1,15 +1,18 @@
 import clsx from "clsx";
-import { ExternalLink, Users } from "lucide-react";
+import { ArrowRight, ExternalLink, Users } from "lucide-react";
+import Link from "next/link";
+import { alliancePath } from "@/lib/alliances/pages";
 import type { Alliance } from "@/lib/data/types";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
+import { localePath } from "@/lib/i18n/paths";
 
-function formatPower(power: number, locale: string): string {
+export function formatPower(power: number, locale: string): string {
   return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 2 }).format(power);
 }
 
 /** Gold / silver / bronze for the top three, like the in-game ranking. */
-const RANK_STYLES = [
+export const RANK_STYLES = [
   "bg-gold text-on-gold shadow-[0_2px_0_0_var(--gold-strong)]",
   "bg-slate-300 text-slate-800 shadow-[0_2px_0_0_#94a3b8] dark:bg-slate-400 dark:text-slate-900",
   "bg-amber-600 text-white shadow-[0_2px_0_0_#92400e]",
@@ -41,7 +44,9 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                   </span>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-extrabold wrap-break-word text-ink" dir="ltr">
-                      [{alliance.tag}] {alliance.name}
+                      <Link href={localePath(locale, alliancePath(alliance.tag))} className="hover:text-primary hover:underline">
+                        [{alliance.tag}] {alliance.name}
+                      </Link>
                     </h3>
                     {alliance.leader && (
                       <p className="text-sm wrap-break-word text-ink-muted">
@@ -85,7 +90,7 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                 )}
 
                 {description && (
-                  <p className="mt-3 text-sm text-ink-muted" dir="auto">
+                  <p className="mt-3 line-clamp-4 text-sm whitespace-pre-line text-ink-muted" dir="auto">
                     {description}
                   </p>
                 )}
@@ -109,11 +114,16 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                   </div>
                 )}
 
-                {alliance.discordUrl && (
-                  <a href={alliance.discordUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm mt-auto self-start pt-2">
-                    Discord <ExternalLink className="size-3.5" aria-hidden />
-                  </a>
-                )}
+                <div className="mt-auto flex flex-wrap gap-x-2 gap-y-3 pt-4">
+                  <Link href={localePath(locale, alliancePath(alliance.tag))} className="btn-ghost btn-sm">
+                    {dict["alliance.more"]} <ArrowRight className="size-3.5 rtl:rotate-180" aria-hidden />
+                  </Link>
+                  {alliance.discordUrl && (
+                    <a href={alliance.discordUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm">
+                      Discord <ExternalLink className="size-3.5" aria-hidden />
+                    </a>
+                  )}
+                </div>
               </article>
             </li>
           );

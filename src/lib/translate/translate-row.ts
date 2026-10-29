@@ -6,7 +6,7 @@ import type { Localized } from "@/lib/i18n/localized";
 import { restoreImages, type Shielded, shieldImages } from "./images";
 import { translateFields, withRetry } from "./provider";
 import { columnHashes, encodeColumnHashes, staleColumns, storedColumnHashes } from "./hash";
-import { getTranslatableTable, isTranslatableRow, type TranslatableTable } from "./tables";
+import { getTranslatableTable, isHtmlField, isTranslatableRow, type TranslatableTable } from "./tables";
 
 /**
  * Translate database rows into every enabled language that is missing or
@@ -169,7 +169,6 @@ export async function translateRows(
     return results;
   }
 
-  const htmlColumns = config.columns.filter((c) => c.html).map((c) => c.name);
   const context = contextFor(table);
   const failures = new Map<string, string>();
 
@@ -177,19 +176,20 @@ export async function translateRows(
     const needing = pending.filter((s) => s.needs.has(locale));
     for (const batch of chunk(needing)) {
       // Field keys are opaque ("f0", "f1", ...) so the model never sees ids.
-      const fieldMap: Array<{ key: string; state: RowState; column: string; shielded: Shielded }> = [];
+      const fieldMap: Array<{ key: string; state: RowState; column: string; html: boolean; shielded: Shielded }> = [];
       const fields: Record<string, string> = {};
       for (const state of batch) {
         for (const column of config.columns) {
           if (!state.needs.get(locale)?.has(column.name)) continue;
           const key = `f${fieldMap.length}`;
           // Images travel as placeholders and come back untouched (images.ts).
-          const shielded = column.html ? shieldImages(state.source[column.name]) : { text: state.source[column.name], images: [] };
-          fieldMap.push({ key, state, column: column.name, shielded });
+          const html = isHtmlField(table, state.id, column);
+          const shielded = html ? shieldImages(state.source[column.name]) : { text: state.source[column.name], images: [] };
+          fieldMap.push({ key, state, column: column.name, html, shielded });
           fields[key] = shielded.text;
         }
       }
-      const htmlFields = fieldMap.filter((f) => htmlColumns.includes(f.column)).map((f) => f.key);
+      const htmlFields = fieldMap.filter((f) => f.html).map((f) => f.key);
 
       log(`${table}: translating ${batch.length} row(s) into ${locale} (${Object.keys(fields).length} fields)`);
       try {
@@ -201,10 +201,9 @@ export async function translateRows(
           const translated = await withRetry(() => translateFields(ask, locale, { htmlFields: htmlFields.filter((key) => key in ask), context }));
           const moved: typeof fieldMap = [];
           for (const entry of open) {
-            const { key, state, column, shielded } = entry;
+            const { key, state, column, html: isHtml, shielded } = entry;
             const text = translated[key];
             if (typeof text !== "string" || !text.trim()) continue;
-            const isHtml = htmlColumns.includes(column);
             const restored = isHtml ? restoreImages(text, shielded) : text;
             if (restored === null) {
               moved.push(entry);

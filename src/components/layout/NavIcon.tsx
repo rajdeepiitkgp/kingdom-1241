@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, Calculator, Home, ScrollText, Swords } from "lucide-react";
+import { ArrowRightLeft, BookOpen, CalendarDays, Calculator, Home, ScrollText, Swords } from "lucide-react";
 import type { NavItem } from "./nav-items";
 
 export function NavIcon({ icon, className }: { icon: NavItem["icon"]; className?: string }) {
@@ -16,5 +16,7 @@ export function NavIcon({ icon, className }: { icon: NavItem["icon"]; className?
       return <Swords {...props} />;
     case "tools":
       return <Calculator {...props} />;
+    case "transfers":
+      return <ArrowRightLeft {...props} />;
   }
 }

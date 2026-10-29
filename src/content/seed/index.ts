@@ -90,6 +90,8 @@ export function buildSeedContent(): SeedContent {
       startsAt: e.startsAt,
       durationMinutes: e.durationMinutes,
       repeatEveryDays: e.repeatEveryDays,
+      alsoAfterDays: e.alsoAfterDays ?? null,
+      timing: e.timing ?? "fixed",
       guideSlug: e.guideSlug,
       published: true,
     })),

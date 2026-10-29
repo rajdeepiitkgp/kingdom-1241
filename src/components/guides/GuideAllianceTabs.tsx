@@ -4,7 +4,8 @@
 import clsx from "clsx";
 import { useRef, useState, useSyncExternalStore } from "react";
 import { SanitizedHtml } from "@/components/content/SanitizedHtml";
-import { GUIDE_ALLIANCE_KEY, openSection } from "@/lib/content/guide-sections";
+import { openSection } from "@/lib/content/guide-sections";
+import { readNoAlliance, readRememberedAlliance, rememberAlliance, subscribeAlliance } from "./alliance-memory";
 
 /** One alliance's section in the visitor's language, sanitised on the server (see guides/[slug]/page.tsx). */
 export interface GuideAllianceTab {
@@ -13,44 +14,13 @@ export interface GuideAllianceTab {
   html: string;
 }
 
-/** Same-tab writes don't fire "storage", so a pick tells the other guide tabs on the page through this event. */
-const PICKED = "kd1241:guide-alliance";
-
-function subscribe(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(PICKED, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(PICKED, onChange);
-  };
-}
-
-function readRemembered(): string | null {
-  try {
-    return window.localStorage.getItem(GUIDE_ALLIANCE_KEY);
-  } catch {
-    return null; // storage blocked: the tabs still work, the pick just isn't kept
-  }
-}
-
-const readServer = () => null;
-
-function remember(tag: string) {
-  try {
-    window.localStorage.setItem(GUIDE_ALLIANCE_KEY, tag);
-    window.dispatchEvent(new Event(PICKED));
-  } catch {
-    // Not kept on this device; the tab still switches.
-  }
-}
-
 /**
  * The guide's alliance sections as tabs, one per alliance that plays the event
  * its own way. Opens the alliance this device picked last (in any guide), else
  * the first; the server renders the first, so the page works without script.
  */
 export function GuideAllianceTabs({ tabs, labels }: { tabs: GuideAllianceTab[]; labels: { title: string; hint: string; tabs: string } }) {
-  const remembered = useSyncExternalStore(subscribe, readRemembered, readServer);
+  const remembered = useSyncExternalStore(subscribeAlliance, readRememberedAlliance, readNoAlliance);
   const [clicked, setClicked] = useState<string | null>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const activeTag = openSection(
@@ -63,7 +33,7 @@ export function GuideAllianceTabs({ tabs, labels }: { tabs: GuideAllianceTab[]; 
 
   function select(tag: string) {
     setClicked(tag);
-    remember(tag);
+    rememberAlliance(tag);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {

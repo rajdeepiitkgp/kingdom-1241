@@ -60,6 +60,13 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     en: "When your coordinator calls it",
     "zh-TW": "當你的協調員下令時",
   },
+  // Set before the first machine run: the top bar's label threshold was measured with these words (NavLinks.tsx).
+  "nav.transfers": {
+    en: "Transfers",
+    tr: "Transferler",
+    it: "Trasferimenti",
+    fr: "Transferts",
+  },
   "prep.group.best": {
     en: "Use today",
     tr: "Bugün kullan",

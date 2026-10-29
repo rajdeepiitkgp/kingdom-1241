@@ -1,14 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { BookOpen, CalendarClock, Repeat } from "lucide-react";
+import { BookOpen, CalendarClock, Repeat, Shield } from "lucide-react";
 import Link from "next/link";
 import type { GameEvent } from "@/lib/data/types";
-import { nextOccurrence, type Occurrence } from "@/lib/events/occurrences";
+import { daysUntil, nextOccurrence, type Occurrence, roundWeekdays } from "@/lib/events/occurrences";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
-import { formatLocalDateTime, formatUtcTime, MINUTE } from "@/lib/time";
+import { formatLocalDateTime, formatUtcDate, formatUtcTime, MINUTE } from "@/lib/time";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 import { eventColor } from "./event-colors";
@@ -66,11 +66,27 @@ export function EventList({
   );
 }
 
-function recurrenceLabel(event: GameEvent, dict: Dictionary): string {
+function recurrenceLabel(event: GameEvent, dict: Dictionary, locale: string): string {
   if (!event.repeatEveryDays) return dict["events.oneOff"];
-  if (event.repeatEveryDays === 1) return dict["events.daily"];
-  if (event.repeatEveryDays === 7) return dict["events.weekly"];
-  return format(dict["events.everyNDays"], { n: event.repeatEveryDays });
+  const every =
+    event.repeatEveryDays === 1
+      ? dict["events.daily"]
+      : event.repeatEveryDays === 7
+        ? dict["events.weekly"]
+        : format(dict["events.everyNDays"], { n: event.repeatEveryDays });
+  const days = roundWeekdays(event, locale);
+  return days ? `${every} · ${days}` : every;
+}
+
+/** "Tomorrow", "In 3 days" in the visitor's language (the dictionary's words where the browser lacks `Intl.RelativeTimeFormat`). */
+function relativeDay(days: number, dict: Dictionary, locale: string): string {
+  if (days <= 0) return dict["events.today"];
+  try {
+    const text = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(days, "day");
+    return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
+  } catch {
+    return format(dict["events.inDays"], { n: days });
+  }
 }
 
 function durationLabel(minutes: number, dict: Dictionary): string {
@@ -95,11 +111,14 @@ function EventCard({
   const { event, start, end, status } = occurrence;
   const colors = eventColor(event.color);
   const live = status === "live";
+  // An event each alliance times itself is a game day (UTC): it counts in days, without a clock time.
+  const byAlliance = event.timing === "alliance";
   const countdownMs = live ? end.getTime() - now.getTime() : start.getTime() - now.getTime();
-  const soon = !live && countdownMs < 60 * MINUTE;
+  const days = daysUntil(start, now);
+  const soon = !live && (byAlliance ? days <= 1 : countdownMs < 60 * MINUTE);
 
   return (
-    <article className={clsx("card flex gap-4 border-2 p-4", colors.ring, live && "ring-4 ring-success/30")}>
+    <article className={clsx("card flex gap-4 border-2 p-4", colors.ring, live && !byAlliance && "ring-4 ring-success/30")}>
       <span className={clsx("grid size-14 shrink-0 place-items-center rounded-2xl text-3xl", colors.icon)} aria-hidden>
         {event.icon}
       </span>
@@ -107,7 +126,7 @@ function EventCard({
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg/tight font-extrabold text-ink" dir="auto">{pick(event.name, locale)}</h3>
           <span className="chip bg-primary-soft text-primary">{dict[`events.category.${event.category}`]}</span>
-          {live && <span className="chip bg-success-soft text-success">● {dict["time.live"]}</span>}
+          {live && !byAlliance && <span className="chip bg-success-soft text-success">● {dict["time.live"]}</span>}
         </div>
 
         {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{pick(event.summary, locale)}</p>}
@@ -117,16 +136,22 @@ function EventCard({
             <CalendarClock className="size-4 shrink-0 text-primary" aria-hidden />
             <dt className="sr-only">{dict["events.next"]}</dt>
             <dd className="font-bold" suppressHydrationWarning>
-              {formatLocalDateTime(start, locale)}
+              {byAlliance ? formatUtcDate(start, locale) : formatLocalDateTime(start, locale)}
               <span className="ms-2 text-xs font-semibold whitespace-nowrap text-ink-faint" dir="ltr">
-                ({formatUtcTime(start)})
+                ({byAlliance ? "UTC" : formatUtcTime(start)})
               </span>
             </dd>
           </div>
+          {byAlliance && (
+            <p className="flex items-center gap-2 font-semibold text-ink">
+              <Shield className="size-4 shrink-0 text-primary" aria-hidden />
+              {dict["events.allianceTimes"]}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ink-muted">
             <span className="inline-flex items-center gap-1.5">
               <Repeat className="size-4 text-primary" aria-hidden />
-              {recurrenceLabel(event, dict)}
+              {recurrenceLabel(event, dict, locale)}
             </span>
             <span>
               {dict["events.duration"]}: <span className="font-bold text-ink">{durationLabel(event.durationMinutes, dict)}</span>
@@ -142,7 +167,9 @@ function EventCard({
             )}
             suppressHydrationWarning
           >
-            {live ? dict["time.endsIn"] : dict["time.startsIn"]} {formatDuration(countdownMs, dict, true)}
+            {byAlliance
+              ? relativeDay(live ? 0 : days, dict, locale)
+              : `${live ? dict["time.endsIn"] : dict["time.startsIn"]} ${formatDuration(countdownMs, dict, true)}`}
           </p>
           {event.guideSlug && (
             <Link href={localePath(locale, `/guides/${event.guideSlug}`)} className="btn-ghost btn-sm">

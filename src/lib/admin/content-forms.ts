@@ -14,7 +14,7 @@ export const BODY_MAX = 20_000;
 export const SUMMARY_MAX = 300;
 /** The line under every English Markdown field. */
 export const MARKDOWN_HINT =
-  "Use the buttons, or Markdown: **bold**, *italics*, ## heading, - list. Text copied from Discord keeps its formatting. Preview shows it as players will see it. Add images with the picture button, or paste or drop them into the text.";
+  "Use the buttons, or Markdown: **bold**, *italics*, ## heading, - list, > a gold box, > [!DANGER] a red one. Text copied from Discord keeps its formatting. Preview shows it as players will see it. Add images with the picture button, or paste or drop them into the text.";
 /** An icon is one emoji; a few code points leave room for skin tones, flags and joined emoji. */
 export const ICON_MAX = 8;
 
@@ -66,7 +66,7 @@ function markdownField(fd: FormData, kind: ImageKind, supabaseUrl: string | unde
 }
 
 /** One emoji as the icon; empty means the default. */
-function iconField(fd: FormData, fallback: string, errors: FieldErrors): string {
+export function iconField(fd: FormData, fallback: string, errors: FieldErrors): string {
   const icon = textField(fd, "icon");
   if (!icon) return fallback;
   if ([...icon].length > ICON_MAX || /[\s<>]/.test(icon)) errors.icon = "One emoji, such as 🐻.";

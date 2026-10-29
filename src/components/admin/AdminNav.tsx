@@ -1,7 +1,23 @@
 "use client";
 
 import clsx from "clsx";
-import { BookOpen, ChevronDown, Gift, LayoutDashboard, Megaphone, Menu, MessageSquareText, ScrollText, Settings, Swords, Timer, Users } from "lucide-react";
+import {
+  ArrowRightLeft,
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  Gift,
+  LayoutDashboard,
+  Megaphone,
+  Menu,
+  MessageSquareText,
+  ScrollText,
+  Settings,
+  Shield,
+  Swords,
+  Timer,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -14,8 +30,11 @@ const ICONS: Record<AdminNavIcon, typeof Menu> = {
   feedback: MessageSquareText,
   rallySync: Timer,
   announcements: Megaphone,
+  events: CalendarDays,
   rules: ScrollText,
   guides: BookOpen,
+  alliances: Shield,
+  transfers: ArrowRightLeft,
   giftCodes: Gift,
   users: Users,
   settings: Settings,

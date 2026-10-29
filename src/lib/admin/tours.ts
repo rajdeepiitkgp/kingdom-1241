@@ -22,12 +22,17 @@ export type AdminPage =
   | "rallySync"
   | "announcements"
   | "announcement"
+  | "events"
+  | "event"
   | "rules"
   | "ruleTopic"
   | "rule"
   | "guides"
   | "guide"
   | "guideSection"
+  | "alliances"
+  | "alliance"
+  | "transfers"
   | "giftCodes"
   | "users"
   | "settings";
@@ -51,17 +56,17 @@ const step = (target: string | null, title: string, body: string) => ({ target, 
 export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   overview: {
     id: "admin-overview",
-    version: 4,
+    version: 5,
     steps: [
       step(
         null,
         "Welcome to the admin area",
-        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms, the announcements and gift codes on Home, and the rules and guides pages. This guide shows where everything is; every admin page has its own guide for the details.",
+        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms, the announcements, events and gift codes on Home, the rules and guides pages, and each alliance's page. This guide shows where everything is; every admin page has its own guide for the details.",
       ),
       step(
         "admin-role",
         "Your role",
-        "Moderators edit battle plans and their pages, run feedback forms, create Rally Sync rooms and write the announcements, rules and guides. Administrators can also delete plans and give people roles; only the owner appoints administrators.",
+        "Moderators edit battle plans and their pages, run feedback forms, create Rally Sync rooms and write the announcements, events, rules, guides and alliance pages. Administrators can also delete plans, open or close transfers and give people roles; only the owner appoints administrators.",
       ),
       step(
         "admin-nav-menu",
@@ -76,9 +81,16 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
       step("admin-nav-announcements", "Announcements", "The news on Home. Write it in English, with images if you like; players read it in their language a minute later."),
+      step("admin-nav-events", "Events", "The event calendar on Home and the events page: when each event runs, or for events each alliance times itself, which days."),
       step("admin-nav-rules", "Rules", "The kingdom's rules, in topics that are the tabs of the rules page. Players read them in their language a minute after you save."),
       step("admin-nav-guides", "Guides", "How 1241 plays each event: a text for everyone, plus a section for each alliance that plays it its own way."),
+      step("admin-nav-alliances", "Alliance pages", "Each alliance's own page: a few lines from its leaders, its requirements, languages and Discord invite. The numbers come from MightPulse by themselves."),
       step("admin-nav-gift-codes", "Gift codes", "The codes on Home. They come by themselves from kingshot.net every hour; add one here when players have it first."),
+      step(
+        "admin-nav-transfers",
+        "Discord & transfers",
+        "Administrators only: the kingdom's Discord invite on Home, whether the kingdom takes transfers, and what players see about moving here.",
+      ),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
       step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
       step("admin-usage", "Usage (only you see this)", "Whether anything about the site's free plans needs you: green, amber or red, with the names of what to look at. Tap it for the Usage tab."),
@@ -462,6 +474,105 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("guide-section-view", "View the guide", "Opens the guide in a new browser tab, to check the alliance's tab."),
     ],
   },
+  events: {
+    id: "admin-events",
+    version: 1,
+    steps: [
+      step(
+        "events-new",
+        "New event",
+        "Adds an event to the calendar. Decide first whether it starts at the same time for everyone, or whether each alliance picks its own times.",
+      ),
+      step("events-list", "All events", "Every event, by its first round. Hidden ones stay here; players see the others on Home and the events page."),
+      step("events-schedule", "The schedule", "How the event repeats, in UTC, in one line. Check it after every change: it is what the site counts from."),
+      step("events-actions", "Edit and Delete", "Edit opens the event and its translations. Delete removes it in every language and can't be undone; to pause an event, hide it instead."),
+    ],
+  },
+  event: {
+    id: "admin-event",
+    version: 1,
+    steps: [
+      step("event-language", "Language", "English is the source: change the name or summary here and every language is translated again. Pick another language to correct its translation by hand."),
+      step("event-name", "Name", "The event's name as players know it from the game."),
+      step("event-summary", "Summary", "One or two sentences on the card: what players do and what it gives."),
+      step(
+        "event-guide",
+        "Guide",
+        "The guide that explains the event; the card links to it. For an event each alliance times itself, that guide's alliance sections are where each alliance writes its times.",
+      ),
+      step(
+        "event-timing",
+        "Who sets the time",
+        "Same time for everyone, like Alliance Championship: players see the start in their own time zone with a countdown. Each alliance picks, like Bear Hunt: players see only the day, and each alliance writes its times in the guide.",
+      ),
+      step("event-start", "A round to count from", "The day (and for a same-time event the UTC start) of any round, past or coming. The site counts every later round from it."),
+      step(
+        "event-repeat",
+        "Length and repeats",
+        "How long one round lasts and how many days until the next. A second day is for events that run twice a round: Viking Vengeance starts on a Tuesday, repeats every 14 days, and its second day is 2 days later.",
+      ),
+      step("event-published", "Show", "Untick to hide the event from Home and the events page without deleting it."),
+      step("event-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step("event-view", "View the events page", "Opens the events page in a new browser tab, to check the card."),
+    ],
+  },
+  alliances: {
+    id: "admin-alliances",
+    version: 1,
+    steps: [
+      step("alliances-list", "Alliances", "Every alliance on Home, strongest first. Each has a page players open from Home."),
+      step("alliances-filled", "What is written", "Which parts of the alliance's page are filled in. Ask each alliance's R4 or R5 for its texts and its Discord invite."),
+      step("alliances-actions", "Edit and View", "Edit writes the alliance's page; View opens it as players see it."),
+    ],
+  },
+  alliance: {
+    id: "admin-alliance",
+    version: 1,
+    steps: [
+      step("alliance-language", "Language", "English is the source: change a text here and every language is translated again. Pick another language to correct its translation by hand."),
+      step("alliance-description", "About the alliance", "A few lines in the leaders' own words: what kind of alliance it is, what it plays for, when it is active."),
+      step("alliance-requirements", "Requirements", "What it asks of new members. Keep it short and concrete, such as a power or town-centre level."),
+      step(
+        "alliance-discord-link",
+        "Discord invite",
+        "An invite that never expires. Discord's usual invites stop working after seven days, so in Discord choose Edit invite link and set it to Never.",
+      ),
+      step("alliance-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step("alliance-view", "View the page", "Opens the alliance's page in a new browser tab."),
+    ],
+  },
+  transfers: {
+    id: "admin-transfers",
+    version: 1,
+    steps: [
+      step(
+        "kingdom-discord",
+        "Kingdom Discord",
+        "The invite to the server for all of 1241. With it, Home shows a Join our Discord button and every page links it at the bottom. Use an invite that never expires; empty hides both.",
+      ),
+      step(
+        "transfers-switch",
+        "Open or closed",
+        "What players see next to the alliances on Home and on the transfers page; while open, Home's banner also shows a Transfers open badge. Nothing changes for them until you save.",
+      ),
+      step(
+        "transfers-terms",
+        "The game's terms",
+        "Copy them from the game's Transfer Manager: the transfer group's kingdoms, when the window opens and closes (UTC), and the most Transfer Power a governor may have to move here without a special invite (in millions, such as 97.5). Players see them while open; leave out what you don't know yet.",
+      ),
+      step("transfers-info", "Anything else", "Optional, shown while open, with bold, lists and links: such as how many slots there are or what you expect of newcomers."),
+      step("transfers-contact", "Whom to ask", "Optional, always on the transfers page: who answers players who want to move here, such as a name with their Discord handle."),
+      step(
+        "transfers-discord",
+        "Discord for transfers",
+        "A Join the transfer Discord button under whom to ask, open or closed: your transfer server or channel, which may differ from the kingdom's. Empty: the kingdom Discord, as Join our Discord.",
+      ),
+      step("transfers-language", "Language", "English is the source. Pick another language to correct a translation by hand."),
+      step("transfers-save", "Save", "Every change is recorded with your name."),
+      step("transfers-view", "View the page", "Opens the transfers page in a new browser tab."),
+      step(null, "Good practice", "Fill in the terms before you open transfers, and close them again as soon as the window ends or the slots are taken."),
+    ],
+  },
   giftCodes: {
     id: "admin-gift-codes",
     version: 1,
@@ -671,6 +782,9 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (section === "announcements") return parts.length === 1 ? "announcements" : parts.length === 2 ? "announcement" : null;
+  if (section === "events") return parts.length === 1 ? "events" : parts.length === 2 ? "event" : null;
+  if (section === "alliances") return parts.length === 1 ? "alliances" : parts.length === 2 ? "alliance" : null;
+  if (parts.length === 1 && section === "transfers") return "transfers";
   if (section === "rules") return parts.length === 1 ? "rules" : parts.length === 2 && id !== "topics" ? "rule" : parts.length === 3 && id === "topics" ? "ruleTopic" : null;
   if (section === "guides") return parts.length === 1 ? "guides" : parts.length === 2 ? "guide" : parts.length === 4 && sub === "alliances" ? "guideSection" : null;
   if (parts.length === 1 && section === "gift-codes") return "giftCodes";

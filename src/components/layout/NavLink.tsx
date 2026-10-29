@@ -41,7 +41,7 @@ export function NavLinkView({ href, icon, label, variant, active }: NavLinkProps
         )}
       >
         <NavIcon icon={icon} className="size-4" />
-        <span className="sr-only @min-[39rem]:not-sr-only">{label}</span>
+        <span className="sr-only @min-[40.5rem]:not-sr-only">{label}</span>
       </Link>
     );
   }

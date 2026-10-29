@@ -4,9 +4,11 @@ export interface NavItem {
   /** Path without locale prefix. */
   href: string;
   labelKey: UiKey;
-  icon: "home" | "events" | "rules" | "guides" | "kvk" | "tools";
+  icon: "home" | "events" | "rules" | "guides" | "kvk" | "tools" | "transfers";
   /** Pages under this section, shown as a dropdown instead of a plain link. */
   children?: NavChild[];
+  /** Only in the bottom bar (phones and tablets): in the top bar the logo does its job. */
+  bottomBarOnly?: boolean;
 }
 
 export interface NavChild {
@@ -20,7 +22,8 @@ export interface NavChild {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", labelKey: "nav.home", icon: "home" },
+  // The top bar has no room for seven labelled entries; its logo leads home.
+  { href: "/", labelKey: "nav.home", icon: "home", bottomBarOnly: true },
   { href: "/events", labelKey: "nav.events", icon: "events" },
   { href: "/rules", labelKey: "nav.rules", icon: "rules" },
   { href: "/guides", labelKey: "nav.guides", icon: "guides" },
@@ -39,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { href: "/tools", labelKey: "nav.tools", icon: "tools" },
+  { href: "/transfers", labelKey: "nav.transfers", icon: "transfers" },
 ];
 
 /** Is `pathname` (without locale) inside the nav item's section? */

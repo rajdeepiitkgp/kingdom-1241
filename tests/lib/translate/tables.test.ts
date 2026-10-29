@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CACHE_TAGS, cacheTagForTable, routesForTag } from "@/lib/data/cache-tags";
-import { getTranslatableTable, isTranslatableRow, TRANSLATABLE_TABLES } from "@/lib/translate/tables";
+import { getTranslatableTable, isHtmlField, isTranslatableRow, TRANSLATABLE_TABLES } from "@/lib/translate/tables";
 
 /** The tables the webhook installer (supabase/webhooks.sql) attaches triggers to. */
 function webhookTables(): string[] {
@@ -36,6 +36,16 @@ describe("translatable tables", () => {
     expect(isTranslatableRow("site_settings", { key: "kingdom_number" })).toBe(false);
     expect(isTranslatableRow("rules", { id: "x" })).toBe(true);
   });
+
+  it("know which settings hold rich text (one value column, so the key decides)", () => {
+    const value = getTranslatableTable("site_settings")!.columns[0];
+    expect(isHtmlField("site_settings", "transfer_info", value)).toBe(true);
+    expect(isHtmlField("site_settings", "transfer_contact", value)).toBe(true);
+    expect(isHtmlField("site_settings", "tagline", value)).toBe(false);
+    expect(isHtmlField("announcements", "x", { html: true })).toBe(true);
+    // Every rich-text setting is translated in the first place.
+    expect(isTranslatableRow("site_settings", { key: "transfer_info" })).toBe(true);
+  });
 });
 
 describe("cacheTagForTable", () => {
@@ -48,10 +58,19 @@ describe("cacheTagForTable", () => {
 });
 
 describe("routesForTag", () => {
-  it("expires the guide pages by route whenever the guides change", () => {
-    expect(routesForTag(cacheTagForTable("guides")!)).toEqual(["/[locale]/guides/[slug]"]);
-    expect(routesForTag(cacheTagForTable("guide_sections")!)).toEqual(["/[locale]/guides/[slug]"]);
-    expect(routesForTag(CACHE_TAGS.all)).toEqual(["/[locale]/guides/[slug]"]);
+  const guidePages = "/[locale]/guides/[slug]";
+  const alliancePages = "/[locale]/alliances/[tag]";
+
+  it("expires the guide and alliance pages by route whenever what they show changes", () => {
+    expect(routesForTag(cacheTagForTable("guides")!)).toEqual([guidePages, alliancePages]);
+    expect(routesForTag(cacheTagForTable("guide_sections")!)).toEqual([guidePages, alliancePages]);
+    expect(routesForTag(cacheTagForTable("alliances")!)).toEqual([guidePages, alliancePages]);
+    expect(routesForTag(cacheTagForTable("events")!)).toEqual([guidePages]);
+    expect(routesForTag(CACHE_TAGS.all)).toEqual([guidePages, alliancePages]);
+  });
+
+  it("leaves the static pages to their tags", () => {
     expect(routesForTag(CACHE_TAGS.rules)).toEqual([]);
+    expect(routesForTag(CACHE_TAGS.settings)).toEqual([]);
   });
 });
