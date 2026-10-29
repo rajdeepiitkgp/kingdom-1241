@@ -9,7 +9,7 @@ import { type Tour, uiStep } from "./tour";
  */
 export const HOME_TOUR: Tour<UiKey> = {
   id: "home",
-  version: 2,
+  version: 3,
   steps: [
     uiStep("site-nav", "site.nav"),
     uiStep("site-language", "site.language"),

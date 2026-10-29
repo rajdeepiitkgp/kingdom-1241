@@ -60,6 +60,19 @@ describe("markdownToHtml", () => {
     expect(html).toContain("<table>");
     expect(html).toContain("<strong>bold</strong>");
   });
+
+  it("makes a quote opening with [!DANGER] the red box, the marker on its own line or before the text", () => {
+    const red = '<blockquote class="danger">\n<p>Never hit first.</p>\n</blockquote>\n';
+    expect(markdownToHtml("> [!DANGER]\n> Never hit first.")).toBe(red);
+    expect(markdownToHtml("> [!danger] Never hit first.")).toBe(red);
+    expect(markdownToHtml("> [!CAUTION]\n>\n> Never hit first.")).toBe(red);
+    // A plain quote stays the gold box.
+    expect(markdownToHtml("> Hold the line.")).toBe("<blockquote>\n<p>Hold the line.</p>\n</blockquote>\n");
+  });
+
+  it("keeps the danger class only, nowhere else", () => {
+    expect(sanitizeRichText('<blockquote class="danger evil"><p class="danger">x</p></blockquote>')).toBe('<blockquote class="danger"><p>x</p></blockquote>');
+  });
 });
 
 describe("htmlToExcerpt", () => {

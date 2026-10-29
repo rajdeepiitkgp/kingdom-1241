@@ -22,6 +22,7 @@ import { BODY_MAX, type ContentOrderTable, isContentOrderTable, parseAnnouncemen
 import { bodyColumns, NO_DATABASE } from "./content-write";
 import { localeField, localizedUpdate, textField, uuidField } from "./forms";
 import { isMoveDirection, moveInList } from "./kvk-forms";
+import { ALLIANCE_DESCRIPTION_MAX, ALLIANCE_REQUIREMENTS_MAX, EVENT_NAME_MAX, EVENT_SUMMARY_MAX, TRANSFER_INFO_MAX } from "./site-forms";
 import { pendingColumns, withLanguage } from "./translation";
 
 /**
@@ -197,12 +198,34 @@ export async function deleteAnnouncement(formData: FormData): Promise<void> {
 type Row = Record<string, unknown>;
 
 /** The content tables whose translations are corrected here, with what each column takes and where its editor is. */
-const CONTENT_TRANSLATIONS: Record<string, { columns: Record<string, number>; tag: CacheTag; path: (row: Row) => string }> = {
+/**
+ * The texts corrected per language: their columns (with the longest text),
+ * cache tag and editor. Rows are found by uuid, or for `site_settings` by one
+ * of the listed keys.
+ */
+const CONTENT_TRANSLATIONS: Record<
+  string,
+  { columns: Record<string, number>; tag: CacheTag; path: (row: Row) => string; keys?: readonly string[]; markdownKeys?: readonly string[] }
+> = {
   announcements: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.announcements, path: (row) => `/announcements/${row.id}` },
   rule_topics: { columns: { title: TITLE_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/topics/${row.id}` },
   rules: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/${row.id}` },
   guides: { columns: { title: TITLE_MAX, summary: SUMMARY_MAX, body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.id}` },
   guide_sections: { columns: { body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.guide_id}/alliances/${row.id}` },
+  events: { columns: { name: EVENT_NAME_MAX, summary: EVENT_SUMMARY_MAX }, tag: CACHE_TAGS.events, path: (row) => `/events/${row.id}` },
+  alliances: {
+    columns: { description: ALLIANCE_DESCRIPTION_MAX, requirements: ALLIANCE_REQUIREMENTS_MAX },
+    tag: CACHE_TAGS.alliances,
+    path: (row) => `/alliances/${row.id}`,
+  },
+  site_settings: {
+    columns: { value: TRANSFER_INFO_MAX },
+    tag: CACHE_TAGS.settings,
+    path: () => "/transfers",
+    keys: ["transfer_info", "transfer_contact"],
+    // Rich text, kept as HTML (no Markdown copy, unlike `body_source`).
+    markdownKeys: ["transfer_info", "transfer_contact"],
+  },
 };
 
 export async function saveContentTranslation(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -213,8 +236,9 @@ export async function saveContentTranslation(_previous: ActionState, formData: F
   const table = textField(formData, "table");
   const column = textField(formData, "column");
   const lang = textField(formData, "lang");
-  const id = uuidField(formData, "id");
   const config = Object.hasOwn(CONTENT_TRANSLATIONS, table) ? CONTENT_TRANSLATIONS[table] : null;
+  const key = textField(formData, "id");
+  const id = config?.keys ? (config.keys.includes(key) ? key : null) : uuidField(formData, "id");
   if (!id || !config || !Object.hasOwn(config.columns, column)) return { status: "error", message: "Unknown field." };
   if (lang === "en" || !isLocaleCode(lang)) return { status: "error", message: "English is edited in English mode." };
   if (!(await getEnabledLocales()).includes(lang)) return { status: "error", message: "That language is not enabled." };
@@ -222,7 +246,8 @@ export async function saveContentTranslation(_previous: ActionState, formData: F
   const value = textField(formData, "value").replace(/\r\n?/g, "\n").slice(0, config.columns[column]);
 
   const admin = createAdminClient();
-  const { data: row } = await admin.from(table).select("*").eq("id", id).maybeSingle();
+  const idColumn = config.keys ? "key" : "id";
+  const { data: row } = await admin.from(table).select("*").eq(idColumn, id).maybeSingle();
   if (!row) return { status: "error", message: "This text no longer exists." };
   if (pendingColumns(table, row).includes(column)) {
     return { status: "error", message: "The machine translation of this text is still running; try again in a moment." };
@@ -235,9 +260,9 @@ export async function saveContentTranslation(_previous: ActionState, formData: F
           body: withLanguage(current, lang, value ? markdownToHtml(value) : ""),
           ...("body_source" in row ? { body_source: withLanguage((row.body_source ?? {}) as Localized, lang, value) } : {}),
         }
-      : { [column]: withLanguage(current, lang, value) };
+      : { [column]: withLanguage(current, lang, config.markdownKeys?.includes(id) && value ? markdownToHtml(value) : value) };
   // source_hash is deliberately left alone: the English is unchanged, so the pipeline skips this row.
-  const { error } = await admin.from(table).update(update).eq("id", id);
+  const { error } = await admin.from(table).update(update).eq(idColumn, id);
   if (error) return failed(log, "Saving the translation", error);
 
   await audit(access.user, "translation.update", table, id, { column, lang });

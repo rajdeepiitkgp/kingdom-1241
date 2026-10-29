@@ -1,6 +1,7 @@
 import type { Localized } from "@/lib/i18n/localized";
 import type { RetroAnalysis } from "@/lib/retro/analysis";
 import type { RatingKey, RetroConfig, TextKey } from "@/lib/retro/questions";
+import type { TransferTerms } from "@/lib/transfers/terms";
 
 /**
  * Content types shared by the database layer, the seed data and the pages.
@@ -21,6 +22,8 @@ export interface Announcement {
 
 export type EventCategory = "alliance" | "kingdom" | "cross-kingdom" | "solo";
 
+export type EventTiming = "fixed" | "alliance";
+
 export interface GameEvent {
   id: string;
   slug: string;
@@ -38,6 +41,10 @@ export interface GameEvent {
   durationMinutes: number;
   /** Repeat every N days (null = one-off). */
   repeatEveryDays: number | null;
+  /** A second day in each round, N days after the first (Viking Vengeance: Tuesday + 2 = Thursday); null = one day. */
+  alsoAfterDays: number | null;
+  /** "fixed": the same start for everyone. "alliance": each alliance picks its own times, so only the (UTC) day is shown. */
+  timing: EventTiming;
   /** Optional link to a guide slug. */
   guideSlug: string | null;
   published: boolean;
@@ -127,8 +134,16 @@ export interface SiteSettings {
   /** Hour (UTC) at which the in-game day resets. */
   dailyResetUtcHour: number;
   discordInviteUrl: string | null;
-  /** Who to contact about transfers, shown while the transfer section is off. */
+  /** Whom to ask about a transfer (rich text: sanitised HTML, translated), shown on the transfers page whether open or closed. */
   transferContact: Localized;
+  /** Whether the kingdom takes transfers now (the admins' switch). */
+  transfersOpen: boolean;
+  /** Anything else a player should know while transfers are open (rich text: sanitised HTML, translated). */
+  transferInfo: Localized;
+  /** The window's kingdoms, times and power caps, shown while transfers are open. */
+  transferTerms: TransferTerms;
+  /** A separate Discord invite for players who want to move here; null = the kingdom's own Discord. */
+  transferDiscordUrl: string | null;
   /** In-game name of the site's creator, shown in the footer ("Created by …"). */
   createdBy: string | null;
 }

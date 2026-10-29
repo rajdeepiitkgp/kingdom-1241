@@ -34,12 +34,16 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   cacheLife: {
     // Editable site content (announcements, events, rules, guides, ...).
-    // Served from cache, refreshed in the background every 5 minutes, and
-    // invalidated immediately by the translation webhook / revalidate route.
+    // Every change expires its tag at once (the editors, the translation
+    // webhook, the syncs, /api/revalidate), so the timed refresh is only a
+    // safety net: once a day. Every refresh of a page in each language counts
+    // against Vercel's ISR writes (200K a month on Hobby; at 5 minutes the
+    // site used 65 % in its first week). Texts that expire at a set time are
+    // taken off by the hourly gift-code run (`expiredRecently`).
     content: {
       stale: 60 * 5,
-      revalidate: 60 * 5,
-      expire: 60 * 60 * 24,
+      revalidate: 60 * 60 * 24,
+      expire: 60 * 60 * 24 * 7,
     },
   },
   turbopack: {

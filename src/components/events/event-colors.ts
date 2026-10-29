@@ -1,5 +1,7 @@
+import type { EventColorKey } from "@/lib/events/options";
+
 /** Accent colours for event cards. Keys are stored on events (`color` column). */
-export const EVENT_COLORS: Record<string, { icon: string; ring: string }> = {
+export const EVENT_COLORS: Record<EventColorKey, { icon: string; ring: string }> = {
   amber: { icon: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200", ring: "border-amber-200/70 dark:border-amber-400/30" },
   red: { icon: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200", ring: "border-rose-200/70 dark:border-rose-400/30" },
   violet: { icon: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200", ring: "border-violet-200/70 dark:border-violet-400/30" },
@@ -10,5 +12,5 @@ export const EVENT_COLORS: Record<string, { icon: string; ring: string }> = {
 };
 
 export function eventColor(key: string) {
-  return EVENT_COLORS[key] ?? EVENT_COLORS.sky;
+  return Object.hasOwn(EVENT_COLORS, key) ? EVENT_COLORS[key as EventColorKey] : EVENT_COLORS.sky;
 }

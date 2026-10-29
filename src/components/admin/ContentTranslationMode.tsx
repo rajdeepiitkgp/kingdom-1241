@@ -6,6 +6,8 @@ import { pendingNote } from "@/lib/admin/translation";
 import { getTranslationSettings } from "@/lib/config/settings";
 
 export interface TranslatedField {
+  /** The row, when the fields come from different rows (the transfer texts are two `site_settings` keys). */
+  id?: string;
   column: string;
   label: string;
   english: string;
@@ -53,13 +55,13 @@ export async function ContentTranslationMode({
         <div className="space-y-3">
           {fields.map((field) => (
             <TranslationForm
-              key={field.column}
+              key={`${field.id ?? id}:${field.column}`}
               action={saveContentTranslation}
               locale={locale}
               lang={lang}
               langLabel={langLabel}
               table={table}
-              id={id}
+              id={field.id ?? id}
               column={field.column}
               label={field.label}
               english={field.english}

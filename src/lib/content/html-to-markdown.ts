@@ -176,12 +176,12 @@ function renderBlock(element: Element): string {
       return escapeLineStarts(inline(element.children).replace(/^[ \t\n]+|[ \t\n]+$/g, ""));
     case "hr":
       return "---";
-    case "blockquote":
-      return blocks(element.children)
-        .join("\n\n")
-        .split("\n")
-        .map((line) => (line ? `> ${line}` : ">"))
-        .join("\n");
+    case "blockquote": {
+      const lines = blocks(element.children).join("\n\n").split("\n");
+      // The red box keeps its marker on a line of its own (GitHub's alert syntax, read back by markDangerBoxes).
+      if (/(^|\s)danger(\s|$)/.test(element.attrs.class ?? "")) lines.unshift("[!DANGER]");
+      return lines.map((line) => (line ? `> ${line}` : ">")).join("\n");
+    }
     case "pre": {
       const code = textOf(element).replace(/\n$/, "");
       const fence = "`".repeat(Math.max(3, ...[...code.matchAll(/`{3,}/g)].map((m) => m[0].length + 1)));

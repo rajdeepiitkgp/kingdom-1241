@@ -26,6 +26,15 @@ describe("settingsToRows", () => {
     expect(back).toEqual({ ...SEED_SETTINGS, discordInviteUrl: null });
     expect(settingsToRows({ ...SEED_SETTINGS, discordInviteUrl: "https://discord.gg/x" }).find((r) => r.key === "discord_invite_url")?.value).toBe("https://discord.gg/x");
   });
+
+  it("leaves out empty transfer terms and round-trips filled ones", () => {
+    expect(settingsToRows(SEED_SETTINGS).find((r) => r.key === "transfer_terms")).toBeUndefined();
+    const terms = { ...SEED_SETTINGS.transferTerms, kingdomFrom: 1201, kingdomTo: 1260, powerLeading: 97_500_000 };
+    const back = mapSettings(settingsToRows({ ...SEED_SETTINGS, transferTerms: terms }), SEED_SETTINGS);
+    expect(back.transferTerms).toEqual(terms);
+    // A stored "" or an older shape reads as no terms, never as an error.
+    expect(mapSettings([{ key: "transfer_terms", value: "" }], SEED_SETTINGS).transferTerms).toEqual(SEED_SETTINGS.transferTerms);
+  });
 });
 
 describe("mapHero", () => {

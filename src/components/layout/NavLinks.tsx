@@ -17,13 +17,15 @@ import { ActiveNavMenu, NavMenuView } from "./NavMenu";
  * Desktop navigation (top bar), from `lg`; below that the bottom tab bar serves
  * tablets too. The nav takes the free space between logo and controls and is a
  * container: NavLinkView shows the labels only when that space is wide enough
- * for the longest language (Polish, Turkish, French), icon-only pills otherwise,
- * so the row never overflows, whatever the language or text size.
+ * for the longest language (Polish and Turkish need 39.8 rem; the header leaves
+ * at least 42 rem from 1280px), icon-only pills otherwise, so the row never
+ * overflows, whatever the language or text size. Home is left out here (the
+ * logo leads home) to make room.
  */
 export function DesktopNav({ locale, dict }: { locale: string; dict: Dictionary }) {
   return (
     <nav className="@container hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main" data-tour="site-nav">
-      {NAV_ITEMS.map((item) => (
+      {NAV_ITEMS.filter((item) => !item.bottomBarOnly).map((item) => (
         <NavEntry key={item.href} item={item} locale={locale} dict={dict} variant="desktop" />
       ))}
     </nav>
@@ -63,7 +65,8 @@ export function BottomNav({ locale, dict }: { locale: string; dict: Dictionary }
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_hsl(var(--shadow-color)/0.25)] backdrop-blur-sm lg:hidden print:hidden"
       aria-label="Main"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-6">
+      {/* One equal column per entry, however many there are. */}
+      <ul className="mx-auto grid max-w-lg auto-cols-fr grid-flow-col">
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <NavEntry item={item} locale={locale} dict={dict} variant="mobile" />

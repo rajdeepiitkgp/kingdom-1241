@@ -14,7 +14,7 @@ git push / merge to main
                                        builds every PR → preview URL
 ```
 
-Supabase content (announcements, rules, the KvK plan…) is edited in the Supabase table editor and shows up within 5 minutes, or immediately through the webhook — no deploy needed.
+Content (announcements, events, rules, guides, the KvK plan…) is edited in the admin area and shows up within seconds through the webhook — no deploy needed.
 
 ---
 
@@ -172,7 +172,7 @@ Translation runs when a row is inserted or edited in Supabase — never when a p
 
 That creates one trigger per content table. Each change POSTs to `/api/translate`, which answers immediately, translates the row in the background (only if its English text changed — so its own write doesn't cause a loop) and refreshes the page cache. You can watch the calls under **Database → Webhooks** and in the Vercel function logs (search for the `reqId` printed in the response).
 
-Without webhooks the site still works: run `npm run translate` (or the Maintenance workflow) after editing, and the cache refreshes itself every 5 minutes.
+Without webhooks the site still works: run `npm run translate` (or the Maintenance workflow) after editing, then the Maintenance task `revalidate`; the cache refreshes itself only once a day.
 
 ## 8. Admin area — Discord sign-in and roles
 
@@ -338,21 +338,26 @@ Home lists the gift codes that work right now. They come from [kingshot.net](htt
 - **The admin page** (moderators and up) shows the last check with **Check now**, the codes on Home and the ended ones. Moderators **add a code** kingshot.net doesn't list yet (from in-game mail or Discord; codes are case-sensitive), write **what it gives** (English, translated by itself) and its **expiry** if known, **hide** a code from Home, and **delete** codes they added or that ended. A code kingshot.net still lists can only be hidden: deleted, it would come back within the hour. Once kingshot.net lists a hand-added code, the hourly check takes it over and ends it when it stops working.
 - **Run it by hand:** Actions → Gift codes → Run workflow, or Check now on the page (once a minute).
 
-### 9f. Announcements, rules, guides and images (Admin → Announcements, Rules, Guides)
+### 9f. Announcements, events, rules, guides, alliance pages and transfers (Admin → Website)
 
-The news on Home, the rules page and the guides are written in the admin area by moderators and up; there is no approval step, and every save is in the change log with its author.
+The news on Home, the events, the rules page, the guides and the alliance pages are written in the admin area by moderators and up (transfers by administrators); there is no approval step, and every save is in the change log with its author.
+
+- **Events** are either **the same time for everyone** (Alliance Championship: players see the start in their own time zone, with a countdown) or **picked by each alliance** (Bear Hunt, Viking Vengeance: players see the day only, in UTC, with "Each alliance sets its own times"; each alliance writes its times in its section of the event's guide). A round can have a second day (Viking Vengeance: a Tuesday, repeating every 14 days, second day 2 days later). The start is any past or coming round; the site counts on from it. The seeded events are placeholders: check every one before players rely on it.
+- **Alliance pages** (`/alliances/<tag>`, linked from each alliance on Home): the rank, power, leader and members come from MightPulse every day; moderators write a few lines about the alliance, its requirements, its languages and a Discord invite that never expires. The list of alliances stays the owner's (Settings → Alliances). The page also lists the guides where the alliance has its own section, and a guide opened from there shows that alliance's tab.
+- **Discord & transfers** (administrators): the **kingdom Discord** invite (the server for all of 1241) puts a "Join our Discord" button on Home and a link at the foot of every page; empty, neither shows. **Transfers** (`/transfers`, in the main menu and linked next to the alliances on Home; while open, Home's banner shows a "Transfers open" badge) are switched open or closed. While open the page shows the game's terms as the Transfer Manager gives them (the transfer group's kingdoms, the window in UTC, the Transfer Power caps as a regular or a leading kingdom, typed in millions; each optional) and anything else you write; whom to ask (for instance a name with their Discord handle) shows either way; both texts take formatting (bold, lists, links; no images) and are optional, with a Discord button: the transfer server's invite ("Join the transfer Discord"; it may differ from the kingdom's), else the kingdom Discord ("Join our Discord"), else none. Every Discord link (kingdom, transfers, each alliance's) is optional and must be an invite (discord.gg/… or discord.com/invite/…); use one that never expires.
 
 - **Rules** are grouped in topics, the tabs of the rules page. The ▲ ▼ arrows order the topics and, inside each topic, its rules; a hidden topic takes its rules off the page with it. A topic's address is the end of its link (`/rules#attacks`).
 - **Guides** have a text for everyone and, for each alliance that plays the event its own way, an **alliance section** (one per alliance and guide, written by any moderator). Players see the sections as tabs under the text, in the order of Home's alliances, and their device remembers the alliance they picked, for every guide. A guide's address is the end of its link (`/guides/bear-hunt`); a changed address takes the events that link to the guide along, and a deleted guide unlinks them. The alliance list is the owner's (Settings → Alliances); a renamed alliance keeps its sections.
 - **The placeholders** from the seed (announcements, rules, guides) are the moderators' to edit or delete: `db:seed` fills these tables only when they are empty, and `sync-ui` never touches them, so a deleted placeholder stays deleted.
 
-- **The editor** is Markdown with buttons (bold, italics, heading, lists, quote, link, table, image) and a **Preview** tab that shows the text through the same pipeline as the live page. Text copied from Discord keeps its formatting (Discord writes Markdown too; a `# heading` becomes a section heading). English is the source: a changed English text is translated again within a minute, and every other language can be corrected by hand from the language menu (that correction stays until the English changes). The battle-plan, rally-leader, checklist and feedback introductions use the same editor, without images.
+- **The editor** is Markdown with buttons (bold, italics, heading, lists, quote as a gold box, a red danger box for "don't do this" warnings (`> [!DANGER]`), link, table, image) and a **Preview** tab that shows the text through the same pipeline as the live page. Text copied from Discord keeps its formatting (Discord writes Markdown too; a `# heading` becomes a section heading). English is the source: a changed English text is translated again within a minute, and every other language can be corrected by hand from the language menu (that correction stays until the English changes). The battle-plan, rally-leader, checklist and feedback introductions use the same editor, without images.
 - **Images** go to the public `images` bucket in Supabase Storage (not the 500 MB database; one small row per image in `content_images`). The browser shrinks every image before upload: at most 1600 × 2560 pixels (a full phone screenshot stays sharp), WebP, or JPEG on Safari, aiming at 600 KB; re-encoding drops camera data such as the location, and the server strips the small metadata block Safari adds. The server takes WebP or JPEG up to 900 KB only, refuses uploads once all images reach **500 MB** (half the free 1 GB), and texts hold at most **3 images** (announcements, rules) or **10** (guides). Images from other sites aren't shown (a hotlinked image tells a stranger who reads the page, and Discord's attachment links expire). On the page an image fits the column and opens full size on a tap.
 - **Translations** keep the images: the pipeline sends each image to the model as a placeholder and puts the original back afterwards. A translation is only saved when every image is back in the same place as in English; if the model moves or drops one, it is asked once more, and if that fails too the language shows the English text until the next translation run (the log says "lost or moved an image"; Settings → Languages counts it as a missing text). The image's description stays in English.
 - **Clean-up:** an image no text refers to any more (taken out of a text, or its announcement deleted) is deleted by the daily `prune` once it is a day old. The image files are not in the weekly backup (only the list of them is); Storage is outside the database dump.
 - **Locked pages take no images:** the bucket is public, so anyone with an image's link could open it; the battle-plan forms refuse images.
 - **Migration 0020** adds `body_source` (the Markdown) to announcements, rules and guides, the `content_images` table, and limits the bucket to WebP/JPEG up to 900 KB. Until it is applied, saving still works and uploads say so.
 - **Migration 0021** adds `guide_sections` (the alliance sections, readable by visitors when shown) and lets them follow an alliance's renamed tag. Until it is applied the guide editor says sections are on their way. Afterwards run the Maintenance tasks **`webhooks`** (so a section is translated when it is saved) and **`sync-ui`** (the guide page's three new labels in the machine-translated languages).
+- **Migration 0022** adds an event's `timing` (same time for everyone, or picked by each alliance) and `also_after_days` (a second day per round), and marks the seeded Bear Hunt and Viking Vengeance as picked by each alliance. Until it is applied, events save as before and the editor says the new choices are on their way. Afterwards run the Maintenance task **`sync-ui`** (the new event, alliance-page and transfer labels, and the transfer texts) once the deployment is live. `sync-ui` writes many strings at once, and every page in every language is rebuilt as their translations land: a burst of Vercel ISR writes (200K a month on Hobby). When the month's ISR writes are already high (Vercel → Usage), wait for the new billing cycle: until then the new labels show in English and the four hand-written languages, and transfers count as closed until the first save on Discord & transfers.
 
 ### 9e. Usage (Admin → Settings → Usage)
 
@@ -422,13 +427,13 @@ If only Vercel is gone, steps 6 and 9 (the environment variables and nothing els
 
 **Restore content.** From the weekly backup, § 10.
 
-**Refresh the cache now.** Content is cached for up to 5 minutes. To refresh immediately: Maintenance workflow → `revalidate`, or
+**Refresh the cache now.** Content is cached for up to a day when nothing expires it. To refresh immediately: Maintenance workflow → `revalidate`, or
 
 ```bash
 curl -X POST https://<your-site>/api/revalidate -H "Authorization: Bearer <TRANSLATE_WEBHOOK_SECRET>"
 ```
 
-**Change site settings.** Table `site_settings`: `kingdom_name`, `tagline`, `daily_reset_utc_hour`, `discord_invite_url`, `transfer_contact`.
+**Change site settings.** Table `site_settings`: `kingdom_name`, `tagline`, `daily_reset_utc_hour`; the Discord invite and the transfer keys are edited in Cockpit → Discord & transfers.
 
 ## Logs
 

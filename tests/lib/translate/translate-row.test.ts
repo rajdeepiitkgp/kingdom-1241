@@ -5,9 +5,9 @@ import { columnHashes, encodeColumnHashes, sourceHash } from "@/lib/translate/ha
 // Mock Gemini: pretend-translate by prefixing the locale.
 const fakeTranslate = async (fields: Record<string, string>, locale: string) =>
   Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, `[${locale}] ${v}`]));
-const translateFields = vi.fn(fakeTranslate);
+const translateFields = vi.fn<(fields: Record<string, string>, locale: string, options?: { htmlFields?: string[] }) => Promise<Record<string, string>>>(fakeTranslate);
 vi.mock("@/lib/translate/provider", () => ({
-  translateFields: (fields: Record<string, string>, locale: string) => translateFields(fields, locale),
+  translateFields: (fields: Record<string, string>, locale: string, options?: { htmlFields?: string[] }) => translateFields(fields, locale, options),
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
@@ -245,5 +245,19 @@ describe("translateRows", () => {
     expect(results).toHaveLength(1);
     expect(rows.kingdom_name.value).toEqual({ en: "Kingdom 1241", de: "[de] Kingdom 1241" });
     expect(rows.daily_reset_utc_hour.value).toBe(0);
+  });
+
+  it("sends the rich-text settings as HTML and the plain ones as text", async () => {
+    const rows = {
+      transfer_info: { key: "transfer_info", value: { en: "<p><strong>20</strong> slots</p>" }, source_hash: null },
+      tagline: { key: "tagline", value: { en: "Rules & tools." }, source_hash: null },
+    };
+    const { client } = fakeSupabase(rows);
+    await translateRows(client, "site_settings", Object.values(rows), ["de"]);
+    const [fields, , options] = translateFields.mock.calls[0];
+    const htmlKeys = options?.htmlFields ?? [];
+    expect(htmlKeys.map((key) => fields[key])).toEqual(["<p><strong>20</strong> slots</p>"]);
+    // The answer goes through the sanitiser like every HTML field.
+    expect(rows.transfer_info.value).toEqual({ en: "<p><strong>20</strong> slots</p>", de: "[de] <p><strong>20</strong> slots</p>" });
   });
 });

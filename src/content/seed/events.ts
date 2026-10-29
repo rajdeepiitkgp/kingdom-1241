@@ -15,6 +15,10 @@ export interface SeedEvent {
   startsAt: string;
   durationMinutes: number;
   repeatEveryDays: number | null;
+  /** A second day in each round, N days after the first. */
+  alsoAfterDays?: number;
+  /** Each alliance picks its own times: only the day is shown. */
+  timing?: "alliance";
   guideSlug: string | null;
 }
 
@@ -30,6 +34,7 @@ export const SEED_EVENTS: SeedEvent[] = [
     startsAt: "2026-10-24T12:00:00.000Z",
     durationMinutes: 30,
     repeatEveryDays: 2,
+    timing: "alliance",
     guideSlug: "bear-hunt",
   },
   {
@@ -40,9 +45,12 @@ export const SEED_EVENTS: SeedEvent[] = [
     category: "alliance",
     icon: "🪓",
     color: "red",
-    startsAt: "2026-10-25T14:00:00.000Z",
+    // Every two weeks on a Tuesday and the Thursday after; the dates are placeholders.
+    startsAt: "2026-11-03T00:00:00.000Z",
     durationMinutes: 60,
-    repeatEveryDays: 7,
+    repeatEveryDays: 14,
+    alsoAfterDays: 2,
+    timing: "alliance",
     guideSlug: "viking-vengeance",
   },
   {

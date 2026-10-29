@@ -72,6 +72,49 @@ export function toggleLinePrefix(text: string, selection: Selection, prefix: "##
   return { from: range.start, to: range.end, insert, select: { start: range.start, end: range.start + insert.length } };
 }
 
+/** A line that opens a red box: `> [!DANGER]` (or GitHub's WARNING and CAUTION), alone or before the text. */
+const DANGER_LINE = /^(\s*)>\s*\[!(?:danger|warning|caution)\][ \t]*/i;
+const QUOTED = /^(\s*)> ?/;
+
+/**
+ * The red danger box: `> [!DANGER]` on a line of its own above the touched
+ * lines, each then quoted (lists and bold inside stay); an empty line gets the
+ * placeholder, selected to be typed over. Inside a red box (its marker or any
+ * quoted line under it) the button takes the whole box off instead.
+ */
+export function toggleDangerBox(text: string, selection: Selection, placeholder: string): TextEdit {
+  const lines = text.split("\n");
+  const startOf = (index: number) => lines.slice(0, index).reduce((sum, line) => sum + line.length + 1, 0);
+  const lineAt = (offset: number) => text.slice(0, offset).split("\n").length - 1;
+  const first = lineAt(selection.start);
+  const last = lineAt(selection.end > selection.start && text[selection.end - 1] === "\n" ? selection.end - 1 : selection.end);
+  const quoted = (index: number) => index >= 0 && index < lines.length && QUOTED.test(lines[index]);
+
+  let top = first;
+  while (quoted(top) && quoted(top - 1) && !DANGER_LINE.test(lines[top])) top -= 1;
+  if (quoted(top) && DANGER_LINE.test(lines[top])) {
+    let bottom = Math.max(last, top);
+    while (quoted(bottom + 1) && !DANGER_LINE.test(lines[bottom + 1])) bottom += 1;
+    const rest = lines[top].replace(DANGER_LINE, "$1");
+    const kept = [...(rest.trim() ? [rest] : []), ...lines.slice(top + 1, bottom + 1).map((line) => line.replace(QUOTED, "$1"))];
+    const from = startOf(top);
+    const insert = kept.join("\n");
+    return { from, to: startOf(bottom) + lines[bottom].length, insert, select: { start: from, end: from + insert.length } };
+  }
+
+  const touched = lines.slice(first, last + 1);
+  const empty = !touched.some((line) => line.trim());
+  const quotedLines = (empty ? [placeholder] : touched).map((line) => {
+    const bare = line.replace(QUOTED, "$1");
+    return bare.trim() ? `> ${bare}` : ">";
+  });
+  const from = startOf(first);
+  const insert = ["> [!DANGER]", ...quotedLines].join("\n");
+  const textStart = from + "> [!DANGER]\n> ".length;
+  const select = empty ? { start: textStart, end: textStart + placeholder.length } : { start: from, end: from + insert.length };
+  return { from, to: startOf(last) + lines[last].length, insert, select };
+}
+
 /** A link: the selection becomes its text (or a placeholder), and the address is selected to be typed or pasted. */
 export function insertLink(text: string, selection: Selection, placeholder: string): TextEdit {
   const selected = text.slice(selection.start, selection.end).trim();

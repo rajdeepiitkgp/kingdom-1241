@@ -105,10 +105,18 @@ export function getTranslatableTable(table: string): TranslatableTable | null {
 }
 
 /** `site_settings` rows whose value is a Localized object. */
-const TRANSLATABLE_SETTING_KEYS = ["kingdom_name", "tagline", "transfer_contact"];
+const TRANSLATABLE_SETTING_KEYS = ["kingdom_name", "tagline", "transfer_contact", "transfer_info"];
 
 /** Rows of a table that the pipeline should translate (filters site_settings). */
 export function isTranslatableRow(table: string, row: Record<string, unknown>): boolean {
   if (table === "site_settings") return TRANSLATABLE_SETTING_KEYS.includes(String(row.key));
   return true;
+}
+
+/** `site_settings` rows whose value is rich text (HTML from the Markdown editor), not plain text. */
+const HTML_SETTING_KEYS = ["transfer_info", "transfer_contact"];
+
+/** Whether a row's column holds HTML: the column says so, or (site_settings, one `value` for every key) the key does. */
+export function isHtmlField(table: string, id: string, column: { html: boolean }): boolean {
+  return column.html || (table === "site_settings" && HTML_SETTING_KEYS.includes(id));
 }

@@ -5,8 +5,8 @@
  *   npm run db:seed -- --sync-ui    # also update the interface strings (ui_strings) from the code
  *   npm run db:seed -- --overwrite  # also replace existing seed rows (drops their translations!)
  *
- * The texts of the content editor (announcements, rule topics and rules,
- * guides) belong to the moderators once the site runs: they are seeded only
+ * The texts of the content editor (announcements, events, rule topics and
+ * rules, guides) belong to the moderators once the site runs: they are seeded only
  * into an empty table, never by --sync-ui, so a placeholder a moderator
  * deleted doesn't come back; --overwrite still replaces them.
  *
@@ -146,23 +146,27 @@ async function main() {
     ),
   );
 
-  await upsertMissing(
-    "events",
-    "id",
-    seed.events.map((e) => ({
-      id: e.id,
-      slug: e.slug,
-      name: e.name,
-      summary: e.summary,
-      category: e.category,
-      icon: e.icon,
-      color: e.color,
-      starts_at: e.startsAt,
-      duration_minutes: e.durationMinutes,
-      repeat_every_days: e.repeatEveryDays,
-      guide_slug: e.guideSlug,
-      published: e.published,
-    })),
+  await seedEditorTables(["events"], () =>
+    upsertMissing(
+      "events",
+      "id",
+      seed.events.map((e) => ({
+        id: e.id,
+        slug: e.slug,
+        name: e.name,
+        summary: e.summary,
+        category: e.category,
+        icon: e.icon,
+        color: e.color,
+        starts_at: e.startsAt,
+        duration_minutes: e.durationMinutes,
+        repeat_every_days: e.repeatEveryDays,
+        also_after_days: e.alsoAfterDays,
+        timing: e.timing,
+        guide_slug: e.guideSlug,
+        published: e.published,
+      })),
+    ),
   );
 
   // Topics and their rules are one unit: rules are seeded only with their topics.

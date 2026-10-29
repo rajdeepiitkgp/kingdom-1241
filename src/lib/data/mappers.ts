@@ -1,6 +1,8 @@
 import type { Localized } from "@/lib/i18n/localized";
+import { EVENT_CATEGORIES } from "@/lib/events/options";
 import { readStoredAnalysis } from "@/lib/retro/analysis";
 import { isRatingKey, isTextKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/questions";
+import { hasTransferTerms, parseTransferTerms } from "@/lib/transfers/terms";
 import type {
   Alliance,
   Announcement,
@@ -96,10 +98,9 @@ export function mapAnnouncement(row: Row): Announcement {
   };
 }
 
-const CATEGORIES: EventCategory[] = ["alliance", "kingdom", "cross-kingdom", "solo"];
 
 export function mapEvent(row: Row): GameEvent {
-  const category = CATEGORIES.includes(row.category) ? (row.category as EventCategory) : "alliance";
+  const category = EVENT_CATEGORIES.includes(row.category as EventCategory) ? (row.category as EventCategory) : "alliance";
   return {
     id: str(row.id),
     slug: str(row.slug),
@@ -111,6 +112,9 @@ export function mapEvent(row: Row): GameEvent {
     startsAt: iso(row.starts_at, new Date(0).toISOString()),
     durationMinutes: Math.max(1, num(row.duration_minutes, 60)),
     repeatEveryDays: numOrNull(row.repeat_every_days),
+    // Both arrive with migration 0022; until then every event is a one-day, same-for-everyone event.
+    alsoAfterDays: numOrNull(row.also_after_days),
+    timing: row.timing === "alliance" ? "alliance" : "fixed",
     guideSlug: strOrNull(row.guide_slug),
     published: row.published !== false,
   };
@@ -211,6 +215,10 @@ export function mapSettings(rows: Row[], defaults: SiteSettings): SiteSettings {
     dailyResetUtcHour: num(values.daily_reset_utc_hour, defaults.dailyResetUtcHour),
     discordInviteUrl: strOrNull(values.discord_invite_url) ?? defaults.discordInviteUrl,
     transferContact: values.transfer_contact ? loc(values.transfer_contact) : defaults.transferContact,
+    transfersOpen: typeof values.transfers_open === "boolean" ? values.transfers_open : defaults.transfersOpen,
+    transferInfo: values.transfer_info ? loc(values.transfer_info) : defaults.transferInfo,
+    transferTerms: "transfer_terms" in values ? parseTransferTerms(values.transfer_terms) : defaults.transferTerms,
+    transferDiscordUrl: strOrNull(values.transfer_discord_url) ?? defaults.transferDiscordUrl,
     createdBy: strOrNull(values.created_by) ?? defaults.createdBy,
   };
 }
@@ -229,6 +237,10 @@ export function settingsToRows(settings: SiteSettings): Array<{ key: string; val
     { key: "daily_reset_utc_hour", value: settings.dailyResetUtcHour },
     { key: "discord_invite_url", value: settings.discordInviteUrl },
     { key: "transfer_contact", value: settings.transferContact },
+    { key: "transfers_open", value: settings.transfersOpen },
+    { key: "transfer_info", value: settings.transferInfo },
+    { key: "transfer_terms", value: hasTransferTerms(settings.transferTerms) ? settings.transferTerms : null },
+    { key: "transfer_discord_url", value: settings.transferDiscordUrl },
     { key: "created_by", value: settings.createdBy },
   ];
   return rows.filter((row) => row.value !== null && row.value !== undefined);

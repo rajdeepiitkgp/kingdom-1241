@@ -46,6 +46,16 @@ export default async function HomePage() {
           </div>
           <h1 className="mt-3 text-3xl/tight font-black text-ink md:text-5xl" dir="auto">{pick(settings.kingdomName, locale)}</h1>
           <p className="mt-3 max-w-2xl text-base font-semibold text-ink-muted md:text-lg" dir="auto">{pick(settings.tagline, locale)}</p>
+          {settings.transfersOpen && (
+            <Link
+              href={localePath(locale, "/transfers")}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-success-soft px-3.5 py-2 text-sm font-extrabold text-ink hover:underline"
+            >
+              <span className="size-2.5 shrink-0 rounded-full bg-success" aria-hidden />
+              {dict["home.transfersOpen"]}
+              <ArrowRight className="size-4 shrink-0 rtl:rotate-180" aria-hidden />
+            </Link>
+          )}
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={localePath(locale, "/events")} className="btn-primary">
               {dict["nav.events"]} <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
@@ -95,7 +105,18 @@ export default async function HomePage() {
 
       {/* Alliances */}
       <section data-tour="home-alliances">
-        <SectionTitle icon="🛡️" title={dict["home.alliances"]} />
+        <SectionTitle
+          icon="🛡️"
+          title={dict["home.alliances"]}
+          action={
+            <Link href={localePath(locale, "/transfers")} className="btn-ghost btn-sm">
+              {dict["transfers.title"]}:{" "}
+              <span className={settings.transfersOpen ? "text-success" : "text-ink-muted"}>
+                {settings.transfersOpen ? dict["transfers.open"] : dict["transfers.closed"]}
+              </span>
+            </Link>
+          }
+        />
         <AllianceGrid alliances={alliances} dict={dict} locale={locale} />
       </section>
 

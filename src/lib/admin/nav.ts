@@ -3,7 +3,20 @@
  * one the current address belongs to. Paths are below `/{locale}/admin`.
  */
 
-export type AdminNavIcon = "overview" | "plans" | "feedback" | "rallySync" | "announcements" | "rules" | "guides" | "giftCodes" | "users" | "settings";
+export type AdminNavIcon =
+  | "overview"
+  | "plans"
+  | "feedback"
+  | "rallySync"
+  | "announcements"
+  | "events"
+  | "rules"
+  | "guides"
+  | "alliances"
+  | "transfers"
+  | "giftCodes"
+  | "users"
+  | "settings";
 
 export interface AdminNavItem {
   /** Below /{locale}/admin: "" is the overview. */
@@ -36,9 +49,12 @@ export function adminNavGroups(access: { canManageUsers: boolean; isOwner: boole
       label: "Website",
       items: [
         { path: "/announcements", label: "Announcements", icon: "announcements", tour: "admin-nav-announcements" },
+        { path: "/events", label: "Events", icon: "events", tour: "admin-nav-events" },
         { path: "/rules", label: "Rules", icon: "rules", tour: "admin-nav-rules" },
         { path: "/guides", label: "Guides", icon: "guides", tour: "admin-nav-guides" },
+        { path: "/alliances", label: "Alliance pages", icon: "alliances", tour: "admin-nav-alliances" },
         { path: "/gift-codes", label: "Gift codes", icon: "giftCodes", tour: "admin-nav-gift-codes" },
+        ...(access.canManageUsers ? [{ path: "/transfers", label: "Discord & transfers", icon: "transfers" as const, tour: "admin-nav-transfers" }] : []),
       ],
     },
     {

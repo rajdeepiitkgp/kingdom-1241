@@ -24,14 +24,28 @@ export const CACHE_TAGS = {
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
 
+const GUIDE_PAGES = "/[locale]/guides/[slug]";
+const ALLIANCE_PAGES = "/[locale]/alliances/[tag]";
+
 /**
  * Routes whose pages must be expired by path as well as by tag. The guide
  * pages (a dynamic address under Suspense) kept showing their previous render
  * on the first visit after the tag was expired, and an address that wasn't
- * there at the last deploy said "not found" once.
+ * there at the last deploy said "not found" once; the alliance pages are built
+ * the same way. A guide page shows its events and the alliances' tabs, an
+ * alliance page its guides.
  */
 export function routesForTag(tag: CacheTag): string[] {
-  return tag === CACHE_TAGS.guides || tag === CACHE_TAGS.all ? ["/[locale]/guides/[slug]"] : [];
+  switch (tag) {
+    case CACHE_TAGS.all:
+    case CACHE_TAGS.guides:
+    case CACHE_TAGS.alliances:
+      return [GUIDE_PAGES, ALLIANCE_PAGES];
+    case CACHE_TAGS.events:
+      return [GUIDE_PAGES];
+    default:
+      return [];
+  }
 }
 
 /** Map a table name (as used by Supabase webhooks) to its cache tag. */

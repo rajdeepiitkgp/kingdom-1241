@@ -42,6 +42,8 @@ export function sanitizeRichText(html: string): string {
       td: ["colspan", "rowspan", "align"],
       "*": ["dir", "lang"],
     },
+    // The one class a text may carry: the red danger box (`> [!DANGER]`, see markDangerBoxes).
+    allowedClasses: { blockquote: ["danger"] },
     allowedSchemes: ["http", "https", "mailto"],
     // Images over https only: no plain-http hosts (mixed content) and no inline data: blobs.
     allowedSchemesByTag: { img: ["https"] },
@@ -96,7 +98,19 @@ export function linkImages(html: string): string {
 /** Convert Markdown (used in seed files for readability) to sanitised HTML. */
 export function markdownToHtml(markdown: string): string {
   const html = marked.parse(markdown, { async: false, gfm: true, breaks: false }) as string;
-  return sanitizeRichText(html);
+  return sanitizeRichText(markDangerBoxes(html));
+}
+
+/**
+ * GitHub's alert marker at the start of a quote, `[!DANGER]` (WARNING and
+ * CAUTION too, as pasted from GitHub or Obsidian), on its own line or before
+ * the text: the marker goes and the quote becomes the red box.
+ */
+const DANGER_MARK = /<blockquote>(\s*)<p>[ \t]*\[!(?:danger|warning|caution)\][ \t]*(?:<br\s*\/?>)?\s*(<\/p>\s*)?/gi;
+
+/** Quotes that open with the danger marker → `<blockquote class="danger">` (the gold box stays a plain quote). */
+export function markDangerBoxes(html: string): string {
+  return html.replace(DANGER_MARK, (_match, space: string, closed?: string) => `<blockquote class="danger">${space}${closed ? "" : "<p>"}`);
 }
 
 /** Rough plain-text excerpt of an HTML string, for cards and previews. */

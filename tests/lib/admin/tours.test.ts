@@ -23,6 +23,12 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/guides/3f2a")).toBe("guide");
     expect(adminPageFor("/en/admin/guides/3f2a/alliances/new")).toBe("guideSection");
     expect(adminPageFor("/en/admin/guides/3f2a/alliances")).toBeNull();
+    expect(adminPageFor("/en/admin/events")).toBe("events");
+    expect(adminPageFor("/en/admin/events/new")).toBe("event");
+    expect(adminPageFor("/en/admin/alliances")).toBe("alliances");
+    expect(adminPageFor("/en/admin/alliances/3f2a")).toBe("alliance");
+    expect(adminPageFor("/en/admin/transfers")).toBe("transfers");
+    expect(adminPageFor("/en/admin/transfers/x")).toBeNull();
     expect(adminPageFor("/en/admin/feedback/3f2a")).toBe("results");
     expect(adminPageFor("/en/admin/feedback/3f2a/print")).toBe("print");
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");
