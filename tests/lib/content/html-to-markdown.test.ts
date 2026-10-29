@@ -33,6 +33,13 @@ describe("htmlToMarkdown", () => {
     for (const text of texts) roundTrips(text);
   });
 
+  it("writes the red box back with its marker", () => {
+    const html = markdownToHtml("> [!DANGER] **Never** hit first.\n>\n> - or you burn");
+    expect(htmlToMarkdown(html)).toBe("> [!DANGER]\n> **Never** hit first.\n>\n> - or you burn");
+    roundTrips("> [!DANGER]\n> Never hit first.");
+    roundTrips("> Gold stays gold.");
+  });
+
   it("writes tables, alignment included", () => {
     const html = markdownToHtml("| Gen | Ratio |\n| :--- | ---: |\n| 1 | 10 / 30 / 60 |\n| 2 | a \\| b |");
     expect(htmlToMarkdown(html)).toBe("| Gen | Ratio |\n| :--- | ---: |\n| 1 | 10 / 30 / 60 |\n| 2 | a \\| b |");

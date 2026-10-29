@@ -331,6 +331,7 @@ body {
   .prose-game blockquote {
     @apply rounded-2xl border-s-4 border-gold bg-gold-soft px-4 py-3 text-ink;
   }
+  .prose-game blockquote.danger { @apply border-danger bg-danger-soft; }
   .prose-game blockquote > * + * { margin-top: 0.5em; }
   .prose-game code { @apply rounded-md bg-primary-soft px-1.5 py-0.5 text-[0.9em] font-bold text-ink; }
   .prose-game pre { @apply overflow-x-auto rounded-2xl bg-card-soft p-4 text-sm; }

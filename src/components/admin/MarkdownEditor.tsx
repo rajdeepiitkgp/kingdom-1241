@@ -2,12 +2,12 @@
 "use client";
 
 import clsx from "clsx";
-import { Bold, Heading2, ImagePlus, Italic, Link, List, ListOrdered, Quote, Table } from "lucide-react";
+import { Bold, Heading2, ImagePlus, Italic, Link, List, ListOrdered, OctagonAlert, Quote, Table } from "lucide-react";
 import { type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { SanitizedHtml } from "@/components/content/SanitizedHtml";
 import { previewMarkdown, uploadContentImage } from "@/lib/admin/content-actions";
 import { IMAGE_MAX_BYTES, IMAGE_MAX_HEIGHT, IMAGE_MAX_WIDTH, type ImageKind, IMAGES_PER_TEXT, imageUrls } from "@/lib/content/images";
-import { imageMarkdown, insertBlock, insertLink, TABLE_TEMPLATE, type TextEdit, toggleLinePrefix, toggleWrap } from "@/lib/content/markdown-edit";
+import { imageMarkdown, insertBlock, insertLink, TABLE_TEMPLATE, type TextEdit, toggleDangerBox, toggleLinePrefix, toggleWrap } from "@/lib/content/markdown-edit";
 import { canShrinkImages, ShrinkError, shrinkImage } from "@/lib/content/shrink";
 
 /**
@@ -31,11 +31,17 @@ const TOOLS: Array<{ label: string; icon: ReactNode; make: Make }> = [
   { label: "Heading", icon: <Heading2 aria-hidden className="size-4" />, make: (t, s) => toggleLinePrefix(t, s, "## ") },
   { label: "List", icon: <List aria-hidden className="size-4" />, make: (t, s) => toggleLinePrefix(t, s, "- ") },
   { label: "Numbered list", icon: <ListOrdered aria-hidden className="size-4" />, make: (t, s) => toggleLinePrefix(t, s, "1. ") },
-  { label: "Quote", icon: <Quote aria-hidden className="size-4" />, make: (t, s) => toggleLinePrefix(t, s, "> ") },
+  { label: "Quote (gold box)", icon: <Quote aria-hidden className="size-4" />, make: (t, s) => toggleLinePrefix(t, s, "> ") },
+  {
+    label: "Danger (red box)",
+    icon: <OctagonAlert aria-hidden className="size-4" />,
+    make: (t, s) => toggleDangerBox(t, s, "Don't do this, or you will be burned."),
+  },
   { label: "Link (Ctrl+K)", icon: <Link aria-hidden className="size-4" />, make: (t, s) => insertLink(t, s, "link text") },
   { label: "Table", icon: <Table aria-hidden className="size-4" />, make: (t, s) => insertBlock(t, s, TABLE_TEMPLATE, { start: 2, end: 8 }) },
 ];
-const SHORTCUTS: Record<string, Make> = { b: TOOLS[0].make, i: TOOLS[1].make, k: TOOLS[6].make };
+const toolMake = (label: string) => TOOLS.find((tool) => tool.label.startsWith(label))!.make;
+const SHORTCUTS: Record<string, Make> = { b: toolMake("Bold"), i: toolMake("Italics"), k: toolMake("Link") };
 
 export function MarkdownEditor({
   id,
