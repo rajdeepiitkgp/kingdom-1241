@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { announcementLive, bodyImageProblem, bodySourceFor, lockedPageImageProblem, parseAnnouncementForm } from "@/lib/admin/content-forms";
+import {
+  announcementLive,
+  bodyImageProblem,
+  bodySourceFor,
+  isContentOrderTable,
+  lockedPageImageProblem,
+  parseAnnouncementForm,
+  parseGuideForm,
+  parseGuideSectionForm,
+  parseRuleForm,
+  parseRuleTopicForm,
+} from "@/lib/admin/content-forms";
 import { parsePlanForm } from "@/lib/admin/kvk-forms";
 
 const BASE = "https://abcdefghijklmnopqrst.supabase.co";
@@ -73,5 +84,86 @@ describe("announcementLive", () => {
     expect(announcementLive({ published: true, expiresAt: "2026-10-30T00:00:00Z" }, now)).toBe(true);
     expect(announcementLive({ published: true, expiresAt: "2026-10-29T11:59:00Z" }, now)).toBe(false);
     expect(announcementLive({ published: false, expiresAt: null }, now)).toBe(false);
+  });
+});
+
+const TOPIC = "0b0e7a52-5d0c-4c43-9f3e-2f6a1f4f6d11";
+
+describe("parseRuleTopicForm", () => {
+  it("makes the address from the name and keeps a typed one", () => {
+    expect(parseRuleTopicForm(form({ title: "Attacks & tiles", icon: "🛡️", published: "on" }))).toEqual({
+      ok: true,
+      value: { title: "Attacks & tiles", icon: "🛡️", slug: "attacks-tiles", published: true },
+    });
+    const typed = parseRuleTopicForm(form({ title: "Attacks", slug: " KvK Rules! " }));
+    expect(typed.ok && typed.value).toMatchObject({ slug: "kvk-rules", icon: "📜", published: false });
+  });
+
+  it("wants a name, one emoji and an address with a letter or digit", () => {
+    const result = parseRuleTopicForm(form({ title: "", icon: "a long text" }));
+    expect(!result.ok && Object.keys(result.errors).sort()).toEqual(["icon", "title"]);
+    const noSlug = parseRuleTopicForm(form({ title: "Règles", slug: "!!!" }));
+    expect(!noSlug.ok && noSlug.errors.slug).toMatch(/at least one letter/);
+    expect(parseRuleTopicForm(form({ title: "Families", icon: "👨‍👩‍👧‍👦" })).ok).toBe(true);
+  });
+});
+
+describe("parseRuleForm", () => {
+  it("reads a rule with its topic and text", () => {
+    const result = parseRuleForm(form({ topicId: TOPIC, title: "No attacks", bodySource: "Never **inside** 1241.\r\n", published: "on" }), { supabaseUrl: BASE });
+    expect(result).toEqual({ ok: true, value: { topicId: TOPIC, title: "No attacks", bodySource: "Never **inside** 1241.", published: true } });
+  });
+
+  it("wants a topic, a title and an explanation, with at most three images", () => {
+    const empty = parseRuleForm(form({ topicId: "nope", title: "", bodySource: "" }), { supabaseUrl: BASE });
+    expect(!empty.ok && Object.keys(empty.errors).sort()).toEqual(["bodySource", "title", "topicId"]);
+    const four = parseRuleForm(form({ topicId: TOPIC, title: "Map", bodySource: [1, 2, 3, 4].map(image).join("\n\n") }), { supabaseUrl: BASE });
+    expect(!four.ok && four.errors.bodySource).toMatch(/At most 3 images in a rule/);
+  });
+});
+
+describe("parseGuideForm", () => {
+  it("reads a guide and folds the summary onto one line", () => {
+    const result = parseGuideForm(form({ title: "Bear Hunt", summary: "Rally the bear.\nEvery two days.", icon: "🐻", bodySource: "## How", published: "on" }), {
+      supabaseUrl: BASE,
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: { title: "Bear Hunt", summary: "Rally the bear. Every two days.", icon: "🐻", slug: "bear-hunt", bodySource: "## How", published: true },
+    });
+  });
+
+  it("wants a summary and allows ten images", () => {
+    const ten = Array.from({ length: 10 }, (_, i) => image(i)).join("\n");
+    const result = parseGuideForm(form({ title: "Swordland", summary: "", bodySource: ten }), { supabaseUrl: BASE });
+    expect(!result.ok && Object.keys(result.errors)).toEqual(["summary"]);
+  });
+});
+
+describe("parseGuideSectionForm", () => {
+  const options = { supabaseUrl: BASE, isNew: true, allianceTags: ["NAM", "Nam", "ULU"], taken: ["NAM"] };
+
+  it("takes an alliance from the list, with its exact case", () => {
+    expect(parseGuideSectionForm(form({ allianceTag: "Nam", bodySource: "We send at 20:00.", published: "on" }), options)).toEqual({
+      ok: true,
+      value: { allianceTag: "Nam", bodySource: "We send at 20:00.", published: true },
+    });
+    const unknown = parseGuideSectionForm(form({ allianceTag: "ulu", bodySource: "x" }), options);
+    expect(!unknown.ok && unknown.errors.allianceTag).toMatch(/isn't on the alliance list/);
+  });
+
+  it("refuses a second section for an alliance, and keeps an existing section's alliance", () => {
+    const twice = parseGuideSectionForm(form({ allianceTag: "NAM", bodySource: "x" }), options);
+    expect(!twice.ok && twice.errors.allianceTag).toMatch(/already has a section/);
+    const existing = parseGuideSectionForm(form({ allianceTag: "ULU", bodySource: "Edited" }), { ...options, isNew: false });
+    expect(existing.ok && existing.value.allianceTag).toBeNull();
+  });
+});
+
+describe("isContentOrderTable", () => {
+  it("knows the lists the arrows reorder", () => {
+    expect(["rule_topics", "rules", "guides"].every(isContentOrderTable)).toBe(true);
+    expect(isContentOrderTable("guide_sections")).toBe(false);
+    expect(isContentOrderTable("kvk_rules")).toBe(false);
   });
 });

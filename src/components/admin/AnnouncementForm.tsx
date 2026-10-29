@@ -4,7 +4,7 @@ import { useActionState, useTransition } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveAnnouncement } from "@/lib/admin/content-actions";
 import type { AdminAnnouncement } from "@/lib/admin/content-data";
-import { BODY_MAX, TITLE_MAX } from "@/lib/admin/content-forms";
+import { BODY_MAX, MARKDOWN_HINT, TITLE_MAX } from "@/lib/admin/content-forms";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { pick } from "@/lib/i18n/localized";
 import { DateTimeField } from "./DateTimeField";
@@ -37,7 +37,7 @@ export function AnnouncementForm({ announcement, bodySource, locale }: { announc
         htmlFor="bodySource"
         error={errors.bodySource}
         tour="announcement-body"
-        hint="Use the buttons, or Markdown: **bold**, *italics*, ## heading, - list. Text copied from Discord keeps its formatting. Preview shows it as players will see it. Add images with the picture button, or paste or drop them into the text."
+        hint={MARKDOWN_HINT}
       >
         <MarkdownEditor id="bodySource" name="bodySource" defaultValue={bodySource} images="announcement" maxLength={BODY_MAX} />
       </Field>

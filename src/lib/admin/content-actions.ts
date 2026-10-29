@@ -9,7 +9,7 @@ import { checkAccess } from "@/lib/auth/server";
 import { missingTable, usedImageBytes } from "@/lib/content/image-store";
 import { budgetProblem, IMAGE_BUCKET, IMAGE_MAX_BYTES, IMAGE_MIME, imagePath, imageProblem, imageUrl, isImageKind, sniffImage, stripJpegMetadata } from "@/lib/content/images";
 import { getEnabledLocales } from "@/lib/data";
-import { CACHE_TAGS } from "@/lib/data/cache-tags";
+import { CACHE_TAGS, type CacheTag, routesForTag } from "@/lib/data/cache-tags";
 import { markdownToHtml } from "@/lib/html";
 import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
@@ -18,18 +18,21 @@ import { isSupabaseAdminConfigured, supabaseUrl } from "@/lib/supabase/env";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { BODY_MAX, bodySourceFor, parseAnnouncementForm, TITLE_MAX } from "./content-forms";
-import { introSourceUnchanged, localeField, localizedUpdate, textField, uuidField } from "./forms";
+import { BODY_MAX, type ContentOrderTable, isContentOrderTable, parseAnnouncementForm, SUMMARY_MAX, TITLE_MAX } from "./content-forms";
+import { bodyColumns, NO_DATABASE } from "./content-write";
+import { localeField, localizedUpdate, textField, uuidField } from "./forms";
+import { isMoveDirection, moveInList } from "./kvk-forms";
 import { pendingColumns, withLanguage } from "./translation";
 
 /**
  * Server Actions of the content editor (moderators and up): the editor's
- * preview and image upload, and the announcements (rules and guides follow).
- * Every write is audited and expires the public page's cache.
+ * preview and image upload, the announcements, the per-language corrections
+ * and the order of every content list. Rules and guides have their own files
+ * (rules-actions.ts, guides-actions.ts). Every write is audited and expires
+ * the public page's cache.
  */
 
-const NO_DATABASE: ActionState = { status: "error", message: "The content editor needs the database." };
-const GONE: ActionState = { status: "error", message: "This announcement no longer exists. Reload the page." };
+const GONE_ANNOUNCEMENT: ActionState = { status: "error", message: "This announcement no longer exists. Reload the page." };
 
 /** The column arrived with migration 0020; until it is applied, rows are written without it. */
 function missingColumn(error: { code?: string } | null): boolean {
@@ -129,20 +132,13 @@ export async function saveAnnouncement(_previous: ActionState, formData: FormDat
   if (id) {
     const { data, error } = await admin.from("announcements").select("*").eq("id", id).maybeSingle();
     if (error) return failed(log, "Reading the announcement", error);
-    if (!data) return GONE;
+    if (!data) return GONE_ANNOUNCEMENT;
     existing = data as ExistingAnnouncement;
   }
 
-  // An unchanged English text keeps its translations (comparing fresh HTML instead
-  // would drop them whenever the stored HTML came from the seed or an older renderer).
-  const shown = existing ? bodySourceFor({ body: existing.body, bodySource: existing.body_source ?? null }, "en") : "";
-  const body = existing && introSourceUnchanged(input.bodySource, shown) ? existing.body : localizedUpdate(existing?.body, markdownToHtml(input.bodySource));
-  const bodySource = existing && body === existing.body ? { ...(existing.body_source ?? {}), en: input.bodySource } : { en: input.bodySource };
-
   const row: Record<string, unknown> = {
     title: localizedUpdate(existing?.title, input.title),
-    body,
-    body_source: bodySource,
+    ...bodyColumns(existing, input.bodySource),
     pinned: input.pinned,
     published: input.published,
     expires_at: input.expiresAt,
@@ -198,9 +194,15 @@ export async function deleteAnnouncement(formData: FormData): Promise<void> {
 // Manual corrections of one language (never English, never re-translated)
 // ---------------------------------------------------------------------------
 
-/** The content tables whose translations are corrected here, with what each column takes and where its page is. */
-const CONTENT_TRANSLATIONS: Record<string, { columns: Record<string, number>; tag: string; path: (id: string) => string }> = {
-  announcements: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.announcements, path: (id) => `/announcements/${id}` },
+type Row = Record<string, unknown>;
+
+/** The content tables whose translations are corrected here, with what each column takes and where its editor is. */
+const CONTENT_TRANSLATIONS: Record<string, { columns: Record<string, number>; tag: CacheTag; path: (row: Row) => string }> = {
+  announcements: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.announcements, path: (row) => `/announcements/${row.id}` },
+  rule_topics: { columns: { title: TITLE_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/topics/${row.id}` },
+  rules: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/${row.id}` },
+  guides: { columns: { title: TITLE_MAX, summary: SUMMARY_MAX, body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.id}` },
+  guide_sections: { columns: { body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.guide_id}/alliances/${row.id}` },
 };
 
 export async function saveContentTranslation(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -240,6 +242,56 @@ export async function saveContentTranslation(_previous: ActionState, formData: F
 
   await audit(access.user, "translation.update", table, id, { column, lang });
   updateTag(config.tag);
-  revalidatePath(adminPath(locale, config.path(id)));
+  for (const route of routesForTag(config.tag)) revalidatePath(route, "page");
+  revalidatePath(adminPath(locale, config.path(row)));
   return { status: "saved", message: "Saved for this language only." };
+}
+
+// ---------------------------------------------------------------------------
+// Order of rule topics, rules (within their topic) and guides: the ▲ ▼ arrows
+// ---------------------------------------------------------------------------
+
+const ORDERED: Record<ContentOrderTable, { action: string; tag: CacheTag; list: string; scope?: string }> = {
+  rule_topics: { action: "rule_topic", tag: CACHE_TAGS.rules, list: "/rules" },
+  rules: { action: "rule", tag: CACHE_TAGS.rules, list: "/rules", scope: "topic_id" },
+  guides: { action: "guide", tag: CACHE_TAGS.guides, list: "/guides" },
+};
+
+const MOVE_FAILED = "Moving failed. Reload the page and try again.";
+
+export async function moveContentRow(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const locale = localeField(formData);
+  const id = uuidField(formData, "id");
+  const table = textField(formData, "table");
+  const direction = textField(formData, "direction");
+  if (!id || !isContentOrderTable(table) || !isMoveDirection(direction)) return { status: "error", message: MOVE_FAILED };
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const config = ORDERED[table];
+  const admin = createAdminClient();
+
+  // A rule moves among the rules of its own topic, read from the row rather than the form.
+  let query = admin.from(table).select("id, sort_order").order("sort_order").order("created_at");
+  if (config.scope) {
+    const { data: row, error } = await admin.from(table).select(config.scope).eq("id", id).maybeSingle();
+    if (error) return failed(log, `Reordering ${table}`, error, MOVE_FAILED);
+    if (!row) return { status: "idle" };
+    query = query.eq(config.scope, String((row as unknown as Row)[config.scope]));
+  }
+  const { data: rows, error } = await query;
+  if (error) return failed(log, `Reordering ${table}`, error, MOVE_FAILED);
+  const order = moveInList((rows ?? []).map((row) => String(row.id)), id, direction);
+  if (!order) return { status: "idle" }; // deleted meanwhile, or already at that end
+  const current = new Map((rows ?? []).map((row) => [String(row.id), Number(row.sort_order)]));
+  for (const [index, rowId] of order.entries()) {
+    if (current.get(rowId) === index) continue;
+    const { error: writeError } = await admin.from(table).update({ sort_order: index }).eq("id", rowId);
+    if (writeError) return failed(log, `Reordering ${table}`, writeError, MOVE_FAILED);
+  }
+  await audit(access.user, `${config.action}.move`, table, id, { direction });
+  updateTag(config.tag);
+  for (const route of routesForTag(config.tag)) revalidatePath(route, "page");
+  revalidatePath(adminPath(locale, config.list));
+  return { status: "saved" };
 }
