@@ -7,6 +7,7 @@ import type { Alliance, KvkCoordinator } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 export function CoordinatorForm({
   locale,
@@ -20,10 +21,12 @@ export function CoordinatorForm({
   alliances: Pick<Alliance, "tag" | "name">[];
 }) {
   const [state, action] = useActionState<ActionState, FormData>(saveCoordinator, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = coordinator ? `coord-${coordinator.id}` : "coord-new";
   const errors = state.errors ?? {};
   return (
-    <form action={action} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[10rem_1fr_10rem_1fr_auto_auto] md:items-end">
+    <form action={action} onSubmit={coordinator ? submit : undefined} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[10rem_1fr_10rem_1fr_auto_auto] md:items-end">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {coordinator && <input type="hidden" name="id" value={coordinator.id} />}

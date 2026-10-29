@@ -6,6 +6,7 @@ import { addGrant, setRole } from "@/lib/admin/users-actions";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/auth/roles";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 export function RoleForm({
   locale,
@@ -23,9 +24,11 @@ export function RoleForm({
   locked: string | null;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(setRole, IDLE_STATE);
+  // Without it, Chrome showed the old role next to "Role updated." until a reload.
+  const submit = useSubmitInTransition(action);
   const options = ROLES.filter((r) => r !== "admin" || canGrantAdmin || r === role);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2" data-tour="users-role">
+    <form action={action} onSubmit={submit} className="flex flex-wrap items-center gap-2" data-tour="users-role">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="id" value={id} />
       <select name="role" className="input w-auto select-chevron py-2" defaultValue={role} disabled={Boolean(locked)} aria-label="Role" title={locked ?? undefined}>

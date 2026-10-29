@@ -6,6 +6,7 @@ import { saveProfile } from "@/lib/admin/profile-actions";
 import type { Alliance } from "@/lib/data/types";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 /** In-game name and home alliance: shown as "[TAG] Name" in the user list and on every change the person makes, like the game does. */
 export function ProfileForm({
@@ -20,8 +21,9 @@ export function ProfileForm({
   path: string;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(saveProfile, IDLE_STATE);
+  const submit = useSubmitInTransition(action);
   return (
-    <form action={action} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_15rem_auto] md:items-end">
+    <form action={action} onSubmit={submit} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_15rem_auto] md:items-end">
       <input type="hidden" name="path" value={path} />
       <Field label="Your in-game name" htmlFor="gameName" error={state.errors?.gameName}>
         <input id="gameName" name="gameName" className="input" defaultValue={gameName ?? ""} maxLength={48} required placeholder="exactly as in Kingshot" />

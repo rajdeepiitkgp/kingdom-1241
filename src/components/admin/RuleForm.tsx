@@ -7,12 +7,15 @@ import type { KvkRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 export function RuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkRule | null }) {
   const [state, action] = useActionState<ActionState, FormData>(saveRule, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = rule ? `rule-${rule.id}` : "rule-new";
   return (
-    <form action={action} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[7rem_1fr_auto_auto] md:items-end">
+    <form action={action} onSubmit={rule ? submit : undefined} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[7rem_1fr_auto_auto] md:items-end">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {rule && <input type="hidden" name="id" value={rule.id} />}

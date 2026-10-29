@@ -7,13 +7,16 @@ import type { KvkLeaderRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 /** One instruction on the leader page, for every leader or only rally / garrison leads. */
 export function LeaderRuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkLeaderRule | null }) {
   const [state, action] = useActionState<ActionState, FormData>(saveLeaderRule, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = rule ? `lrule-${rule.id}` : "lrule-new";
   return (
-    <form action={action} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[9rem_7rem_1fr_auto_auto] md:items-end">
+    <form action={action} onSubmit={rule ? submit : undefined} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[9rem_7rem_1fr_auto_auto] md:items-end">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {rule && <input type="hidden" name="id" value={rule.id} />}

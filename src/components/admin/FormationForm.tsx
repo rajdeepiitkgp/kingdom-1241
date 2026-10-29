@@ -9,6 +9,7 @@ import { pick } from "@/lib/i18n/localized";
 import { HeroSlotFields, type HeroSlots, RatioFields, type Ratio } from "./HeroRatioFields";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 export function FormationForm({
   locale,
@@ -46,6 +47,8 @@ export function FormationForm({
     }
     return result;
   }, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   // The preset letter of the "add" form follows the list: after an add the next
   // free letter arrives as a new prop.
   const [label, setLabel] = useState(formation?.label ?? defaultLabel);
@@ -58,7 +61,7 @@ export function FormationForm({
   const errors = state.errors ?? {};
 
   return (
-    <form action={action} className="min-w-0 flex-1 space-y-4">
+    <form action={action} onSubmit={formation ? submit : undefined} className="min-w-0 flex-1 space-y-4">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {formation && <input type="hidden" name="id" value={formation.id} />}

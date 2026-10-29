@@ -7,13 +7,16 @@ import type { KvkChecklistRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
+import { useSubmitInTransition } from "./useEditorForm";
 
 /** One line on the checklist page: an order for the battle commander or a general guideline. */
 export function ChecklistRuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkChecklistRule | null }) {
   const [state, action] = useActionState<ActionState, FormData>(saveChecklistRule, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(action);
   const prefix = rule ? `crule-${rule.id}` : "crule-new";
   return (
-    <form action={action} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[11rem_7rem_1fr_auto_auto] md:items-end">
+    <form action={action} onSubmit={rule ? submit : undefined} className="grid min-w-0 grow basis-72 grid-cols-1 gap-2 md:grid-cols-[11rem_7rem_1fr_auto_auto] md:items-end">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="planId" value={planId} />
       {rule && <input type="hidden" name="id" value={rule.id} />}
