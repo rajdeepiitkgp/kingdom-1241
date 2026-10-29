@@ -3,11 +3,18 @@
 import { useActionState } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveTranslation } from "@/lib/admin/kvk-actions";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
 
-/** One translated text next to its English source. Locked while the machine translation of the row is running. */
+/**
+ * One translated text next to its English source. Locked while the machine
+ * translation of the row is running. Battle-plan rows save through
+ * `saveTranslation` (with their plan id); the content editor passes its own action.
+ */
 export function TranslationForm({
+  action: save = saveTranslation,
+  markdown = false,
   locale,
   planId,
   table,
@@ -22,8 +29,11 @@ export function TranslationForm({
   multiline = false,
   maxLength,
 }: {
+  action?: (previous: ActionState, formData: FormData) => Promise<ActionState>;
+  /** A Markdown text: the editor with its preview instead of a plain box. */
+  markdown?: boolean;
   locale: string;
-  planId: string;
+  planId?: string;
   table: string;
   id: string;
   column: string;
@@ -36,12 +46,12 @@ export function TranslationForm({
   multiline?: boolean;
   maxLength: number;
 }) {
-  const [state, action] = useActionState<ActionState, FormData>(saveTranslation, IDLE_STATE);
+  const [state, action] = useActionState<ActionState, FormData>(save, IDLE_STATE);
   const inputId = `tr-${table}-${id}-${column}`;
   return (
     <form action={action} className="space-y-3 rounded-2xl bg-card-soft p-3">
       <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="planId" value={planId} />
+      {planId && <input type="hidden" name="planId" value={planId} />}
       <input type="hidden" name="table" value={table} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="column" value={column} />
@@ -54,7 +64,9 @@ export function TranslationForm({
           </div>
         </div>
         <Field label={`${label} · ${langLabel}`} htmlFor={inputId} error={state.errors?.value}>
-          {multiline ? (
+          {markdown ? (
+            <MarkdownEditor id={inputId} name="value" defaultValue={value} disabled={pending} dir="auto" maxLength={maxLength} className="min-h-40" />
+          ) : multiline ? (
             <textarea id={inputId} name="value" className="input min-h-40 font-mono text-sm" defaultValue={value} disabled={pending} dir="auto" maxLength={maxLength} />
           ) : (
             <input id={inputId} name="value" className="input" defaultValue={value} disabled={pending} dir="auto" maxLength={maxLength} />

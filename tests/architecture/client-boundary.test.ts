@@ -45,6 +45,8 @@ const SERVER_ONLY = [
   "lib/gift-codes/sync.ts",
   "lib/admin/gift-codes-data.ts",
   "lib/admin/usage-data.ts",
+  "lib/admin/content-data.ts",
+  "lib/content/image-store.ts",
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
   "lib/translate/provider.ts",
