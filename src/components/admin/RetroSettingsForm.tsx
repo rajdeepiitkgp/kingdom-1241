@@ -20,6 +20,7 @@ import {
   TITLE_MAX,
 } from "@/lib/retro/questions";
 import { DateTimeField } from "./DateTimeField";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
 
@@ -100,7 +101,7 @@ export function RetroSettingsForm({
         error={errors.introSource}
         hint="A few lines above the questions: what the council wants to learn, how long it takes. Translated automatically after saving."
       >
-        <textarea id="retro-intro" name="introSource" className="input min-h-28 font-mono text-sm" defaultValue={pick(retro?.introSource, "en")} maxLength={INTRO_MAX} dir="ltr" />
+        <MarkdownEditor id="retro-intro" name="introSource" defaultValue={pick(retro?.introSource, "en")} maxLength={INTRO_MAX} className="min-h-28" locked />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

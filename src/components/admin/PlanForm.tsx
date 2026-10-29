@@ -10,6 +10,7 @@ import { adminPath } from "@/lib/auth/paths";
 import { pick } from "@/lib/i18n/localized";
 import { STANDARD_BATTLE, standardWindow } from "@/lib/kvk/battle-window";
 import { DateTimeField } from "./DateTimeField";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
 import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
@@ -107,7 +108,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
         tour="plan-intro"
         hint="**bold**, *italics*, lists with “- ”, quotes with “> ”. Write {{when}}, {{date}}, {{time}} or {{utc}} instead of “tomorrow” or a time: every player sees the battle time in their own words and time zone (“tomorrow”, “Sunday, November 8”, “15:00”, “14:00 UTC”), so the text never goes stale. Translated into the other languages automatically after saving."
       >
-        <textarea id="introSource" name="introSource" className="input min-h-56 font-mono text-sm" defaultValue={plan?.introSource ?? ""} dir="ltr" />
+        <MarkdownEditor id="introSource" name="introSource" defaultValue={plan?.introSource ?? ""} locked />
       </Field>
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-ink" data-tour="plan-flags">

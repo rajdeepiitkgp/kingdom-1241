@@ -350,7 +350,7 @@ async function TranslationMode({
       <AdminSection title="Plan texts">
         <div className="space-y-3">
           <TranslationForm {...common} table="kvk_plans" id={plan.id} column="title" label="Title" english={text(plan.title, "en")} value={text(plan.title, lang)} pending={plan.pendingColumns.includes("title")} maxLength={TEXT_LIMITS.title} />
-          <TranslationForm {...common} table="kvk_plans" id={plan.id} column="intro" label="Introduction (Markdown)" english={plan.introSource} value={introSourceFor(plan, lang)} pending={plan.pendingColumns.includes("intro")} multiline maxLength={TEXT_LIMITS.intro} />
+          <TranslationForm {...common} table="kvk_plans" id={plan.id} column="intro" label="Introduction (Markdown)" english={plan.introSource} value={introSourceFor(plan, lang)} pending={plan.pendingColumns.includes("intro")} multiline markdown maxLength={TEXT_LIMITS.intro} />
         </div>
       </AdminSection>
 
@@ -382,7 +382,7 @@ async function TranslationMode({
         <AdminSection title="Feedback form texts" hint="The title and introduction players see above the feedback questions. The questions themselves are translated with the interface strings.">
           <div className="space-y-3">
             <TranslationForm {...common} table="kvk_retrospectives" id={retro.id} column="title" label="Feedback title" english={text(retro.title, "en")} value={text(retro.title, lang)} pending={retro.pendingColumns.includes("title")} maxLength={TEXT_LIMITS.title} />
-            <TranslationForm {...common} table="kvk_retrospectives" id={retro.id} column="intro" label="Feedback introduction (Markdown)" english={text(retro.introSource, "en")} value={introSourceFor({ intro: retro.intro, introSources: retro.introSource }, lang)} pending={retro.pendingColumns.includes("intro")} multiline maxLength={TEXT_LIMITS.intro} />
+            <TranslationForm {...common} table="kvk_retrospectives" id={retro.id} column="intro" label="Feedback introduction (Markdown)" english={text(retro.introSource, "en")} value={introSourceFor({ intro: retro.intro, introSources: retro.introSource }, lang)} pending={retro.pendingColumns.includes("intro")} multiline markdown maxLength={TEXT_LIMITS.intro} />
           </div>
         </AdminSection>
       )}
