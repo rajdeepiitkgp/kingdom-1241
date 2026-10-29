@@ -2,6 +2,7 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
+import { readConfig, writeConfig } from "@/lib/config/app-config";
 import { expiryWindow } from "@/lib/content/expiry";
 import { CACHE_TAGS } from "@/lib/data";
 import { syncGiftCodes } from "@/lib/gift-codes/sync";
@@ -19,9 +20,11 @@ import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
  * they were and the run passes; it fails (503, GitHub e-mails the owner) once
  * kingshot.net has failed for six hours, or when the database is the problem.
  *
- * The same hourly run takes an announcement or a gift code that just ran out
- * off Home: the pages are refreshed once a day (cacheLife "content"), so
- * without it an expired text would stay up to a day.
+ * The same run takes an announcement or a gift code that ran out since its
+ * last look off Home: the pages are refreshed once a day (cacheLife
+ * "content"), so without it an expired text would stay up to a day. GitHub
+ * runs the hourly schedule when it can (often hours apart), so the look
+ * starts where the previous one ended (app_config `last_expiry_check`).
  */
 
 const log = createLogger("gift-codes");
@@ -45,16 +48,30 @@ export async function POST(request: Request) {
   return reply({ ok: false, ...result }, quiet ? 200 : 503);
 }
 
-/** Whether an announcement or a gift code reached its expiry in the last two hours (never throws: a failed look just waits for the next run). */
+/**
+ * Whether an announcement or a gift code reached its expiry since the last
+ * look (never throws: a failed look leaves the note alone, so the next run
+ * covers the same span again).
+ */
 async function expiredRecently(reqId: string): Promise<{ announcements: boolean; giftCodes: boolean }> {
   if (!isSupabaseAdminConfigured()) return { announcements: false, giftCodes: false };
-  const { from, to } = expiryWindow(new Date());
   const admin = createAdminClient();
+  const note = await readConfig(admin, "last_expiry_check").catch(() => null);
+  const { from, to } = expiryWindow(new Date(), note);
+  let complete = true;
   const count = async (table: "announcements" | "gift_codes") => {
     const { count, error } = await admin.from(table).select("id", { count: "exact", head: true }).gt("expires_at", from).lte("expires_at", to);
-    if (error) log.warn("Checking for expired texts failed", { reqId, table, error: error.message });
+    if (error) {
+      complete = false;
+      log.warn("Checking for expired texts failed", { reqId, table, error: error.message });
+    }
     return (count ?? 0) > 0;
   };
   const [announcements, giftCodes] = await Promise.all([count("announcements"), count("gift_codes")]);
+  if (complete) {
+    await writeConfig(admin, "last_expiry_check", { at: to }).catch((error: unknown) =>
+      log.warn("Saving the expiry check's time failed", { reqId, error: error instanceof Error ? error.message : String(error) }),
+    );
+  }
   return { announcements, giftCodes };
 }
