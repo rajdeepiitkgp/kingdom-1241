@@ -7,7 +7,7 @@ import type { KvkChecklistItem } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 /** One task on the commander checklist: when it is due, what to do and an optional note. */
 export function ChecklistItemForm({ locale, planId, item }: { locale: string; planId: string; item: KvkChecklistItem | null }) {

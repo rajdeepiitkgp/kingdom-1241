@@ -6,7 +6,7 @@ import { addGrant, setRole } from "@/lib/admin/users-actions";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/auth/roles";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 export function RoleForm({
   locale,

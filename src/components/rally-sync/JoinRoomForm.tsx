@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { unlockRoom, type UnlockRoomState } from "@/lib/rally-sync/actions";
 import { formatRoomCode } from "@/lib/rally-sync/room";
+import { useSubmitInTransition } from "../ui/useSubmitInTransition";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 
@@ -18,6 +19,8 @@ const INITIAL: UnlockRoomState = { status: "idle" };
  */
 export function JoinRoomForm({ dict, locale, fixedCode }: { dict: Dictionary; locale: string; fixedCode?: string }) {
   const [state, formAction, pending] = useActionState(unlockRoom, INITIAL);
+  // A wrong password keeps the typed room ID (React's own reset after an action would empty both fields).
+  const submit = useSubmitInTransition(formAction);
   const now = useNow(1000);
   const waitMs = state.error === "throttled" && state.retryAt && now ? Math.max(0, state.retryAt - now.getTime()) : 0;
   const waiting = state.error === "throttled" && (now === null || waitMs > 0);
@@ -32,7 +35,7 @@ export function JoinRoomForm({ dict, locale, fixedCode }: { dict: Dictionary; lo
   const hint = state.error === "wrong" && state.triesLeft !== undefined && state.triesLeft <= 2 ? format(dict["kvk.triesLeft"], { n: state.triesLeft }) : null;
 
   return (
-    <form action={formAction} className="card p-5 md:p-6">
+    <form action={formAction} onSubmit={submit} className="card p-5 md:p-6">
       <h2 className="text-xl font-extrabold text-ink">{fixedCode ? dict["sync.unlock.title"] : dict["sync.join.title"]}</h2>
       <p className="mt-1 text-sm text-ink-muted">{fixedCode ? dict["sync.unlock.body"] : dict["sync.join.body"]}</p>
       <input type="hidden" name="locale" value={locale} />
