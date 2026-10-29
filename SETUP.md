@@ -127,13 +127,15 @@ The token can do anything in that Vercel team, so it lives only in GitHub's secr
 
 ## 6. GitHub Actions — CI and database deploys
 
-Four workflows live in `.github/workflows/`:
+These workflows live in `.github/workflows/`:
 
 | Workflow | Runs when | Does |
 | --- | --- | --- |
-| **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build |
+| **CI** | every PR, every push to `main` | `npm ci`, lint, typecheck, unit tests, production build, then the browser tests against that build with no keys (`docs/QA.md`); the run's summary shows the JUnit results of both test suites, and the `test-reports` artifact keeps the reports for 14 days |
 | **Deploy database** | a push to `main` that touches `supabase/migrations/`, or manually; a PR that touches them gets a dry run | `supabase link` + `supabase db push` — applies new migration files to the production database (`--dry-run` on the PR only lists them) |
 | **Maintenance** | manually (Actions → Maintenance → Run workflow), every Monday on its own for the backup, daily for the prune and the alliance sync | `seed`, `sync-ui`, `translate`, `translate-dry-run`, `revalidate`, `backup` (§ 10), `prune` / `prune-dry-run` (§ 9, battle feedback), `webhooks` (§ 7), `config-push` (§ 8.1), `alliances` (§ 9c): everything you would otherwise run from a laptop |
+| **Gift codes** | every hour, or manually | asks the site to check kingshot.net's gift codes (§ 9d) |
+| **E2E live** | daily at 06:30 UTC, or manually | opens the live site's pages like a visitor, in every language it offers, read-only (`docs/QA.md`, the live check); a failure e-mails you like any failed workflow |
 | **Prune deployments** | after every finished Vercel deployment, daily, or manually (a dry run by default) | deletes old Vercel deployments, keeping the live one, the one before it and open pull requests' previews (§ 5) |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
@@ -147,7 +149,7 @@ Four workflows live in `.github/workflows/`:
 | `SUPABASE_SECRET_KEY` | Maintenance | step 1 |
 | `ANTHROPIC_API_KEY` | Maintenance | step 2, option A |
 | `GEMINI_API_KEY` | Maintenance | step 2, option B (optional) |
-| `SITE_URL` | Maintenance | step 5 |
+| `SITE_URL` | Maintenance, Gift codes, E2E live | step 5 |
 | `TRANSLATE_WEBHOOK_SECRET` | Maintenance | step 3 |
 | `KVK_SEED_PASSWORD` | Maintenance (optional) | step 3 |
 | `BACKUP_PASSPHRASE` | Maintenance (`backup`) | `openssl rand -hex 32`; keep a copy outside GitHub (§ 10) |
