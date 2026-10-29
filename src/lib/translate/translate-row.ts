@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeRichText } from "@/lib/html";
 import { DEFAULT_LOCALE } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
+import { restoreImages, type Shielded, shieldImages } from "./images";
 import { translateFields, withRetry } from "./provider";
 import { columnHashes, encodeColumnHashes, staleColumns, storedColumnHashes } from "./hash";
 import { getTranslatableTable, isTranslatableRow, type TranslatableTable } from "./tables";
@@ -176,28 +177,48 @@ export async function translateRows(
     const needing = pending.filter((s) => s.needs.has(locale));
     for (const batch of chunk(needing)) {
       // Field keys are opaque ("f0", "f1", ...) so the model never sees ids.
-      const fieldMap: Array<{ key: string; state: RowState; column: string }> = [];
+      const fieldMap: Array<{ key: string; state: RowState; column: string; shielded: Shielded }> = [];
       const fields: Record<string, string> = {};
       for (const state of batch) {
         for (const column of config.columns) {
           if (!state.needs.get(locale)?.has(column.name)) continue;
           const key = `f${fieldMap.length}`;
-          fieldMap.push({ key, state, column: column.name });
-          fields[key] = state.source[column.name];
+          // Images travel as placeholders and come back untouched (images.ts).
+          const shielded = column.html ? shieldImages(state.source[column.name]) : { text: state.source[column.name], images: [] };
+          fieldMap.push({ key, state, column: column.name, shielded });
+          fields[key] = shielded.text;
         }
       }
       const htmlFields = fieldMap.filter((f) => htmlColumns.includes(f.column)).map((f) => f.key);
 
       log(`${table}: translating ${batch.length} row(s) into ${locale} (${Object.keys(fields).length} fields)`);
       try {
-        const translated = await withRetry(() => translateFields(fields, locale, { htmlFields, context }));
-        for (const { key, state, column } of fieldMap) {
-          const text = translated[key];
-          if (typeof text !== "string" || !text.trim()) continue;
-          const isHtml = htmlColumns.includes(column);
-          state.columns[column] = { ...state.columns[column], [locale]: isHtml ? sanitizeRichText(text) : text };
-          if (!state.done.has(locale)) state.done.set(locale, new Set());
-          state.done.get(locale)!.add(column);
+        // An answer that lost or moved an image is asked for once more; still wrong,
+        // that language keeps the English text (images in place) until the next run.
+        let open = fieldMap;
+        for (let attempt = 0; attempt < 2 && open.length > 0; attempt++) {
+          const ask = Object.fromEntries(open.map((f) => [f.key, fields[f.key]]));
+          const translated = await withRetry(() => translateFields(ask, locale, { htmlFields: htmlFields.filter((key) => key in ask), context }));
+          const moved: typeof fieldMap = [];
+          for (const entry of open) {
+            const { key, state, column, shielded } = entry;
+            const text = translated[key];
+            if (typeof text !== "string" || !text.trim()) continue;
+            const isHtml = htmlColumns.includes(column);
+            const restored = isHtml ? restoreImages(text, shielded) : text;
+            if (restored === null) {
+              moved.push(entry);
+              continue;
+            }
+            state.columns[column] = { ...state.columns[column], [locale]: isHtml ? sanitizeRichText(restored) : restored };
+            if (!state.done.has(locale)) state.done.set(locale, new Set());
+            state.done.get(locale)!.add(column);
+          }
+          if (moved.length > 0) {
+            const which = moved.map((f) => `${f.state.id}.${f.column}`).join(", ");
+            log(`${table}: the ${locale} translation lost or moved an image (${which}); ${attempt === 0 ? "asking again" : "English stays until the next run"}`);
+          }
+          open = moved;
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

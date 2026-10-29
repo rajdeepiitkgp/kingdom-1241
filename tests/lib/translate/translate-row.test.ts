@@ -42,6 +42,51 @@ describe("translateRows", () => {
     translateFields.mockImplementation(fakeTranslate);
   });
 
+  it("keeps images out of the model's hands and puts them back in every language", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abcdefghijklmnopqrst.supabase.co");
+    const src = "https://abcdefghijklmnopqrst.supabase.co/storage/v1/object/public/images/content/0b0e7a52-5d0c-4c43-9f3e-2f6a1f4f6d11-800x600.webp";
+    const rows = {
+      a: { id: "a", title: { en: "Trap moved" }, body: { en: `<p>Here:</p><p><img src="${src}" alt="Trap"></p>` }, source_hash: null },
+    };
+    const { client } = fakeSupabase(rows);
+    await translateRows(client, "announcements", [rows.a], ["de"]);
+    const sent = JSON.stringify(translateFields.mock.calls[0][0]);
+    expect(sent).not.toContain("supabase.co");
+    expect(sent).toContain("{{img:0}}");
+    expect((rows.a.body as Record<string, string>).de).toContain(`<img src="${src}" alt="Trap" width="800" height="600" loading="lazy" />`);
+    vi.unstubAllEnvs();
+  });
+
+  it("asks again when the model moves an image, and keeps English when it does so twice", async () => {
+    const rows = {
+      a: { id: "a", title: { en: "Trap" }, body: { en: '<p>One</p><p><img src="/items/a.webp" alt="A"></p><p>Two</p>' }, source_hash: null },
+      b: { id: "b", title: { en: "Hall" }, body: { en: '<p>Three</p><p><img src="/items/b.webp" alt="B"></p>' }, source_hash: null },
+    };
+    // The model moves every image into the paragraph before it, except on the second try for row a.
+    let calls = 0;
+    translateFields.mockImplementation(async (fields: Record<string, string>, locale: string) => {
+      calls += 1;
+      return Object.fromEntries(
+        Object.entries(fields).map(([k, v]) => {
+          const keep = calls > 1 && v.startsWith("<p>One");
+          return [k, `[${locale}] ${keep ? v : v.replace(/<\/p><p>(\{\{img:\d+\}\})<\/p>/, " $1</p>")}`];
+        }),
+      );
+    });
+    const { client } = fakeSupabase(rows);
+    const logs: string[] = [];
+    await translateRows(client, "announcements", [rows.a, rows.b], ["de"], { log: (line) => logs.push(line) });
+    expect(calls).toBe(2);
+    expect(translateFields.mock.calls[1][0]).toEqual({ f1: '<p>One</p><p>{{img:0}}</p><p>Two</p>', f3: "<p>Three</p><p>{{img:0}}</p>" });
+    expect((rows.a.body as Record<string, string>).de).toBe('[de] <p>One</p><p><img src="/items/a.webp" alt="A" loading="lazy" /></p><p>Two</p>');
+    expect((rows.b.body as Record<string, string>).de).toBeUndefined(); // English is shown, no image out of place
+    expect((rows.b.title as Record<string, string>).de).toBe("[de] Hall");
+    expect(logs.filter((line) => line.includes("lost or moved an image"))).toEqual([
+      "announcements: the de translation lost or moved an image (a.body, b.body); asking again",
+      "announcements: the de translation lost or moved an image (b.body); English stays until the next run",
+    ]);
+  });
+
   it("translates missing languages, stores the hash, and is a no-op the second time", async () => {
     const rows = {
       a: { id: "a", name: { en: "Bear Hunt" }, summary: { en: "Rally the bear." }, source_hash: null },
