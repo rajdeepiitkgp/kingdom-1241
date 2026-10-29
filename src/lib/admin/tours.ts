@@ -10,7 +10,7 @@ import type { Tour } from "@/lib/tour/tour";
  * hasn't been created) are left out when the tour starts.
  */
 
-export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "giftCodes" | "users" | "settings";
+export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "announcements" | "announcement" | "giftCodes" | "users" | "settings";
 
 export const ADMIN_TOUR_LABELS = {
   open: "Page guide",
@@ -31,17 +31,17 @@ const step = (target: string | null, title: string, body: string) => ({ target, 
 export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   overview: {
     id: "admin-overview",
-    version: 2,
+    version: 3,
     steps: [
       step(
         null,
         "Welcome to the admin area",
-        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms and the gift codes on Home. This guide shows where everything is; every admin page has its own guide for the details.",
+        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms, and the announcements and gift codes on Home. This guide shows where everything is; every admin page has its own guide for the details.",
       ),
       step(
         "admin-role",
         "Your role",
-        "Moderators edit battle plans and their pages, run feedback forms and create Rally Sync rooms. Administrators can also delete plans and give people roles; only the owner appoints administrators.",
+        "Moderators edit battle plans and their pages, run feedback forms, create Rally Sync rooms and write the announcements. Administrators can also delete plans and give people roles; only the owner appoints administrators.",
       ),
       step(
         "admin-nav-plans",
@@ -50,6 +50,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
+      step("admin-nav-announcements", "Announcements", "The news on Home. Write it in English, with images if you like; players read it in their language a minute later."),
       step("admin-nav-gift-codes", "Gift codes", "The codes on Home. They come by themselves from kingshot.net every hour; add one here when players have it first."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
       step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
@@ -273,6 +274,51 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
     ],
   },
+  announcements: {
+    id: "admin-announcements",
+    version: 1,
+    steps: [
+      step("announcements-new", "New announcement", "Write news for Home: an event this weekend, a rule change, a call for help. You write in English; players read it in their own language."),
+      step("announcements-list", "All announcements", "Every announcement, drafts and expired ones included. Home shows the pinned ones first, then the newest."),
+      step(
+        "announcements-state",
+        "On Home, Draft or Expired",
+        "On Home: players see it. Draft: saved but hidden, for preparing a text before it goes out. Expired: its end time has passed, so Home no longer shows it. Translating: the other languages are still being written, which takes about a minute.",
+      ),
+      step(
+        "announcements-actions",
+        "Edit and Delete",
+        "Edit opens the text, its settings and its translations. Delete removes it in every language at once and can't be undone; to take it off Home for now, untick Show on Home instead.",
+      ),
+    ],
+  },
+  announcement: {
+    id: "admin-announcement",
+    version: 1,
+    steps: [
+      step(
+        "announcement-language",
+        "Language",
+        "English is the source: change the text here and every language is translated again. Pick another language to correct its translation by hand; that correction stays until the English changes.",
+      ),
+      step("announcement-title", "Title", "One short line, shown in bold above the text on Home."),
+      step(
+        "announcement-body",
+        "Text",
+        "Write here, or paste from Discord: the formatting comes along. The buttons add bold, headings, lists, links and tables. Preview shows the text exactly as players will see it, so check it before saving.",
+      ),
+      step(
+        "editor-image",
+        "Images",
+        "Up to three per announcement. Tap the picture button, or paste or drop a screenshot into the text. Each image is shrunk to a small copy first, then a line with “Describe the image” appears: replace those words with what the image shows. To remove an image, delete its line.",
+      ),
+      step("announcement-expiry", "Leaves Home at", "Optional, in UTC: for news with an end date. After that time Home stops showing it, and it stays here as Expired."),
+      step("announcement-published", "Show on Home", "Untick to keep a draft that players don't see. A draft that goes live later counts as new from that day."),
+      step("announcement-pinned", "Pin to the top", "Pinned announcements stay above the others. Pin one or two at most, such as the welcome text or the coming battle."),
+      step("announcement-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step("announcement-view", "View Home", "Opens Home in a new tab, to check how the announcement looks there."),
+    ],
+  },
   giftCodes: {
     id: "admin-gift-codes",
     version: 1,
@@ -481,6 +527,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "kvk") return parts.length === 1 ? "plans" : parts.length === 2 ? "plan" : parts.length === 3 && (sub === "leaders" || sub === "checklist") ? sub : null;
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
+  if (section === "announcements") return parts.length === 1 ? "announcements" : parts.length === 2 ? "announcement" : null;
   if (parts.length === 1 && section === "gift-codes") return "giftCodes";
   if (parts.length === 1 && section === "users") return "users";
   // One guide for every tab of the settings: steps for parts not on the open tab are left out.

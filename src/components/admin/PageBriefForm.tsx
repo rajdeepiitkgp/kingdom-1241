@@ -3,6 +3,7 @@
 import { useActionState, useTransition } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveChecklistBrief, saveLeaderBrief } from "@/lib/admin/kvk-actions";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
 import { CodeSuggestInput } from "@/components/ui/CodeSuggestInput";
@@ -80,7 +81,7 @@ export function PageBriefForm({ area, locale, planId, brief }: { area: keyof typ
       </Field>
 
       <Field label={page.introLabel} htmlFor={`${area}-intro`} error={errors.introSource} hint={page.introHint} tour={page.introTour}>
-        <textarea id={`${area}-intro`} name="introSource" className="input min-h-40 font-mono text-sm" defaultValue={brief?.introSource ?? ""} dir="ltr" />
+        <MarkdownEditor id={`${area}-intro`} name="introSource" defaultValue={brief?.introSource ?? ""} className="min-h-40" locked />
       </Field>
 
       <label className="flex items-center gap-2 text-sm font-bold text-ink" data-tour={page.publishTour}>

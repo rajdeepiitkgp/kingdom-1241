@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { AllianceSyncState } from "@/lib/alliances/sync-plan";
 import type { GiftCodeSyncState } from "@/lib/gift-codes/sync-plan";
+import { IMAGE_BUDGET_BYTES } from "@/lib/content/images";
 import { BROWSER_BUDGET } from "@/lib/rally-sync/capacity";
 import { DAY, HOUR, MINUTE } from "@/lib/time";
 
@@ -226,14 +227,14 @@ function databaseChecks(snapshot: UsageSnapshot | null, ref: string | null): Che
   }
   checks.push(
     snapshot.storageBytes === null
-      ? { id: "storage", title: "File storage", value: "Couldn't be read", level: "unknown", detail: "Images and files in Supabase Storage (free plan: 1 GB)." }
+      ? { id: "storage", title: "Images", value: "Couldn't be read", level: "unknown", detail: "The content editor's images in Supabase Storage (free plan: 1 GB)." }
       : {
           id: "storage",
-          title: "File storage",
-          value: `${formatBytes(snapshot.storageBytes)} of ${formatBytes(FREE_PLAN.storageBytes)}, ${plural(snapshot.storageObjects ?? 0, "file")}`,
-          level: shareLevel(snapshot.storageBytes / FREE_PLAN.storageBytes),
-          share: snapshot.storageBytes / FREE_PLAN.storageBytes,
-          detail: "Images and files in Supabase Storage (free plan: 1 GB). The site keeps none there yet; the content editor will.",
+          title: "Images",
+          value: `${formatBytes(snapshot.storageBytes)} of ${formatBytes(IMAGE_BUDGET_BYTES)} for images, ${plural(snapshot.storageObjects ?? 0, "file")}`,
+          level: shareLevel(snapshot.storageBytes / IMAGE_BUDGET_BYTES),
+          share: snapshot.storageBytes / IMAGE_BUDGET_BYTES,
+          detail: `The images of announcements, rules and guides, in Supabase Storage (free plan: ${formatBytes(FREE_PLAN.storageBytes)}). The editor stops uploads at ${formatBytes(IMAGE_BUDGET_BYTES)}, half of it; each image is shrunk to 600 KB or less first, and images no text uses any more are deleted once a day. To make room sooner, take images out of old announcements.`,
         },
   );
   if (snapshot.connections !== null && snapshot.maxConnections) {

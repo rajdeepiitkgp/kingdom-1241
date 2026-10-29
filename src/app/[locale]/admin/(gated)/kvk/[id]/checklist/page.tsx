@@ -222,6 +222,7 @@ async function TranslationMode({ plan, locale, lang, langLabel }: { plan: AdminC
           value={introSourceFor(brief, lang)}
           pending={brief.pendingColumns.includes("intro")}
           multiline
+          markdown
           maxLength={TEXT_LIMITS.intro}
         />
       </AdminSection>

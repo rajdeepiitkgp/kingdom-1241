@@ -11,6 +11,7 @@ import {
   utcDateTimeField,
   type FormResult,
 } from "./forms";
+import { lockedPageImageProblem } from "./content-forms";
 
 /** Parsers for the battle-plan editor forms (pure, unit-tested). */
 
@@ -72,6 +73,7 @@ export function parsePlanForm(fd: FormData, options: PlanFormOptions = {}): Form
 
   const introSource = textField(fd, "introSource");
   if (introSource.length > 20_000) errors.introSource = "Keep the introduction under 20 000 characters.";
+  else if (lockedPageImageProblem(introSource)) errors.introSource = lockedPageImageProblem(introSource)!;
 
   const minHeroStars = intField(fd, "minHeroStars", 0, 5);
   if (minHeroStars === null) errors.minHeroStars = "Stars go from 0 to 5.";
@@ -221,6 +223,7 @@ export function parsePageBriefForm(fd: FormData, others: OtherPasswords = {}): F
   else if (clash) errors.password = clash;
   const introSource = textField(fd, "introSource");
   if (introSource.length > 20_000) errors.introSource = "Keep the instructions under 20 000 characters.";
+  else if (lockedPageImageProblem(introSource)) errors.introSource = lockedPageImageProblem(introSource)!;
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: { password: password.value, introSource, published: boolField(fd, "published") } };
 }

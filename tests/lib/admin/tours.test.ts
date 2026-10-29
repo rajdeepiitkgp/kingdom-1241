@@ -12,6 +12,9 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/kvk/3f2a/leaders")).toBe("leaders");
     expect(adminPageFor("/en/admin/kvk/3f2a/checklist")).toBe("checklist");
     expect(adminPageFor("/en/admin/feedback")).toBe("feedback");
+    expect(adminPageFor("/en/admin/announcements")).toBe("announcements");
+    expect(adminPageFor("/en/admin/announcements/new")).toBe("announcement");
+    expect(adminPageFor("/en/admin/announcements/3f2a/x")).toBeNull();
     expect(adminPageFor("/en/admin/feedback/3f2a")).toBe("results");
     expect(adminPageFor("/en/admin/feedback/3f2a/print")).toBe("print");
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");

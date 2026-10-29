@@ -1,4 +1,5 @@
 import { configFromForm, configProblem, INTRO_MAX, MAX_RESPONSES_LIMIT, RETENTION_RANGE, type RetroConfig, TITLE_MAX } from "@/lib/retro/questions";
+import { lockedPageImageProblem } from "./content-forms";
 import { boolField, type FormResult, intField, textField, utcDateTimeField } from "./forms";
 
 /** Parser for the retrospective settings in the plan editor (pure, unit-tested). */
@@ -23,6 +24,7 @@ export function parseRetroSettingsForm(fd: FormData): FormResult<RetroSettingsIn
 
   const introSource = textField(fd, "introSource");
   if (introSource.length > INTRO_MAX) errors.introSource = `Keep the introduction under ${INTRO_MAX} characters.`;
+  else if (lockedPageImageProblem(introSource)) errors.introSource = lockedPageImageProblem(introSource)!;
 
   const closesAt = utcDateTimeField(fd, "closesAt");
   if (closesAt === undefined) errors.closesAt = "Enter the date and time as the form shows them (UTC), or clear the field.";

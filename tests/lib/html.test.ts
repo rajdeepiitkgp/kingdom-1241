@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { htmlToExcerpt, markdownToHtml, sanitizeRichText } from "@/lib/html";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { htmlToExcerpt, linkImages, markdownToHtml, sanitizeRichText } from "@/lib/html";
+
+const BASE = "https://abcdefghijklmnopqrst.supabase.co";
+const OURS = `${BASE}/storage/v1/object/public/images/content/0b0e7a52-5d0c-4c43-9f3e-2f6a1f4f6d11-1179x2556.webp`;
+
+beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", BASE));
+afterEach(() => vi.unstubAllEnvs());
 
 describe("sanitizeRichText", () => {
   it("strips scripts, event handlers and javascript: links", () => {
@@ -12,13 +18,38 @@ describe("sanitizeRichText", () => {
   });
 
   it("keeps tables, headings, lists and images; external links open safely", () => {
-    const html = `<h2>T</h2><table><tr><th>a</th><td>b</td></tr></table><ul><li>x</li></ul><img src="https://x/y.png" alt="p"><a href="https://example.com">e</a>`;
+    const html = `<h2>T</h2><table><tr><th>a</th><td>b</td></tr></table><ul><li>x</li></ul><img src="${OURS}" alt="p"><a href="https://example.com">e</a>`;
     const clean = sanitizeRichText(html);
     expect(clean).toContain("<h2>T</h2>");
     expect(clean).toContain("<table>");
     expect(clean).toContain('loading="lazy"');
     expect(clean).toContain('rel="noopener noreferrer"');
     expect(clean).toContain('target="_blank"');
+  });
+
+  it("keeps only our own images, with their size", () => {
+    const clean = sanitizeRichText(`<p><img src="${OURS}" alt="ours"><img src="https://i.imgur.com/x.png" alt="theirs"><img src="/items/x.webp" alt="site"><img src="//evil.example/x.png"></p>`);
+    expect(clean).toContain('width="1179"');
+    expect(clean).toContain('height="2556"');
+    expect(clean).toContain('src="/items/x.webp"');
+    expect(clean).not.toContain("imgur");
+    expect(clean).not.toContain("evil");
+  });
+
+  it("turns a pasted # heading into a section heading", () => {
+    expect(sanitizeRichText("<h1>Big</h1><h6>small</h6>")).toBe("<h2>Big</h2><h4>small</h4>");
+  });
+});
+
+describe("linkImages", () => {
+  it("links images to their full size and sizes them to the column and the height cap", () => {
+    const html = linkImages(sanitizeRichText(`<p><img src="${OURS}" alt="tall"></p>`));
+    expect(html).toContain(`<a class="image-link" href="${OURS}" target="_blank" rel="noopener noreferrer"><img style="width:min(100%,1179px,12.915rem)"`);
+  });
+
+  it("leaves images that already sit in a link unwrapped", () => {
+    const html = linkImages(`<a href="https://example.com"><img src="/a.webp"></a><img src="/b.webp">`);
+    expect(html).toBe(`<a href="https://example.com"><img src="/a.webp"></a><a class="image-link" href="/b.webp" target="_blank" rel="noopener noreferrer"><img src="/b.webp"></a>`);
   });
 });
 

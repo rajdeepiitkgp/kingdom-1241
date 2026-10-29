@@ -120,6 +120,8 @@ async function main() {
       published: a.published,
       published_at: a.publishedAt,
       expires_at: a.expiresAt,
+      // A replaced text drops the Markdown an editor saved, so the editor opens the seed's HTML again.
+      ...(overwrite ? { body_source: {} } : {}),
     })),
   );
 
@@ -166,6 +168,7 @@ async function main() {
         body: r.body,
         sort_order: r.sortOrder,
         published: r.published,
+        ...(overwrite ? { body_source: {} } : {}),
       })),
     ),
   );
@@ -183,6 +186,7 @@ async function main() {
       cover_image_url: g.coverImageUrl,
       sort_order: g.sortOrder,
       published: g.published,
+      ...(overwrite ? { body_source: {} } : {}),
     })),
   );
 
