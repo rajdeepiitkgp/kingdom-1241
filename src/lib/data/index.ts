@@ -13,6 +13,7 @@ import {
   mapEvent,
   mapGiftCode,
   mapGuide,
+  mapGuideSection,
   mapHero,
   mapKvkChecklistPlan,
   mapKvkLeaderPlan,
@@ -29,6 +30,7 @@ import type {
   GameEvent,
   GiftCode,
   Guide,
+  GuideSection,
   Hero,
   KvkChecklistPlanWithSecret,
   KvkLeaderPlanWithSecret,
@@ -51,7 +53,7 @@ import type {
  * the loaders return the bundled seed content so the site still works.
  */
 
-export { CACHE_TAGS, cacheTagForTable } from "./cache-tags";
+export { CACHE_TAGS, cacheTagForTable, routesForTag } from "./cache-tags";
 
 /** Drop rows whose `expiresAt` is in the past (evaluated when the cache entry is built). */
 function dropExpired<T extends { expiresAt: string | null }>(rows: T[]): T[] {
@@ -220,6 +222,26 @@ export async function getGuides(): Promise<Guide[]> {
   } catch (error) {
     logFallback("guides", error);
     return buildSeedContent().guides;
+  }
+}
+
+/** Every published alliance section of every guide (a small table; the guide page picks its own). */
+export async function getGuideSections(): Promise<GuideSection[]> {
+  "use cache";
+  cacheLife("content");
+  cacheTag(CACHE_TAGS.all, CACHE_TAGS.guides);
+
+  // Alliance sections are written by moderators only: the seed has none.
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient()!;
+    const { data, error } = await supabase.from("guide_sections").select("*").eq("published", true);
+    if (error?.code === "PGRST205" || error?.code === "42P01") return []; // migration 0021 not applied yet
+    if (error) throw error;
+    return (data ?? []).map(mapGuideSection);
+  } catch (error) {
+    log.warn("Failed to load the guides' alliance sections; showing the guides without them", { error });
+    return [];
   }
 }
 

@@ -45,6 +45,7 @@ export const TRANSLATABLE_TABLES: TranslatableTable[] = [
       { name: "body", html: true },
     ],
   },
+  { table: "guide_sections", primaryKey: "id", columns: [{ name: "body", html: true }] },
   {
     table: "alliances",
     primaryKey: "id",

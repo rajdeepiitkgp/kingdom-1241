@@ -15,6 +15,7 @@ const TEXT_COLUMNS: Record<string, readonly string[]> = {
   announcements: ["body", "body_source"],
   rules: ["body", "body_source"],
   guides: ["body", "body_source", "cover_image_url"],
+  guide_sections: ["body", "body_source"],
 };
 
 const PAGE = 1000;
@@ -64,6 +65,8 @@ export async function pruneUnusedImages(admin: SupabaseClient, now: Date, option
   const texts: string[] = [];
   for (const [table, columns] of Object.entries(TEXT_COLUMNS)) {
     const { rows, error } = await readAll(admin, table, columns.join(", "));
+    // A table that isn't there yet (its migration still to come) holds no texts.
+    if (missingTable(error)) continue;
     // Never delete on a partial picture: a text that couldn't be read may hold the image.
     if (error) throw new Error(`Could not read ${table} to find the images in use: ${error.message}`);
     for (const row of rows) for (const column of columns) texts.push(...strings(row[column]));

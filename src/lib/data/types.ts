@@ -77,6 +77,17 @@ export interface Guide {
   updatedAt: string;
 }
 
+/** How one alliance plays a guide's event: a tab under the guide's shared text. */
+export interface GuideSection {
+  id: string;
+  guideId: string;
+  /** The alliance's tag, case-sensitive. */
+  allianceTag: string;
+  /** Sanitised HTML. */
+  body: Localized;
+  published: boolean;
+}
+
 export interface Alliance {
   id: string;
   tag: string;

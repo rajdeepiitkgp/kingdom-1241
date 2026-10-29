@@ -37,6 +37,7 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { table: "rule_topics", primaryKey: "id", restore: "upsert" },
   { table: "rules", primaryKey: "id", restore: "upsert" },
   { table: "guides", primaryKey: "id", restore: "upsert" },
+  { table: "guide_sections", primaryKey: "id", restore: "upsert" },
   { table: "alliances", primaryKey: "id", restore: "upsert" },
   { table: "gift_codes", primaryKey: "id", restore: "upsert" },
   // Which images the editor uploaded (the files themselves stay in Storage, outside this backup).

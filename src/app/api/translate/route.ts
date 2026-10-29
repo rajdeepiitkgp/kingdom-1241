@@ -1,8 +1,9 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { after, NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
 import { getTranslationSettings } from "@/lib/config/settings";
-import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
+import { CACHE_TAGS, cacheTagForTable, routesForTag } from "@/lib/data";
+import type { CacheTag } from "@/lib/data/cache-tags";
 import { createLogger, elapsedMs, requestId, type Logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
@@ -153,9 +154,10 @@ export async function POST(request: Request) {
   return reply({ ok: true, action: "scheduled", table, id: id ?? null }, 202);
 }
 
-function revalidate(tag: string | null, log: Logger) {
+function revalidate(tag: CacheTag | null, log: Logger) {
   try {
     revalidateTag(tag ?? CACHE_TAGS.all, { expire: 0 });
+    for (const route of routesForTag(tag ?? CACHE_TAGS.all)) revalidatePath(route, "page");
   } catch (error) {
     log.error("revalidateTag failed", { tag, error });
   }
