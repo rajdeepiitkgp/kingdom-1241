@@ -10,7 +10,27 @@ import type { Tour } from "@/lib/tour/tour";
  * hasn't been created) are left out when the tour starts.
  */
 
-export type AdminPage = "overview" | "plans" | "plan" | "leaders" | "checklist" | "feedback" | "results" | "print" | "rallySync" | "announcements" | "announcement" | "giftCodes" | "users" | "settings";
+export type AdminPage =
+  | "overview"
+  | "plans"
+  | "plan"
+  | "leaders"
+  | "checklist"
+  | "feedback"
+  | "results"
+  | "print"
+  | "rallySync"
+  | "announcements"
+  | "announcement"
+  | "rules"
+  | "ruleTopic"
+  | "rule"
+  | "guides"
+  | "guide"
+  | "guideSection"
+  | "giftCodes"
+  | "users"
+  | "settings";
 
 export const ADMIN_TOUR_LABELS = {
   open: "Page guide",
@@ -31,17 +51,22 @@ const step = (target: string | null, title: string, body: string) => ({ target, 
 export const ADMIN_TOURS: Record<AdminPage, Tour> = {
   overview: {
     id: "admin-overview",
-    version: 3,
+    version: 4,
     steps: [
       step(
         null,
         "Welcome to the admin area",
-        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms, and the announcements and gift codes on Home. This guide shows where everything is; every admin page has its own guide for the details.",
+        "This is the council's tool: battle plans with their leader and commander pages, player feedback, Rally Sync rooms, the announcements and gift codes on Home, and the rules and guides pages. This guide shows where everything is; every admin page has its own guide for the details.",
       ),
       step(
         "admin-role",
         "Your role",
-        "Moderators edit battle plans and their pages, run feedback forms, create Rally Sync rooms and write the announcements. Administrators can also delete plans and give people roles; only the owner appoints administrators.",
+        "Moderators edit battle plans and their pages, run feedback forms, create Rally Sync rooms and write the announcements, rules and guides. Administrators can also delete plans and give people roles; only the owner appoints administrators.",
+      ),
+      step(
+        "admin-nav-menu",
+        "Cockpit",
+        "Every admin page, in groups: the battle tools, the website's texts, and people and settings. It always names the page you are on; tap it to go elsewhere.",
       ),
       step(
         "admin-nav-plans",
@@ -51,6 +76,8 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
       step("admin-nav-announcements", "Announcements", "The news on Home. Write it in English, with images if you like; players read it in their language a minute later."),
+      step("admin-nav-rules", "Rules", "The kingdom's rules, in topics that are the tabs of the rules page. Players read them in their language a minute after you save."),
+      step("admin-nav-guides", "Guides", "How 1241 plays each event: a text for everyone, plus a section for each alliance that plays it its own way."),
       step("admin-nav-gift-codes", "Gift codes", "The codes on Home. They come by themselves from kingshot.net every hour; add one here when players have it first."),
       step("admin-nav-users", "Users", "Give people the moderator or administrator role, before or after their first sign-in, and take it away again."),
       step("admin-nav-settings", "Settings", "Only the owner has this: Rally Sync limits, the alliances on Home, languages and the site's other switches."),
@@ -319,6 +346,122 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("announcement-view", "View Home", "Opens Home in a new tab, to check how the announcement looks there."),
     ],
   },
+  rules: {
+    id: "admin-rules",
+    version: 1,
+    steps: [
+      step("rules-new-topic", "New topic", "Topics are the tabs of the rules page, such as General conduct or Attacks & tiles. Make a new one when a group of rules doesn't fit the others."),
+      step(
+        "rules-topic",
+        "A topic and its rules",
+        "Each box is one tab of the rules page, with its rules in the order players read them. Hidden means the whole tab is off the page; Draft means one rule is.",
+      ),
+      step("rules-topic-actions", "Edit or delete a topic", "Edit changes the tab's name, icon and address. Delete removes the topic with all its rules in every language, and can't be undone."),
+      step(
+        "rules-rule",
+        "Rules in order",
+        "The arrows move a rule up or down within its topic; the arrows next to a topic move the whole tab. Edit opens the rule's text and translations.",
+      ),
+      step("rules-add", "Add a rule", "Adds a rule at the end of this topic. Write it in English: the other languages follow within a minute."),
+    ],
+  },
+  ruleTopic: {
+    id: "admin-rule-topic",
+    version: 1,
+    steps: [
+      step("rule-topic-language", "Language", "English is the source: change the name here and it is translated again. Pick another language to correct its translation by hand."),
+      step("rule-topic-title", "Name", "The tab's name on the rules page. Keep it to a few words."),
+      step("rule-topic-icon", "Icon", "One emoji, shown before the name on the tab."),
+      step(
+        "rule-topic-slug",
+        "Address",
+        "Links to a tab end in # and this address, for example /rules#attacks. Leave it empty on a new topic to make one from the name. Change it only if you must: links people already shared stop opening this tab.",
+      ),
+      step("rule-topic-published", "Show on the rules page", "Untick to hide the tab and every rule in it, for example while you rewrite them."),
+      step("rule-topic-save", "Save", "Players see the change within seconds. Every save is recorded with your name."),
+      step("rule-topic-view", "View the tab", "Opens the rules page on this tab in a new browser tab."),
+    ],
+  },
+  rule: {
+    id: "admin-rule",
+    version: 1,
+    steps: [
+      step("rule-language", "Language", "English is the source: change the text here and every language is translated again. Pick another language to correct its translation by hand; that correction stays until the English changes."),
+      step("rule-topic", "Topic", "The tab the rule is listed under. Moving a rule to another topic puts it at the end of that topic."),
+      step("rule-title", "Rule", "The rule itself in one line, shown in bold with its number."),
+      step(
+        "rule-body",
+        "Explanation",
+        "What the rule means in practice: what is allowed, what isn't, and what happens if someone breaks it. Preview shows it exactly as players will see it.",
+      ),
+      step(
+        "editor-image",
+        "Images",
+        "Up to three per rule, such as a screenshot of the map. Tap the picture button, or paste or drop an image into the text; then replace “Describe the image” with what it shows.",
+      ),
+      step("rule-published", "Show on the rules page", "Untick to keep a draft that players don't see."),
+      step("rule-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step("rule-view", "View the rules page", "Opens the rules page on this rule's tab in a new browser tab."),
+    ],
+  },
+  guides: {
+    id: "admin-guides",
+    version: 1,
+    steps: [
+      step("guides-new", "New guide", "A guide explains how 1241 plays one event. Write the facts in your own words; when you use a fan site, add a Sources line with its link at the end."),
+      step("guides-list", "All guides", "In the order of the guides page. Drafts stay here until you show them."),
+      step("guides-order", "Order", "The arrows move a guide up or down the guides page. Put the events players ask about most at the top."),
+      step("guides-state", "Shown or Draft", "Shown: players see it. Draft: only here. The tags at the end are the alliances that have their own section in that guide."),
+      step("guides-actions", "Edit and Delete", "Edit opens the guide, its translations and its alliance sections. Delete removes the guide with its sections in every language and can't be undone."),
+    ],
+  },
+  guide: {
+    id: "admin-guide",
+    version: 1,
+    steps: [
+      step("guide-language", "Language", "English is the source: change a text here and every language is translated again. Pick another language to correct its translation by hand."),
+      step("guide-title", "Title", "Usually the event's name. It heads the guide and its card in the list."),
+      step("guide-icon", "Icon", "One emoji for the guide's card and page."),
+      step("guide-summary", "Summary", "One or two sentences on the guide's card, so players know what they will find."),
+      step(
+        "guide-slug",
+        "Address",
+        "The end of the guide's link, such as /guides/bear-hunt. Leave it empty on a new guide to make one from the title. Changing it breaks links people already shared; events that point to this guide follow by themselves.",
+      ),
+      step(
+        "guide-body",
+        "Text for everyone",
+        "How the event works and what every player should do, whatever their alliance. Headings, lists and tables keep a long guide easy to read; Preview shows it as players will see it.",
+      ),
+      step("editor-image", "Images", "Up to ten per text. Tap the picture button, or paste or drop an image into the text; then replace “Describe the image” with what it shows."),
+      step("guide-published", "Show on the guides page", "Untick to keep a draft that players don't see."),
+      step("guide-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step(
+        "guide-sections",
+        "Alliance sections",
+        "When an alliance plays this event its own way, it gets a section here. Players see the sections as tabs under the text for everyone, and their device remembers the alliance they picked.",
+      ),
+      step("guide-sections-add", "Add an alliance section", "Pick the alliance, then write how it plays the event. Any moderator can write or change any alliance's section; ask that alliance's R4 or R5 for the text."),
+      step("guide-view", "View the guide", "Opens the guide in a new browser tab, to check how it looks to players."),
+    ],
+  },
+  guideSection: {
+    id: "admin-guide-section",
+    version: 1,
+    steps: [
+      step("guide-section-language", "Language", "English is the source: change the text here and every language is translated again. Pick another language to correct its translation by hand."),
+      step("guide-section-alliance", "Alliance", "The alliance this section is for, from the list on Home. Each alliance has at most one section per guide, and it can't be changed later: delete the section and add another instead."),
+      step(
+        "guide-section-body",
+        "How this alliance plays it",
+        "Only what differs for this alliance: its times, who sends what, its own rules. The text for everyone stays above it, so there is no need to repeat it.",
+      ),
+      step("editor-image", "Images", "Up to ten per section. Tap the picture button, or paste or drop an image into the text; then replace “Describe the image” with what it shows."),
+      step("guide-section-published", "Show on the guide", "Untick to keep a draft that players don't see."),
+      step("guide-section-save", "Save", "Players see the change within seconds, and the other languages follow within a minute. Every save is recorded with your name."),
+      step("guide-section-view", "View the guide", "Opens the guide in a new browser tab, to check the alliance's tab."),
+    ],
+  },
   giftCodes: {
     id: "admin-gift-codes",
     version: 1,
@@ -528,6 +671,8 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (section === "announcements") return parts.length === 1 ? "announcements" : parts.length === 2 ? "announcement" : null;
+  if (section === "rules") return parts.length === 1 ? "rules" : parts.length === 2 && id !== "topics" ? "rule" : parts.length === 3 && id === "topics" ? "ruleTopic" : null;
+  if (section === "guides") return parts.length === 1 ? "guides" : parts.length === 2 ? "guide" : parts.length === 4 && sub === "alliances" ? "guideSection" : null;
   if (parts.length === 1 && section === "gift-codes") return "giftCodes";
   if (parts.length === 1 && section === "users") return "users";
   // One guide for every tab of the settings: steps for parts not on the open tab are left out.

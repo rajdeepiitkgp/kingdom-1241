@@ -15,6 +15,14 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/announcements")).toBe("announcements");
     expect(adminPageFor("/en/admin/announcements/new")).toBe("announcement");
     expect(adminPageFor("/en/admin/announcements/3f2a/x")).toBeNull();
+    expect(adminPageFor("/en/admin/rules")).toBe("rules");
+    expect(adminPageFor("/en/admin/rules/new")).toBe("rule");
+    expect(adminPageFor("/en/admin/rules/topics/3f2a")).toBe("ruleTopic");
+    expect(adminPageFor("/en/admin/rules/topics")).toBeNull();
+    expect(adminPageFor("/en/admin/guides")).toBe("guides");
+    expect(adminPageFor("/en/admin/guides/3f2a")).toBe("guide");
+    expect(adminPageFor("/en/admin/guides/3f2a/alliances/new")).toBe("guideSection");
+    expect(adminPageFor("/en/admin/guides/3f2a/alliances")).toBeNull();
     expect(adminPageFor("/en/admin/feedback/3f2a")).toBe("results");
     expect(adminPageFor("/en/admin/feedback/3f2a/print")).toBe("print");
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");

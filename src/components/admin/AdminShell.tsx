@@ -1,39 +1,27 @@
-import Link from "next/link";
-import { formatGameName } from "@/lib/admin/profile";
 import { type ReactNode, Suspense } from "react";
+import { adminNavGroups } from "@/lib/admin/nav";
+import { formatGameName } from "@/lib/admin/profile";
 import { signOut } from "@/lib/auth/actions";
-import { adminPath } from "@/lib/auth/paths";
 import { canManageUsers, ROLE_LABELS } from "@/lib/auth/roles";
 import type { CurrentUser } from "@/lib/auth/server";
 import { AdminGuide } from "./AdminGuide";
+import { AdminNav } from "./AdminNav";
 
-/** Admin top bar: section links, the page's guide, who is signed in, sign-out. English only (council tool). */
+/**
+ * The admin area's frame (English only, council tool): a top strip with the
+ * page's guide, who is signed in and sign-out, and the grouped menu beside
+ * the page (a sidebar from laptop width up, a menu button above it below).
+ */
 export function AdminShell({ user, locale, children }: { user: CurrentUser; locale: string; children: ReactNode }) {
-  const links = [
-    { href: adminPath(locale), label: "Overview" },
-    { href: adminPath(locale, "/kvk"), label: "Battle plans", tour: "admin-nav-plans" },
-    { href: adminPath(locale, "/feedback"), label: "Feedback", tour: "admin-nav-feedback" },
-    { href: adminPath(locale, "/rally-sync"), label: "Rally Sync", tour: "admin-nav-rally" },
-    { href: adminPath(locale, "/announcements"), label: "Announcements", tour: "admin-nav-announcements" },
-    { href: adminPath(locale, "/gift-codes"), label: "Gift codes", tour: "admin-nav-gift-codes" },
-    ...(canManageUsers(user.role) ? [{ href: adminPath(locale, "/users"), label: "Users", tour: "admin-nav-users" }] : []),
-    ...(user.isOwner ? [{ href: adminPath(locale, "/settings"), label: "Settings", tour: "admin-nav-settings" }] : []),
-  ];
+  const groups = adminNavGroups({ canManageUsers: canManageUsers(user.role), isOwner: user.isOwner });
   return (
     <div dir="ltr">
-      <div className="card-soft mb-6 flex flex-wrap items-center gap-3 px-4 py-3 print:hidden">
+      <div className="card-soft mb-4 flex flex-wrap items-center gap-3 px-4 py-3 lg:mb-6 print:hidden">
         <span className="text-base font-black text-ink">🛠️ Admin</span>
         <Suspense fallback={null}>
           <AdminGuide />
         </Suspense>
-        <nav className="flex flex-wrap gap-x-2 gap-y-3" aria-label="Admin sections">
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className="btn-ghost btn-sm" data-tour={link.tour}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="ms-auto flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm sm:ms-auto">
           <span className="font-bold text-ink">{formatGameName(user.gameName, user.allianceTag) ?? user.displayName}</span>
           {user.gameName && <span className="text-xs text-ink-faint">({user.displayName})</span>}
           <span className="chip bg-card" data-tour="admin-role">
@@ -47,7 +35,10 @@ export function AdminShell({ user, locale, children }: { user: CurrentUser; loca
           </form>
         </div>
       </div>
-      {children}
+      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6 print:block">
+        <AdminNav locale={locale} groups={groups} />
+        <div className="min-w-0">{children}</div>
+      </div>
     </div>
   );
 }
