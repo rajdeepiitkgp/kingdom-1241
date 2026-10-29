@@ -1,4 +1,4 @@
-import { sanitizeRichText } from "@/lib/html";
+import { linkImages, sanitizeRichText } from "@/lib/html";
 import { SanitizedHtml } from "./SanitizedHtml";
 
 /**
@@ -12,9 +12,9 @@ export function RichText({ html, className }: { html: string; className?: string
   return <SanitizedHtml html={prepareRichText(html)} className={className} />;
 }
 
-/** Sanitised HTML with the table wrappers: what RichText renders, for components that post-process it. */
+/** Sanitised HTML with the table wrappers and image links: what RichText renders, for components that post-process it. */
 export function prepareRichText(html: string): string {
-  return wrapTables(sanitizeRichText(html));
+  return linkImages(wrapTables(sanitizeRichText(html)));
 }
 
 function wrapTables(html: string): string {

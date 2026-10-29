@@ -336,7 +336,8 @@ body {
   .prose-game pre { @apply overflow-x-auto rounded-2xl bg-card-soft p-4 text-sm; }
   .prose-game pre code { @apply bg-transparent p-0; }
   .prose-game hr { @apply my-6 border-line; }
-  .prose-game img { @apply mx-auto max-h-112 rounded-2xl; }
+  .prose-game img { @apply mx-auto h-auto max-h-112 rounded-2xl; }
+  .prose-game .image-link { @apply block cursor-zoom-in no-underline; }
   .prose-game table { @apply w-full border-collapse overflow-hidden rounded-2xl text-start text-[0.95em]; }
   .prose-game thead th { @apply bg-primary-soft px-3 py-2 text-start font-extrabold text-ink; }
   .prose-game tbody td { @apply border-t border-line px-3 py-2 align-top; }

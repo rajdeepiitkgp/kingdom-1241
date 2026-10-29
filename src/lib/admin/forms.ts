@@ -1,3 +1,4 @@
+import { htmlToMarkdown } from "@/lib/content/html-to-markdown";
 import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
 
@@ -116,38 +117,9 @@ export function introSourceUnchanged(posted: string, shown: string): boolean {
 }
 
 /**
- * Rough HTML → Markdown-ish text, used once to open a row that was written as
- * HTML (the seed) in the Markdown editor. Paragraphs, line breaks, emphasis,
- * lists and quotes survive; everything else is flattened to text.
+ * HTML → Markdown, used to open a text in the editor that was stored as HTML
+ * only (the seed, or a machine translation); see `htmlToMarkdown`.
  */
 export function htmlToEditableText(html: string): string {
-  return html
-    .replace(/\r/g, "")
-    .replace(/<\s*br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|h[1-6]|blockquote|ul|ol|table|tr)>/gi, "\n\n")
-    .replace(/<h2[^>]*>/gi, "## ")
-    .replace(/<h3[^>]*>/gi, "### ")
-    .replace(/<h4[^>]*>/gi, "#### ")
-    .replace(/<blockquote[^>]*>\s*(<p[^>]*>)?/gi, "> ")
-    .replace(/<li[^>]*>/gi, "- ")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<(strong|b)[^>]*>/gi, "**")
-    .replace(/<\/(strong|b)>/gi, "**")
-    .replace(/<(em|i)[^>]*>/gi, "*")
-    .replace(/<\/(em|i)>/gi, "*")
-    .replace(/<code[^>]*>/gi, "`")
-    .replace(/<\/code>/gi, "`")
-    .replace(/<a [^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+$/g, ""))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return htmlToMarkdown(html);
 }
