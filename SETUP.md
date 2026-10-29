@@ -85,7 +85,7 @@ Without any env vars the site still runs with the bundled English seed content (
 | `npm run test` / `npm run lint` / `npm run typecheck` | Checks (tests live in `tests/`, mirroring `src/`). |
 | `npm run build` | Production build (what Vercel and CI run). |
 | `npm run backup` | Encrypted dump of every content and admin table into `backups/` (needs `BACKUP_PASSPHRASE`). `-- --restore <file> --yes` writes it back, `-- --decrypt <file>` makes a readable copy. § 10. |
-| `npm run prune` | Deletes battle feedback past its retention period and closes those forms, Rally Sync rooms that have closed, and editor images no text uses any more (`-- --dry-run` to preview). § 9a, § 9b, § 9f. |
+| `npm run prune` | Deletes battle feedback past its retention period and closes those forms, Rally Sync rooms that have closed, and editor images no announcement, rule, guide or alliance section uses any more (`-- --dry-run` to preview). § 9a, § 9b, § 9f. |
 
 ## 5. Vercel — hosting with automatic deploys
 
@@ -338,9 +338,13 @@ Home lists the gift codes that work right now. They come from [kingshot.net](htt
 - **The admin page** (moderators and up) shows the last check with **Check now**, the codes on Home and the ended ones. Moderators **add a code** kingshot.net doesn't list yet (from in-game mail or Discord; codes are case-sensitive), write **what it gives** (English, translated by itself) and its **expiry** if known, **hide** a code from Home, and **delete** codes they added or that ended. A code kingshot.net still lists can only be hidden: deleted, it would come back within the hour. Once kingshot.net lists a hand-added code, the hourly check takes it over and ends it when it stops working.
 - **Run it by hand:** Actions → Gift codes → Run workflow, or Check now on the page (once a minute).
 
-### 9f. Announcements and images (Admin → Announcements)
+### 9f. Announcements, rules, guides and images (Admin → Announcements, Rules, Guides)
 
-The news on Home is written in the admin area by moderators and up; there is no approval step, and every save is in the change log with its author.
+The news on Home, the rules page and the guides are written in the admin area by moderators and up; there is no approval step, and every save is in the change log with its author.
+
+- **Rules** are grouped in topics, the tabs of the rules page. The ▲ ▼ arrows order the topics and, inside each topic, its rules; a hidden topic takes its rules off the page with it. A topic's address is the end of its link (`/rules#attacks`).
+- **Guides** have a text for everyone and, for each alliance that plays the event its own way, an **alliance section** (one per alliance and guide, written by any moderator). Players see the sections as tabs under the text, in the order of Home's alliances, and their device remembers the alliance they picked, for every guide. A guide's address is the end of its link (`/guides/bear-hunt`); a changed address takes the events that link to the guide along, and a deleted guide unlinks them. The alliance list is the owner's (Settings → Alliances); a renamed alliance keeps its sections.
+- **The placeholders** from the seed (announcements, rules, guides) are the moderators' to edit or delete: `db:seed` fills these tables only when they are empty, and `sync-ui` never touches them, so a deleted placeholder stays deleted.
 
 - **The editor** is Markdown with buttons (bold, italics, heading, lists, quote, link, table, image) and a **Preview** tab that shows the text through the same pipeline as the live page. Text copied from Discord keeps its formatting (Discord writes Markdown too; a `# heading` becomes a section heading). English is the source: a changed English text is translated again within a minute, and every other language can be corrected by hand from the language menu (that correction stays until the English changes). The battle-plan, rally-leader, checklist and feedback introductions use the same editor, without images.
 - **Images** go to the public `images` bucket in Supabase Storage (not the 500 MB database; one small row per image in `content_images`). The browser shrinks every image before upload: at most 1600 × 2560 pixels (a full phone screenshot stays sharp), WebP, or JPEG on Safari, aiming at 600 KB; re-encoding drops camera data such as the location, and the server strips the small metadata block Safari adds. The server takes WebP or JPEG up to 900 KB only, refuses uploads once all images reach **500 MB** (half the free 1 GB), and texts hold at most **3 images** (announcements, rules) or **10** (guides). Images from other sites aren't shown (a hotlinked image tells a stranger who reads the page, and Discord's attachment links expire). On the page an image fits the column and opens full size on a tap.
@@ -348,6 +352,7 @@ The news on Home is written in the admin area by moderators and up; there is no 
 - **Clean-up:** an image no text refers to any more (taken out of a text, or its announcement deleted) is deleted by the daily `prune` once it is a day old. The image files are not in the weekly backup (only the list of them is); Storage is outside the database dump.
 - **Locked pages take no images:** the bucket is public, so anyone with an image's link could open it; the battle-plan forms refuse images.
 - **Migration 0020** adds `body_source` (the Markdown) to announcements, rules and guides, the `content_images` table, and limits the bucket to WebP/JPEG up to 900 KB. Until it is applied, saving still works and uploads say so.
+- **Migration 0021** adds `guide_sections` (the alliance sections, readable by visitors when shown) and lets them follow an alliance's renamed tag. Until it is applied the guide editor says sections are on their way. Afterwards run the Maintenance tasks **`webhooks`** (so a section is translated when it is saved) and **`sync-ui`** (the guide page's three new labels in the machine-translated languages).
 
 ### 9e. Usage (Admin → Settings → Usage)
 

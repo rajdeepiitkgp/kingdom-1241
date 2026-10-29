@@ -13,6 +13,7 @@ import type {
   GameEvent,
   GiftCode,
   Guide,
+  GuideSection,
   Hero,
   HeroRarity,
   KvkChecklistItem,
@@ -150,6 +151,16 @@ export function mapGuide(row: Row): Guide {
     sortOrder: num(row.sort_order, 0),
     published: row.published !== false,
     updatedAt: iso(row.updated_at, new Date(0).toISOString()),
+  };
+}
+
+export function mapGuideSection(row: Row): GuideSection {
+  return {
+    id: str(row.id),
+    guideId: str(row.guide_id),
+    allianceTag: str(row.alliance_tag),
+    body: loc(row.body),
+    published: row.published !== false,
   };
 }
 

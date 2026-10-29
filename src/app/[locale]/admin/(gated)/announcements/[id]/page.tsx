@@ -6,17 +6,13 @@ import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
 import { AnnouncementForm } from "@/components/admin/AnnouncementForm";
 import { LanguagePicker } from "@/components/admin/LanguagePicker";
-import { PendingRefresher } from "@/components/admin/PendingRefresher";
-import { TranslationForm } from "@/components/admin/TranslationForm";
-import { AdminSection } from "@/components/admin/ui";
+import { ContentTranslationMode } from "@/components/admin/ContentTranslationMode";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { saveContentTranslation } from "@/lib/admin/content-actions";
 import { type AdminAnnouncement, getAnnouncementForEditing } from "@/lib/admin/content-data";
 import { BODY_MAX, bodySourceFor, TITLE_MAX } from "@/lib/admin/content-forms";
-import { parseEditLang, pendingNote } from "@/lib/admin/translation";
+import { parseEditLang } from "@/lib/admin/translation";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
-import { getTranslationSettings } from "@/lib/config/settings";
 import { getLanguages } from "@/lib/data";
 import { pick } from "@/lib/i18n/localized";
 
@@ -100,41 +96,27 @@ async function Editor({ locale, params, searchParams }: { locale: string; params
   );
 }
 
-async function TranslationMode({ announcement, locale, lang, langLabel }: { announcement: AdminAnnouncement; locale: string; lang: string; langLabel: string }) {
-  const { paused } = await getTranslationSettings();
-  const pending = announcement.pending.length > 0;
-  const common = { action: saveContentTranslation, locale, lang, langLabel, table: "announcements", id: announcement.id };
+function TranslationMode({ announcement, locale, lang, langLabel }: { announcement: AdminAnnouncement; locale: string; lang: string; langLabel: string }) {
   return (
-    <>
-      <PendingRefresher active={pending && !paused} />
-      <p className="rounded-xl bg-card-soft px-3 py-2 text-sm font-bold text-ink-muted">
-        Corrections saved here apply to {langLabel} only and are never overwritten until the English text changes again.
-        {pending && pendingNote(paused)}
-      </p>
-      <AdminSection title="Announcement">
-        <div className="space-y-3">
-          <TranslationForm
-            {...common}
-            column="title"
-            label="Title"
-            english={pick(announcement.title, "en")}
-            value={announcement.title[lang] ?? ""}
-            pending={announcement.pending.includes("title")}
-            maxLength={TITLE_MAX}
-          />
-          <TranslationForm
-            {...common}
-            column="body"
-            label="Text"
-            english={bodySourceFor(announcement, "en")}
-            value={announcement.body[lang] ? bodySourceFor(announcement, lang) : ""}
-            pending={announcement.pending.includes("body")}
-            multiline
-            markdown
-            maxLength={BODY_MAX}
-          />
-        </div>
-      </AdminSection>
-    </>
+    <ContentTranslationMode
+      table="announcements"
+      id={announcement.id}
+      locale={locale}
+      lang={lang}
+      langLabel={langLabel}
+      title="Announcement"
+      fields={[
+        { column: "title", label: "Title", english: pick(announcement.title, "en"), value: announcement.title[lang] ?? "", pending: announcement.pending.includes("title"), maxLength: TITLE_MAX },
+        {
+          column: "body",
+          label: "Text",
+          english: bodySourceFor(announcement, "en"),
+          value: announcement.body[lang] ? bodySourceFor(announcement, lang) : "",
+          pending: announcement.pending.includes("body"),
+          markdown: true,
+          maxLength: BODY_MAX,
+        },
+      ]}
+    />
   );
 }

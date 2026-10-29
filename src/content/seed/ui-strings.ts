@@ -143,6 +143,15 @@ export const UI_STRINGS = {
   "guides.read": { en: "Read guide", de: "Guide lesen", ko: "가이드 읽기", pl: "Czytaj poradnik", ar: "اقرأ الدليل" },
   "guides.back": { en: "All guides", de: "Alle Guides", ko: "모든 가이드", pl: "Wszystkie poradniki", ar: "كل الأدلة" },
   "guides.relatedEvent": { en: "Related event", de: "Zugehöriges Event", ko: "관련 이벤트", pl: "Powiązane wydarzenie", ar: "الفعالية المرتبطة" },
+  "guides.alliances.title": { en: "How each alliance plays it", de: "So spielt jede Allianz", ko: "연맹별 진행 방법", pl: "Jak gra każdy sojusz", ar: "كيف يلعبها كل تحالف" },
+  "guides.alliances.hint": {
+    en: "No section for your alliance? Follow the advice above.",
+    de: "Kein Abschnitt für deine Allianz? Folge den Hinweisen oben.",
+    ko: "내 연맹 항목이 없나요? 위의 안내를 따르세요.",
+    pl: "Brak sekcji twojego sojuszu? Stosuj się do wskazówek powyżej.",
+    ar: "لا يوجد قسم لتحالفك؟ اتبع الإرشادات أعلاه.",
+  },
+  "guides.alliances.label": { en: "Alliance", de: "Allianz", ko: "연맹", pl: "Sojusz", ar: "التحالف" },
   "guides.notFound": { en: "This guide doesn't exist (yet).", de: "Diesen Guide gibt es (noch) nicht.", ko: "이 가이드는 (아직) 없습니다.", pl: "Ten poradnik (jeszcze) nie istnieje.", ar: "هذا الدليل غير موجود (بعد)." },
 
   // Tools

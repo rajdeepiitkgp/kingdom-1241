@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CACHE_TAGS, cacheTagForTable } from "@/lib/data/cache-tags";
+import { CACHE_TAGS, cacheTagForTable, routesForTag } from "@/lib/data/cache-tags";
 import { getTranslatableTable, isTranslatableRow, TRANSLATABLE_TABLES } from "@/lib/translate/tables";
 
 /** The tables the webhook installer (supabase/webhooks.sql) attaches triggers to. */
@@ -44,5 +44,14 @@ describe("cacheTagForTable", () => {
     expect(cacheTagForTable("rule_topics")).toBe(CACHE_TAGS.rules);
     expect(cacheTagForTable("audit_log")).toBeNull();
     expect(new Set(Object.values(CACHE_TAGS)).size).toBe(Object.keys(CACHE_TAGS).length);
+  });
+});
+
+describe("routesForTag", () => {
+  it("expires the guide pages by route whenever the guides change", () => {
+    expect(routesForTag(cacheTagForTable("guides")!)).toEqual(["/[locale]/guides/[slug]"]);
+    expect(routesForTag(cacheTagForTable("guide_sections")!)).toEqual(["/[locale]/guides/[slug]"]);
+    expect(routesForTag(CACHE_TAGS.all)).toEqual(["/[locale]/guides/[slug]"]);
+    expect(routesForTag(CACHE_TAGS.rules)).toEqual([]);
   });
 });

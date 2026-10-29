@@ -5,12 +5,15 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
+import { moveContentRow } from "@/lib/admin/content-actions";
+import { type ContentOrderTable, isContentOrderTable } from "@/lib/admin/content-forms";
 import { moveRow } from "@/lib/admin/kvk-actions";
 
 /**
- * ▲ position ▼ next to an instruction, coordinator or formation. Each arrow
- * submits the row one step in that direction; the editor re-renders in place,
- * and a failure is shown under the arrows instead of being swallowed.
+ * ▲ position ▼ next to an instruction, coordinator or formation of a battle
+ * plan, or a rule topic, rule or guide. Each arrow submits the row one step in
+ * that direction; the editor re-renders in place, and a failure is shown under
+ * the arrows instead of being swallowed.
  */
 export function MoveButtons({
   locale,
@@ -23,8 +26,9 @@ export function MoveButtons({
   className,
 }: {
   locale: string;
-  planId: string;
-  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders" | "kvk_checklist_items" | "kvk_checklist_rules";
+  /** The battle plan of a plan's row; content rows have none. */
+  planId?: string;
+  table: "kvk_rules" | "kvk_coordinators" | "kvk_formations" | "kvk_leader_rules" | "kvk_rally_leaders" | "kvk_checklist_items" | "kvk_checklist_rules" | ContentOrderTable;
   id: string;
   /** 0-based position in the list. */
   position: number;
@@ -33,11 +37,11 @@ export function MoveButtons({
   label: string;
   className?: string;
 }) {
-  const [state, action] = useActionState<ActionState, FormData>(moveRow, IDLE_STATE);
+  const [state, action] = useActionState<ActionState, FormData>(isContentOrderTable(table) ? moveContentRow : moveRow, IDLE_STATE);
   return (
     <form action={action} className={clsx("flex shrink-0 flex-col items-center gap-0.5", className)}>
       <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="planId" value={planId} />
+      {planId && <input type="hidden" name="planId" value={planId} />}
       <input type="hidden" name="table" value={table} />
       <input type="hidden" name="id" value={id} />
       <Arrow direction="up" disabled={position === 0} title={`Move ${label} up`} />

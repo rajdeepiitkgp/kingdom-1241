@@ -26,7 +26,7 @@ begin
 
   foreach t in array array[
     'languages', 'site_settings', 'ui_strings', 'announcements', 'events',
-    'rule_topics', 'rules', 'guides', 'alliances', 'gift_codes',
+    'rule_topics', 'rules', 'guides', 'guide_sections', 'alliances', 'gift_codes',
     'heroes', 'kvk_plans', 'kvk_rules', 'kvk_coordinators', 'kvk_formations',
     'kvk_retrospectives', 'kvk_leader_briefs', 'kvk_leader_rules', 'kvk_rally_leaders',
     'kvk_checklist_briefs', 'kvk_checklist_items', 'kvk_checklist_rules'

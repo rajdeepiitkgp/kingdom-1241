@@ -5,6 +5,11 @@
  *   npm run db:seed -- --sync-ui    # also update the interface strings (ui_strings) from the code
  *   npm run db:seed -- --overwrite  # also replace existing seed rows (drops their translations!)
  *
+ * The texts of the content editor (announcements, rule topics and rules,
+ * guides) belong to the moderators once the site runs: they are seeded only
+ * into an empty table, never by --sync-ui, so a placeholder a moderator
+ * deleted doesn't come back; --overwrite still replaces them.
+ *
  * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local.
  * The KvK battle plan is seeded with the password from KVK_SEED_PASSWORD
  * (default "1241") — change it in the kvk_plans table afterwards.
@@ -38,6 +43,20 @@ async function main() {
   const supabase = createAdminClient();
   const seed = buildSeedContent();
   const summary: string[] = [];
+
+  /** Seed an editor-managed table only into a new database (see the top of this file). */
+  async function seedEditorTables(tables: string[], write: () => Promise<void>) {
+    const leave = () => void summary.push(`${tables.join(" + ")}: left to the moderators (seeded into an empty table only)`);
+    if (!overwrite) {
+      if (syncUi) return leave();
+      for (const table of tables) {
+        const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
+        if (error) throw new Error(`${table}: ${error.message}`);
+        if ((count ?? 0) > 0) return leave();
+      }
+    }
+    await write();
+  }
 
   async function upsertMissing(
     table: string,
@@ -109,20 +128,22 @@ async function main() {
   }
   await upsertMissing("ui_strings", "key", uiRows, syncUi);
 
-  await upsertMissing(
-    "announcements",
-    "id",
-    seed.announcements.map((a) => ({
-      id: a.id,
-      title: a.title,
-      body: a.body,
-      pinned: a.pinned,
-      published: a.published,
-      published_at: a.publishedAt,
-      expires_at: a.expiresAt,
-      // A replaced text drops the Markdown an editor saved, so the editor opens the seed's HTML again.
-      ...(overwrite ? { body_source: {} } : {}),
-    })),
+  await seedEditorTables(["announcements"], () =>
+    upsertMissing(
+      "announcements",
+      "id",
+      seed.announcements.map((a) => ({
+        id: a.id,
+        title: a.title,
+        body: a.body,
+        pinned: a.pinned,
+        published: a.published,
+        published_at: a.publishedAt,
+        expires_at: a.expiresAt,
+        // A replaced text drops the Markdown an editor saved, so the editor opens the seed's HTML again.
+        ...(overwrite ? { body_source: {} } : {}),
+      })),
+    ),
   );
 
   await upsertMissing(
@@ -144,50 +165,54 @@ async function main() {
     })),
   );
 
-  await upsertMissing(
-    "rule_topics",
-    "id",
-    seed.ruleTopics.map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      title: t.title,
-      icon: t.icon,
-      sort_order: t.sortOrder,
-      published: t.published,
-    })),
-  );
+  // Topics and their rules are one unit: rules are seeded only with their topics.
+  await seedEditorTables(["rule_topics", "rules"], async () => {
+    await upsertMissing(
+      "rule_topics",
+      "id",
+      seed.ruleTopics.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        title: t.title,
+        icon: t.icon,
+        sort_order: t.sortOrder,
+        published: t.published,
+      })),
+    );
+    await upsertMissing(
+      "rules",
+      "id",
+      seed.ruleTopics.flatMap((t) =>
+        t.rules.map((r) => ({
+          id: r.id,
+          topic_id: r.topicId,
+          title: r.title,
+          body: r.body,
+          sort_order: r.sortOrder,
+          published: r.published,
+          ...(overwrite ? { body_source: {} } : {}),
+        })),
+      ),
+    );
+  });
 
-  await upsertMissing(
-    "rules",
-    "id",
-    seed.ruleTopics.flatMap((t) =>
-      t.rules.map((r) => ({
-        id: r.id,
-        topic_id: r.topicId,
-        title: r.title,
-        body: r.body,
-        sort_order: r.sortOrder,
-        published: r.published,
+  await seedEditorTables(["guides"], () =>
+    upsertMissing(
+      "guides",
+      "id",
+      seed.guides.map((g) => ({
+        id: g.id,
+        slug: g.slug,
+        title: g.title,
+        summary: g.summary,
+        body: g.body,
+        icon: g.icon,
+        cover_image_url: g.coverImageUrl,
+        sort_order: g.sortOrder,
+        published: g.published,
         ...(overwrite ? { body_source: {} } : {}),
       })),
     ),
-  );
-
-  await upsertMissing(
-    "guides",
-    "id",
-    seed.guides.map((g) => ({
-      id: g.id,
-      slug: g.slug,
-      title: g.title,
-      summary: g.summary,
-      body: g.body,
-      icon: g.icon,
-      cover_image_url: g.coverImageUrl,
-      sort_order: g.sortOrder,
-      published: g.published,
-      ...(overwrite ? { body_source: {} } : {}),
-    })),
   );
 
   await upsertMissing(

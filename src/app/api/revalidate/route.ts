@@ -1,7 +1,7 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/api-auth";
-import { CACHE_TAGS, cacheTagForTable } from "@/lib/data";
+import { CACHE_TAGS, cacheTagForTable, routesForTag } from "@/lib/data";
 import { createLogger, requestId } from "@/lib/log";
 
 /**
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
 
   const tag = table ? (cacheTagForTable(table) ?? CACHE_TAGS.all) : CACHE_TAGS.all;
   revalidateTag(tag, { expire: 0 });
+  for (const route of routesForTag(tag)) revalidatePath(route, "page");
   log.info("Cache revalidated", { reqId, table: table ?? "*", tag });
   return reply({ ok: true, tag, now: Date.now() });
 }
