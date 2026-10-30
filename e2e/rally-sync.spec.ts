@@ -226,10 +226,11 @@ test("RS-11 the invite link opens the room without the password", async ({ page,
   await page.locator('[data-tour="sync-more"]').click();
   const invite = page.locator("details", { hasText: t("sync.invite.title") });
   await invite.locator("summary").click();
-  // The link is made from the password this browser typed; the panel offers to show it first.
+  // The panel first checks what this device saved (a server call), then shows the link, or offers to make it from the typed password.
   const show = invite.getByRole("button", { name: t("sync.invite.makeLink"), exact: true });
-  if (await show.isVisible()) await show.click();
   const link = invite.locator("p.input", { hasText: "#k=" }).first();
+  await expect(link.or(show).first()).toBeVisible({ timeout: 15_000 });
+  if (await show.isVisible()) await show.click();
   await expect(link).toBeVisible();
   const url = (await link.innerText()).trim();
 
