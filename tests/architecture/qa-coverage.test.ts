@@ -29,9 +29,10 @@ export function qaSpecs(markdown: string): Array<{ id: string; checkedBy: string
   });
 }
 
-/** The spec IDs that test titles in a spec file start with. */
+/** The spec IDs that test titles in a spec file start with. Comments don't count: a commented-out test covers nothing. */
 export function testedIds(source: string): string[] {
-  return [...source.matchAll(/\btest\(\s*["'`]([A-Z]+-\d{2}) /g)].map((match) => match[1]);
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/[^\n]*/g, "$1");
+  return [...code.matchAll(/\btest\(\s*["'`]([A-Z]+-\d{2}) /g)].map((match) => match[1]);
 }
 
 /** The pages under src/app/[locale] as routes (`/kvk/prep`, `/guides/[slug]`), without the admin area, route groups or the catch-all. */
@@ -84,5 +85,6 @@ describe("QA specs and tests", () => {
       { id: "KVK-06", checkedBy: "Unit: tests/lib/kvk/prep.test.ts" },
     ]);
     expect(testedIds('test("RS-01 opens", …); test(`SITE-01 every page in ${locale}`, …); test("no id", …)')).toEqual(["RS-01", "SITE-01"]);
+    expect(testedIds('// test("RS-09 waits for a decision", …)\n/* test("RS-08 …", …) */\ntest("RS-02 runs", …) // test("RS-07 no", …)')).toEqual(["RS-02"]);
   });
 });

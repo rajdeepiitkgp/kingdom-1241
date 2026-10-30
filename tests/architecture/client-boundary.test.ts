@@ -82,7 +82,8 @@ function stripComments(source: string): string {
 function importSpecifiers(source: string): string[] {
   const code = stripComments(source);
   const specifiers: string[] = [];
-  const re = /(?:^|\n)\s*(import|export)\s+(type\s+)?([\s\S]*?)\s+from\s+["']([^"']+)["']|(?:^|\n)\s*import\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g;
+  // The clause before `from` stops at a semicolon, so `import "server-only";` ahead of a named import is read as its own statement.
+  const re = /(?:^|\n)\s*(import|export)\s+(type\s+)?([^;]*?)\s+from\s+["']([^"']+)["']|(?:^|\n)\s*import\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g;
   for (const match of code.matchAll(re)) {
     if (match[2]) continue; // import type / export type
     const spec = match[4] ?? match[5] ?? match[6];
@@ -136,6 +137,23 @@ describe("client components", () => {
   it("exist (the scan found the client entry points)", () => {
     expect(clientEntries.length).toBeGreaterThan(10);
     expect(clientEntries.map(rel)).toContain("components/rules/RulesTabs.tsx");
+  });
+
+  it("reads bare, named, multi-line, re-exported and dynamic imports (so a green run means something)", () => {
+    const source = [
+      '"use client";',
+      'import "server-only";',
+      'import { a } from "./a";',
+      'import type { T } from "./types";',
+      "import {",
+      "  b,",
+      "  c,",
+      '} from "@/lib/b";',
+      'export { d } from "./d";',
+      'const e = () => import("./e"); // import { no } from "./comment"',
+      "",
+    ].join("\n");
+    expect(importSpecifiers(source)).toEqual(["server-only", "./a", "@/lib/b", "./d", "./e"]);
   });
 
   it("never reach a server-only module or package", () => {
