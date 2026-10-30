@@ -10,6 +10,7 @@ import { GuideAllianceTabs } from "@/components/guides/GuideAllianceTabs";
 import { allianceLabel, orderByAlliance } from "@/lib/content/guide-sections";
 import { getAlliances, getEvents, getGuideBySlug, getGuides, getGuideSections } from "@/lib/data";
 import type { Alliance, GuideSection } from "@/lib/data/types";
+import { eventView } from "@/lib/events/view";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
@@ -70,7 +71,7 @@ async function GuideArticle({ params }: Pick<PageProps<"/[locale]/guides/[slug]"
       {relatedEvents.length > 0 && (
         <section className="mt-5">
           <h2 className="mb-2 text-sm font-bold tracking-wider text-ink-muted uppercase">{dict["guides.relatedEvent"]}</h2>
-          <EventList events={relatedEvents} dict={dict} locale={locale} compact />
+          <EventList events={relatedEvents.map((event) => eventView(event, locale))} dict={dict} locale={locale} compact />
         </section>
       )}
 

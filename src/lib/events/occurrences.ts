@@ -1,8 +1,11 @@
 import type { GameEvent } from "@/lib/data/types";
+
+/** What the occurrence rules read of an event (the browser gets a view with the texts in one language). */
+export type EventSchedule = Pick<GameEvent, "startsAt" | "durationMinutes" | "timing" | "repeatEveryDays" | "alsoAfterDays">;
 import { DAY, MINUTE } from "@/lib/time";
 
-export interface Occurrence {
-  event: GameEvent;
+export interface Occurrence<E extends EventSchedule = EventSchedule> {
+  event: E;
   start: Date;
   end: Date;
   /** "upcoming" | "live" | "ended" relative to `now`. */
@@ -19,7 +22,7 @@ function startOfUtcDay(ms: number): number {
  * alliance picks is a whole UTC day (the game's day): its own start time and
  * length don't say when a given alliance plays it.
  */
-function span(event: GameEvent): { first: number; durationMs: number } | null {
+function span(event: EventSchedule): { first: number; durationMs: number } | null {
   const start = new Date(event.startsAt).getTime();
   if (Number.isNaN(start)) return null;
   return event.timing === "alliance" ? { first: startOfUtcDay(start), durationMs: DAY } : { first: start, durationMs: event.durationMinutes * MINUTE };
@@ -30,7 +33,7 @@ function span(event: GameEvent): { first: number; durationMs: number } | null {
  * A round may have a second day (`alsoAfterDays`, e.g. Tuesday and Thursday).
  * Returns null for a one-off event that has already ended.
  */
-export function nextOccurrence(event: GameEvent, now: Date): Occurrence | null {
+export function nextOccurrence<E extends EventSchedule>(event: E, now: Date): Occurrence<E> | null {
   const timing = span(event);
   if (!timing) return null;
   const { first, durationMs } = timing;
@@ -55,10 +58,10 @@ export function nextOccurrence(event: GameEvent, now: Date): Occurrence | null {
 }
 
 /** Upcoming/live occurrences for a list of events, soonest first. */
-export function upcomingOccurrences(events: GameEvent[], now: Date, limit?: number): Occurrence[] {
+export function upcomingOccurrences<E extends EventSchedule>(events: E[], now: Date, limit?: number): Occurrence<E>[] {
   const list = events
     .map((event) => nextOccurrence(event, now))
-    .filter((o): o is Occurrence => o !== null)
+    .filter((o): o is Occurrence<E> => o !== null)
     .sort((a, b) => {
       // Live events first, then by start time.
       if (a.status === "live" && b.status !== "live") return -1;
@@ -77,7 +80,7 @@ export function daysUntil(start: Date, now: Date): number {
  * The days of one round as UTC weekdays ("Tue + Thu"), when a round has a
  * second day and repeats in whole weeks (so the weekdays never change).
  */
-export function roundWeekdays(event: GameEvent, locale: string): string | null {
+export function roundWeekdays(event: EventSchedule, locale: string): string | null {
   if (!event.alsoAfterDays || !event.repeatEveryDays || event.repeatEveryDays % 7 !== 0) return null;
   const start = new Date(event.startsAt).getTime();
   if (Number.isNaN(start)) return null;
