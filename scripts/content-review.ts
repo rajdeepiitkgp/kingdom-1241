@@ -27,7 +27,7 @@ const args = parseArgs(process.argv.slice(2));
 const STATE_FILE = resolve(process.cwd(), ".claude/skills/translation-review/content-state.local.json");
 
 async function main() {
-  const [{ createAdminClient }, { TRANSLATABLE_TABLES, isTranslatableRow }, { getEnabledLocalesForTranslation }, { GLOSSARY }, review] = await Promise.all([
+  const [{ createAdminClient }, { TRANSLATABLE_TABLES, isHtmlField, isTranslatableRow }, { getEnabledLocalesForTranslation }, { GLOSSARY }, review] = await Promise.all([
     import("@/lib/supabase/admin"),
     import("@/lib/translate/tables"),
     import("@/lib/translate/translate-row"),
@@ -59,7 +59,7 @@ async function main() {
       for (const column of config.columns) {
         const value = row[column.name];
         if (!value || typeof value !== "object") continue;
-        cells.push({ table: config.table, id: String(row[config.primaryKey]), column: column.name, html: column.html, value: value as Record<string, string>, manual: {} });
+        cells.push({ table: config.table, id: String(row[config.primaryKey]), column: column.name, html: isHtmlField(config.table, String(row[config.primaryKey]), column), value: value as Record<string, string>, manual: {} });
       }
     }
   }
