@@ -13,6 +13,7 @@
     "lint": "eslint --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "e2e": "playwright test",
     "db:seed": "tsx scripts/seed.ts",
     "translate": "tsx scripts/translate.ts",
     "ui:review": "tsx scripts/ui-review.ts",
@@ -40,6 +41,7 @@
     "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",

@@ -7,7 +7,7 @@ import type { KvkRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 export function RuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkRule | null }) {
   const [state, action] = useActionState<ActionState, FormData>(saveRule, IDLE_STATE);

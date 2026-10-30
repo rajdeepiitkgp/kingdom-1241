@@ -4,7 +4,7 @@ import { laterStamp } from "@/lib/kvk/throttle";
 import { hashPassword, hashToken } from "./access";
 import { EMPTY_GARRISON, type GarrisonState } from "./garrison";
 import { ACTIVE_BROWSER_MS, BROWSER_BUDGET, parseCapacity } from "./capacity";
-import { DEFAULT_SETTINGS, isRoomOpen } from "./room";
+import { DEFAULT_SETTINGS, isRoomOpen, type RoomMode } from "./room";
 import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, type RoomRow } from "./store-types";
 
 /**
@@ -19,12 +19,23 @@ import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, typ
  *   /tools/rally-sync/TEST23#c=local-review-coordinator          … as its coordinator
  *   /tools/rally-sync/DEFEND                                     a garrison room, same password and coordinator link
  *   /tools/rally-sync/CNTR22                                     a counter-rally room, same password and coordinator link
+ *
+ * The browser tests (e2e/) open fresh demo rooms of their own, so tests running side by side never share a
+ * hit time: E2R plus three characters is a rally room, E2G… a garrison room, E2C… a counter-rally room.
  */
 
 export const DEMO_ROOM = { code: "TEST23", password: "review123", coordinatorToken: "local-review-coordinator" };
 export const DEMO_GARRISON_ROOM = { ...DEMO_ROOM, code: "DEFEND" };
 export const DEMO_COUNTER_ROOM = { ...DEMO_ROOM, code: "CNTR22" };
-const DEMO_CODES = [DEMO_ROOM.code, DEMO_GARRISON_ROOM.code, DEMO_COUNTER_ROOM.code];
+const DEMO_MODES: Record<string, RoomMode> = { [DEMO_ROOM.code]: "rally", [DEMO_GARRISON_ROOM.code]: "garrison", [DEMO_COUNTER_ROOM.code]: "counter" };
+const TEST_ROOM = /^E2([RGC])\w{3}$/;
+const TEST_MODES: Record<string, RoomMode> = { R: "rally", G: "garrison", C: "counter" };
+
+/** The mode of a demo or test room's code; null for any other code. */
+function demoMode(code: string): RoomMode | null {
+  const test = TEST_ROOM.exec(code);
+  return test ? TEST_MODES[test[1]] : (DEMO_MODES[code] ?? null);
+}
 
 interface Memory {
   rooms: Map<string, RoomRow>;
@@ -71,13 +82,13 @@ const DEMO_ENEMIES: GarrisonState = {
  * A demo room (outside the room limit, like a room created before it was reached): the rally room and the
  * counter-rally room with three placeholder leaders, or the garrison room with three placeholder enemy leaders.
  */
-async function demoRoom(m: Memory, code: string): Promise<RoomRow> {
+async function demoRoom(m: Memory, code: string, mode: RoomMode): Promise<RoomRow> {
   const now = new Date().toISOString();
-  const garrison = code === DEMO_GARRISON_ROOM.code;
-  const counter = code === DEMO_COUNTER_ROOM.code;
+  const garrison = mode === "garrison";
+  const counter = mode === "counter";
   const room: RoomRow = {
     ...DEFAULT_SETTINGS,
-    ...(garrison ? { mode: "garrison" as const } : counter ? { mode: "counter" as const } : {}),
+    mode,
     id: randomUUID(),
     code,
     title: garrison ? "Demo garrison (local review)" : counter ? "Demo counter-rally (local review)" : "Demo room (local review)",
@@ -121,7 +132,9 @@ export function memoryStore(): RallyStore {
     kind: "memory",
     async roomByCode(code) {
       const room = [...m.rooms.values()].find((r) => r.code === code) ?? null;
-      return room ?? (DEMO_CODES.includes(code) && Date.now() - (m.demoGoneAt[code] ?? 0) > 60_000 ? demoRoom(m, code) : null);
+      if (room) return room;
+      const mode = demoMode(code);
+      return mode && Date.now() - (m.demoGoneAt[code] ?? 0) > 60_000 ? demoRoom(m, code, mode) : null;
     },
     async roomById(id) {
       return m.rooms.get(id) ?? null;
@@ -160,7 +173,7 @@ export function memoryStore(): RallyStore {
     },
     async deleteRoom(id) {
       const code = m.rooms.get(id)?.code;
-      if (code && DEMO_CODES.includes(code)) m.demoGoneAt[code] = Date.now();
+      if (code && demoMode(code)) m.demoGoneAt[code] = Date.now();
       m.rooms.delete(id);
       for (const [leaderId, leader] of m.leaders) if (leader.roomId === id) m.leaders.delete(leaderId);
       for (const [instanceId, instance] of m.instances) if (instance.roomId === id) m.instances.delete(instanceId);

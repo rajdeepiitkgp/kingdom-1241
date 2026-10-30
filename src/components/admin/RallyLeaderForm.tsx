@@ -10,7 +10,7 @@ import { DateTimeField } from "./DateTimeField";
 import { HeroSlotFields, type HeroSlots, type Ratio, RatioFields } from "./HeroRatioFields";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 const EMPTY_SLOTS: HeroSlots = [null, null, null];
 const DEFAULT_RATIO: Ratio = { infantry: 50, cavalry: 0, archers: 50 };

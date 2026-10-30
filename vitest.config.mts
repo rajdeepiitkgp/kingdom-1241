@@ -10,5 +10,8 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    // CI also writes JUnit XML for the run's test summary (docs/QA.md).
+    reporters: process.env.CI ? ["default", "junit"] : ["default"],
+    outputFile: { junit: "reports/junit/unit.xml" },
   },
 });

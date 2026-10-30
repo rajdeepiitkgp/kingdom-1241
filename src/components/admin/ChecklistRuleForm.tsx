@@ -7,7 +7,7 @@ import type { KvkChecklistRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 /** One line on the checklist page: an order for the battle commander or a general guideline. */
 export function ChecklistRuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkChecklistRule | null }) {

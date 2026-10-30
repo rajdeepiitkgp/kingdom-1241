@@ -7,7 +7,7 @@ import type { KvkLeaderRule } from "@/lib/data/types";
 import { pick } from "@/lib/i18n/localized";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 /** One instruction on the leader page, for every leader or only rally / garrison leads. */
 export function LeaderRuleForm({ locale, planId, rule }: { locale: string; planId: string; rule: KvkLeaderRule | null }) {

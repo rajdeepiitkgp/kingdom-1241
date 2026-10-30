@@ -1,0 +1,68 @@
+# The daily look at the live site (docs/QA.md, "The live check"): the pages
+# a visitor sees, in every language the site offers, read-only. It never types
+# a password, opens a room or sends a form, and it answers link prefetches
+# itself so it doesn't spend Vercel's ISR writes on pages nobody opened.
+#
+# Runs daily and by hand (Actions → E2E live → Run workflow). Secret: SITE_URL,
+# the same as Maintenance (SETUP.md § 9d). A failure e-mails the owner like any
+# failed workflow; the test-reports artifact shows what the page looked like.
+name: E2E live
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: Check the live site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      E2E_BASE_URL: ${{ secrets.SITE_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install browser
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Check the live site
+        run: npm run e2e
+
+      - name: Live check report
+        if: ${{ !cancelled() && hashFiles('reports/junit/e2e.xml') != '' }}
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        with:
+          report_paths: reports/junit/e2e.xml
+          check_name: Live site
+          annotate_only: true
+          detailed_summary: true
+          include_passed: true
+
+      - name: Keep the reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            reports/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

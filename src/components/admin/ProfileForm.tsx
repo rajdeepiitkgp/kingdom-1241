@@ -6,7 +6,7 @@ import { saveProfile } from "@/lib/admin/profile-actions";
 import type { Alliance } from "@/lib/data/types";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
-import { useSubmitInTransition } from "./useEditorForm";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 
 /** In-game name and home alliance: shown as "[TAG] Name" in the user list and on every change the person makes, like the game does. */
 export function ProfileForm({

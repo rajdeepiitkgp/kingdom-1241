@@ -54,7 +54,8 @@ src/
   lib/vercel/             which old Vercel deployments to delete (pure; the script is scripts/prune-deployments.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
   lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
-tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components
+tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components and docs/QA.md in step with the tests
+e2e/                      browser tests (Playwright) against an offline build: every page in every language on three devices, tours, the locked pages, Rally Sync between two devices; e2e/live is the daily read-only look at the live site. The specs they check are in docs/QA.md
 public/heroes/            128px hero portraits (from kingshotdata.com)
 public/items/             128px game icons for the KvK prep page (kingshotdata.com, kingshot.net, kingshotwiki.com, g2384/Kingshot-Data)
 supabase/
@@ -72,7 +73,7 @@ scripts/
   prune.ts                npm run prune (deletes battle feedback past its retention period, closed Rally Sync rooms and unused editor images, SETUP.md § 9a/9b/9f)
   prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
 vercel.json               runs the server code in Frankfurt (fra1), next to the database (SETUP.md § 5)
-.github/workflows/        CI (lint/typecheck/test/build), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Prune deployments (old Vercel deployments, after every deploy); dependabot.yml for updates
+.github/workflows/        CI (lint/typecheck/test/build/browser tests, JUnit summary), E2E live (daily read-only check of the live site), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Prune deployments (old Vercel deployments, after every deploy); dependabot.yml for updates
 ```
 
 ### Languages and translation
@@ -110,6 +111,7 @@ Pages are prerendered and content is cached for a day (`cacheLife('content')` in
 | --- | --- |
 | `npm run dev` / `npm run build` / `npm start` | Next.js |
 | `npm run lint` / `npm run typecheck` / `npm run test` | ESLint, TypeScript, Vitest (tests in `tests/`) |
+| `npm run e2e` | Browser tests (Playwright, `e2e/`): builds the site offline with no keys, then runs every spec on three devices (docs/QA.md; `npx playwright install chromium webkit` once) |
 | `npm run db:seed` | Insert seed content into Supabase (idempotent) |
 | `npm run translate` | Translate missing/outdated content with the configured provider |
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
