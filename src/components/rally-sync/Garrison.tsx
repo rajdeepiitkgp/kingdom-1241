@@ -14,6 +14,7 @@ import {
   type EnemyRally,
   focusSteps,
   hasLaunched,
+  LANDED_SLACK_MS,
   LAUNCH_CHIPS,
   MAX_SEND_SPACING_SECONDS,
   MIN_SEND_SPACING_SECONDS,
@@ -522,7 +523,9 @@ function EnemyCard({
   const cancel = useConfirm();
   const where = `card-${enemy?.id ?? rally?.id ?? ""}`;
   const hit = rally === null ? null : rallyHit(rally);
-  const landed = hit !== null && now !== null && hit <= now;
+  // "Landed" only once the server would refuse a correction (LANDED_SLACK_MS): the predicted hit may run late.
+  const landed = hit !== null && now !== null && hit + LANDED_SLACK_MS <= now;
+  const overdue = hit !== null && now !== null && hit <= now && !landed;
   const launched = rally !== null && now !== null && hasLaunched(rally, now);
   const stage = picking ? "picking" : rally === null || landed ? "waiting" : launched ? "launched" : "marked";
   const error = runner.errorFor(where);
@@ -643,10 +646,12 @@ function EnemyCard({
       <section className="rounded-card border-2 border-danger/50 bg-card px-4 py-3">
         {header}
         <p className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="chip bg-danger-soft text-danger">{dict["sync.gar.launched"]}</span>
-          <span className="text-xl font-black text-ink">
-            <Phrase template={dict["sync.gar.landsInTime"]} values={{ time: formatSeconds(secondsUntil(hit, now)) }} />
-          </span>
+          <span className="chip bg-danger-soft text-danger">{overdue ? dict["sync.gar.landed"] : dict["sync.gar.launched"]}</span>
+          {!overdue && (
+            <span className="text-xl font-black text-ink">
+              <Phrase template={dict["sync.gar.landsInTime"]} values={{ time: formatSeconds(secondsUntil(hit, now)) }} />
+            </span>
+          )}
         </p>
         <p className="text-sm font-bold text-ink-muted">
           <Phrase template={dict["sync.gar.lands"]} values={{ time: `${shown(hit)} ${clock.label}` }} />
