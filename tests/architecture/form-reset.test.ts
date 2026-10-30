@@ -24,6 +24,21 @@ function tsxFiles(dir: string): string[] {
   });
 }
 
+/** The JSX tag that starts at `start`, with its `{…}` expressions balanced (an `=>` inside one is not the end of the tag). */
+function tagAt(source: string, start: number): { tag: string; end: number } {
+  let depth = 0;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") depth--;
+    else if (ch === ">" && depth === 0) return { tag: source.slice(start, i + 1), end: i + 1 };
+  }
+  return { tag: source.slice(start), end: source.length };
+}
+
+/** A dropdown, or a component that wraps one (…Select, …Picker, …Dropdown). */
+const DROPDOWN_TAG = /<(select|[A-Z]\w*(?:Select|Picker|Dropdown)\w*)\b/g;
+
 /** The forms in a component's source that have an action, a dropdown with a stored default and no onSubmit. */
 export function formsThatResetDropdowns(source: string): string[] {
   const problems: string[] = [];
@@ -31,14 +46,13 @@ export function formsThatResetDropdowns(source: string): string[] {
   for (;;) {
     const start = source.indexOf("<form", from);
     if (start === -1) break;
-    const tagEnd = source.indexOf(">", start);
+    const { tag, end: tagEnd } = tagAt(source, start);
     const end = source.indexOf("</form>", tagEnd);
-    from = end === -1 ? tagEnd + 1 : end;
-    const tag = source.slice(start, tagEnd + 1);
-    const body = source.slice(tagEnd + 1, end === -1 ? undefined : end);
+    from = end === -1 ? tagEnd : end;
+    const body = source.slice(tagEnd, end === -1 ? undefined : end);
     if (!/\baction=\{/.test(tag) || /\b(onSubmit|key)=/.test(tag)) continue;
     // A select whose default comes from data; a fixed default ("moderator") is fine for an add form.
-    const storedDropdown = [...body.matchAll(/<select\b[^>]*>/g)].some((match) => /\bdefaultValue=\{/.test(match[0]));
+    const storedDropdown = [...body.matchAll(DROPDOWN_TAG)].some((match) => /\bdefaultValue=\{/.test(tagAt(body, match.index).tag));
     if (storedDropdown) problems.push(tag.replace(/\s+/g, " ").slice(0, 80));
   }
   return problems;
@@ -59,5 +73,10 @@ describe("forms that edit stored values", () => {
     expect(formsThatResetDropdowns(broken.replace("<form action={action}", "<form action={action} onSubmit={rule ? submit : undefined}"))).toEqual([]);
     expect(formsThatResetDropdowns(broken.replace("<form action={action}", "<form action={action} key={version}"))).toEqual([]);
     expect(formsThatResetDropdowns(`<form action={action}><select defaultValue="moderator"></select></form>`)).toEqual([]);
+    // A handler with an arrow before the default, and a component that wraps the dropdown.
+    expect(formsThatResetDropdowns(`<form action={action}><select onChange={(e) => pick(e.target.value)} defaultValue={role}></select></form>`)).toHaveLength(1);
+    expect(formsThatResetDropdowns(`<form action={action}><RolePicker name="role" defaultValue={role} /></form>`)).toHaveLength(1);
+    expect(formsThatResetDropdowns(`<form action={action} onSubmit={(e) => send(e)}><select defaultValue={role}></select></form>`)).toEqual([]);
+    expect(formsThatResetDropdowns(`<form action={action}><input name="title" defaultValue={title} /></form>`)).toEqual([]);
   });
 });

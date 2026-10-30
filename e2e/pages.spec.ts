@@ -25,6 +25,7 @@ test.describe("addresses", () => {
       expect(response?.status()).toBe(404);
       await expect(page.getByRole("heading", { level: 1, name: t("notFound.title", locale) })).toBeVisible();
       await expect(page.getByRole("link", { name: t("notFound.home", locale) })).toHaveAttribute("href", at(locale, "/"));
+      await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true })).toBeVisible();
       await expectHealthyPage(page, locale);
     }
   });

@@ -48,7 +48,8 @@ export default defineConfig({
   testIgnore: liveUrl ? undefined : "live/**",
   fullyParallel: true,
   forbidOnly: ci,
-  retries: ci ? 1 : 0,
+  // A flaky test gets its cause fixed (CLAUDE.md), never a second try that hides it.
+  retries: 0,
   workers: ci ? 3 : undefined,
   timeout: 45_000,
   expect: { timeout: 10_000 },

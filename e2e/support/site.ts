@@ -52,7 +52,7 @@ export async function expectHealthyPage(page: Page, locale: string) {
   await expect(html).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
   // One page on screen. Next keeps the page before a language switch in the document, hidden, for Back.
   await expect(page.locator("main").filter({ visible: true })).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
+  await expect(page.locator("[data-error-page]"), "the error boundary must not have caught the page").toHaveCount(0);
   await expectNoSidewaysScroll(page);
 }
 
