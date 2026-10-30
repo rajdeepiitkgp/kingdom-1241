@@ -43,3 +43,10 @@ test("SITE-08 search engines are asked to stay away", async ({ page, request }) 
   const robots = await request.get("/robots.txt");
   expect(await robots.text()).toMatch(/^Disallow: \/$/m);
 });
+
+test("SITE-10 the admin area asks to sign in when nobody is signed in", async ({ page }) => {
+  await page.goto(at("en", "/admin"));
+  await expect(page).toHaveURL(/\/en\/admin\/login/);
+  await expect(page.getByRole("heading", { level: 1, name: "Admin area" })).toBeVisible();
+  await expectHealthyPage(page, "en");
+});

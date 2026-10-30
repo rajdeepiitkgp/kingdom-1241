@@ -72,3 +72,30 @@ test("TOUR-04 tours read right to left in Arabic, also after switching language"
   await page.keyboard.press("Escape");
   expect(await walkTour(page, "ar")).toBeGreaterThan(1);
 });
+
+test("TOUR-06 the read-aloud speaker shows only where the browser has a voice for the page's language", async ({ page, otherDevice }) => {
+  // No speech at all: the speaker stays away and the tour still opens.
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "speechSynthesis", { configurable: true, value: undefined });
+  });
+  await page.goto(at("en", "/"));
+  await hydrated(tourButton(page));
+  await tourButton(page).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: t("tour.voice") })).toHaveCount(0);
+
+  // A voice for the page's language: the speaker shows.
+  const voiced = await otherDevice();
+  await voiced.addInitScript(() => {
+    const voice = { voiceURI: "fake-en", name: "Fake English", lang: "en-US", localService: true, default: true };
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { getVoices: () => [voice], addEventListener: () => undefined, removeEventListener: () => undefined, speak: () => undefined, cancel: () => undefined, pause: () => undefined, resume: () => undefined, speaking: false, pending: false, paused: false },
+    });
+  });
+  await voiced.goto(at("en", "/"));
+  await hydrated(tourButton(voiced));
+  await tourButton(voiced).click();
+  await expect(voiced.getByRole("dialog").getByRole("button", { name: t("tour.voice") })).toBeVisible();
+});

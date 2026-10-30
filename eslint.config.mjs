@@ -41,6 +41,9 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Playwright writes these after a failed local run; they are no code of ours.
+    "playwright-report/**",
+    "test-results/**",
     "next-env.d.ts",
   ]),
 ]);

@@ -85,6 +85,8 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | SITE-07 | The largest text size (125 %) stays on across pages, and every page still fits a phone in German, the longest language. | Browser |
 | SITE-08 | Search engines are asked to stay away (robots meta and `robots.txt`). | Browser |
 | SITE-09 | Reviewed translations keep every placeholder of the English and step aside once the English changes. | Unit: tests/content/seed/ui-reviewed.test.ts |
+| SITE-10 | The admin area asks to sign in when nobody is signed in: the login page, never the error page. | Browser |
+| SITE-11 | A link in a language the site knows but doesn't show opens the same page in the visitor's language. | Unit: tests/lib/i18n/negotiate.test.ts |
 
 ### Guided tours
 
@@ -95,6 +97,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | TOUR-03 | "New here?" shows until that tour is opened or hidden on the device, stays gone after a reload, and is still shown for other pages' tours. | Browser |
 | TOUR-04 | Tours read right to left in Arabic, also right after switching language. | Browser |
 | TOUR-05 | Every tour step points at a marker that exists on its page, and button names in steps use the page's own words. | Unit: tests/architecture/tour-targets.test.ts |
+| TOUR-06 | The read-aloud speaker shows only where the browser has a voice for the page's language; without speech the tour still opens. | Browser |
 
 ### Home and content
 
@@ -102,12 +105,14 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | --- | --- | --- |
 | HOME-01 | Home lists the alliances, and each opens its own page. | Browser |
 | HOME-02 | While transfers are closed, Home shows no "Transfers open" badge, and the transfers page says they're closed and still shows whom to ask. | Browser |
+| HOME-03 | Home shows the gift codes, or says there are none, with kingshot.net's credit and the official redeem page. | Browser |
 | CONT-01 | Events list every event, and an event's guide link opens that guide. | Browser |
 | CONT-02 | Rules show one topic at a time; picking a topic puts it in the address (`#topic`), and a shared `#topic` link opens that topic. | Browser |
 | CONT-03 | Every guide in the guides list opens. | Browser |
 | CONT-04 | Events repeat on their schedule (fixed time or each alliance's own day, second days included). | Unit: tests/lib/events/occurrences.test.ts |
 | CONT-05 | Gift codes follow kingshot.net: new codes are added, ended ones leave Home, a moderator's own code is never ended. | Unit: tests/lib/gift-codes/sync-plan.test.ts |
 | CONT-06 | Alliances follow MightPulse by alliance id, battle days keep the numbers from before the battle, and a new climber is held for review. | Unit: tests/lib/alliances/sync-plan.test.ts |
+| CONT-07 | An event each alliance schedules itself shows its day and says so; an event with a fixed time shows the time. | Browser |
 
 ### KvK pages
 
@@ -121,6 +126,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | KVK-06 | The prep calendar: rounds every 28 days from 1 Nov 2026, the day boundaries, the Saturday shield and battle times, the intel stacking days. | Unit: tests/lib/kvk/prep.test.ts |
 | KVK-07 | Wrong passwords lock out one address for a while and only alert for the plan; nobody is ever locked out by other players' guesses. | Unit: tests/lib/kvk/throttle.test.ts |
 | KVK-08 | A battle's plan stays active while its feedback form is open: the editor refuses to activate another plan or deactivate this one until the form is closed, and a form opens for the active plan only. | Unit: tests/lib/admin/kvk-forms.test.ts |
+| KVK-09 | The battle-plan intro's `{{when}}`, `{{date}}`, `{{time}}` and `{{utc}}` tokens come from the battle time: UTC in the server's HTML, the visitor's zone and words once the page is live. | Unit: tests/lib/kvk/battle-tokens.test.ts |
 
 ### Rally Sync
 
@@ -136,6 +142,16 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | RS-08 | Timing rules: stages (waiting, ready, alert, GO, passed), the game-clock adjustment, the rally that runs while a hit time is ahead. | Unit: tests/lib/rally-sync/timing.test.ts |
 | RS-09 | Garrison refill windows, the send plan with speedups, and the waves clearing after their last hit. | Unit: tests/lib/rally-sync/garrison.test.ts |
 | RS-10 | Room limits per type stay within the Realtime budget, and the database triggers use the same numbers. | Unit: tests/lib/rally-sync/capacity.test.ts |
+| RS-11 | The invite link opens a room without the password. | Browser |
+| RS-12 | The coordinator can log another browser out; it needs the password again. | Browser |
+| RS-13 | Garrison: the wave copies for the game chat (or shows the text to copy by hand), and Clear all needs two taps. | Browser |
+| RS-14 | The screen-awake switch asks the browser for a wake lock, and hides where the browser has none. | Browser |
+
+### Tools
+
+| ID | What must hold | Checked by |
+| --- | --- | --- |
+| TOOLS-01 | The rally refill and pack value calculators answer as the numbers change. | Browser |
 
 ### Live site
 
@@ -155,7 +171,9 @@ Run through the ones that apply before each battle day, and after any change in 
 | MAN-01 | Rally Sync sounds: the chime and the ticks to GO are heard on Android and iPhone with the game in front. | Manual |
 | MAN-02 | Rally Sync keeps the screen awake while a room is open, where the phone allows it. | Manual |
 | MAN-03 | A real room on the live site: the Realtime dot is green, a second phone follows a new hit time within a second, and the invite link opens the room. | Manual |
-| MAN-04 | Tour read-aloud speaks in the page's language on Android Chrome and on iPhone, and the speaker button is hidden where there is no voice. | Manual |
+| MAN-04 | Tour read-aloud speaks in the page's language on Android Chrome and on iPhone (TOUR-06 checks when the speaker shows). | Manual |
 | MAN-05 | Admin: Discord sign-in works; a moderator can publish an announcement, and Home shows it after the save. | Manual |
 | MAN-06 | Admin: a role change, a battle-plan edit and a translation fix save, and keep their values on screen after Save. | Manual |
 | MAN-07 | The feedback results print to PDF on light and dark paper in Chrome and Safari. | Manual |
+| MAN-08 | Admin: with transfers switched open, the transfers page shows the terms and Home's banner shows the badge; closed again, both go. | Manual |
+| MAN-09 | Admin: the editor's Preview shows a text as players will see it (formatting, a danger box, an image). | Manual |
