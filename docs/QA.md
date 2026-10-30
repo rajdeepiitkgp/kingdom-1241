@@ -94,7 +94,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | TOUR-02 | Escape closes a tour and the page stays as it was. | Browser |
 | TOUR-03 | "New here?" shows until that tour is opened or hidden on the device, stays gone after a reload, and is still shown for other pages' tours. | Browser |
 | TOUR-04 | Tours read right to left in Arabic, also right after switching language. | Browser |
-| TOUR-05 | Every tour step points at a marker that exists on its page, and button names in steps use the page's own words. | Unit: tests/lib/tour/targets.test.ts |
+| TOUR-05 | Every tour step points at a marker that exists on its page, and button names in steps use the page's own words. | Unit: tests/architecture/tour-targets.test.ts |
 
 ### Home and content
 

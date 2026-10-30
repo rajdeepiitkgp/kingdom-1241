@@ -19,7 +19,7 @@ import type { Tour } from "@/lib/tour/tour";
 const PLAYER_TOURS: Tour[] = [...Object.values(RALLY_SYNC_TOURS), HOME_TOUR, ALLIANCE_TOUR, ...Object.values(KVK_TOURS)];
 const TOURS: Tour[] = [...PLAYER_TOURS, ...Object.values(ADMIN_TOURS)];
 
-const SRC = resolve(__dirname, "../../../src");
+const SRC = resolve(__dirname, "../../src");
 const files = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => (statSync(join(dir, name)).isDirectory() ? files(join(dir, name)) : /\.tsx?$/.test(name) ? [join(dir, name)] : []));
 // `data-tour="x"` on an element, `tour="x"` on a component that passes it on, `tour: "x"` / `…Tour: "x"` in a list (the admin menu's is a .ts module) or a form's settings.
