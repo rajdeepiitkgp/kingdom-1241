@@ -6,13 +6,20 @@
  * switches (which replace the root layout) use `withNavigationTransition`.
  */
 
-type StartViewTransition = (callback: () => void | Promise<void>) => unknown;
+type StartViewTransition = (callback: () => void | Promise<void>) => { ready?: Promise<unknown> } | undefined;
 
 function startViewTransition(): StartViewTransition | null {
   if (typeof document === "undefined") return null;
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return null;
   const start = (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition;
-  return typeof start === "function" ? start.bind(document) : null;
+  if (typeof start !== "function") return null;
+  return (callback) => {
+    const transition = start.call(document, callback);
+    // A crossfade cut short by a newer one (a quick tap on a link right after the theme switch) rejects `ready`
+    // with "Transition was skipped"; the change itself is done, so it must not reach the console as an error.
+    transition?.ready?.catch(() => {});
+    return transition;
+  };
 }
 
 /** Run a synchronous DOM update inside a crossfade. */
