@@ -26,6 +26,19 @@ updates:
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
+  # The code guide (guide/, its own Astro project): one grouped PR for minor and patch releases.
+  - package-ecosystem: npm
+    directory: /guide
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      guide:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(guide)"
+
   # The pinned action commits in .github/workflows/*.yml (the version comment is updated too).
   - package-ecosystem: github-actions
     directory: /
