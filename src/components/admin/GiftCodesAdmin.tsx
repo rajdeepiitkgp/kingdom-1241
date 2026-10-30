@@ -10,6 +10,7 @@ import type { AdminGiftCode, GiftCodesAdmin as Data } from "@/lib/admin/gift-cod
 import { CODE_HINT, MAX_REWARDS } from "@/lib/gift-codes/forms";
 import { KINGSHOT_SITE } from "@/lib/gift-codes/kingshot";
 import { type GiftCodeState, HOURLY_CHECK_MINUTE } from "@/lib/gift-codes/sync-plan";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { DateTimeField } from "./DateTimeField";
 import { AdminSection, EmptyRow, Field, Notice } from "./ui";
 
@@ -156,10 +157,12 @@ function CodeRow({ code, locale }: { code: AdminGiftCode; locale: string }) {
 /** Add a code (no `code`), or edit what one gives and when it expires. */
 function CodeForm({ locale, code }: { locale: string; code?: AdminGiftCode }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(code ? saveGiftCode : addGiftCode, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const submit = useSubmitInTransition(formAction);
   const errors = state.errors ?? {};
   const key = code?.id ?? "new";
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onSubmit={code ? submit : undefined} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
       {code && <input type="hidden" name="id" value={code.id} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
