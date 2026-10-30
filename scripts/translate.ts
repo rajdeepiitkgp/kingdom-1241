@@ -19,13 +19,14 @@ loadEnv();
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, provider, { getTranslationSettings }] =
+  const [{ createAdminClient }, { TRANSLATABLE_TABLES }, { getEnabledLocalesForTranslation, translateRows }, provider, { getTranslationSettings }, { readAll }] =
     await Promise.all([
       import("@/lib/supabase/admin"),
       import("@/lib/translate/tables"),
       import("@/lib/translate/translate-row"),
       import("@/lib/translate/provider"),
       import("@/lib/config/settings"),
+      import("@/lib/supabase/read-all"),
     ]);
 
   // Fail safe: `--dry-run=true` or `--dry-run 1` must not start a real, paid run.
@@ -52,9 +53,11 @@ async function main() {
   let failed = 0;
 
   for (const table of tables) {
-    const { data, error } = await supabase.from(table).select("*");
-    if (error) throw new Error(`${table}: ${error.message}`);
-    const results = await translateRows(supabase, table, data ?? [], enabled, {
+    const primaryKey = TRANSLATABLE_TABLES.find((t) => t.table === table)?.primaryKey ?? "id";
+    const data = await readAll<Record<string, unknown>>((from, to) => supabase.from(table).select("*").order(primaryKey).range(from, to)).catch((error: Error) => {
+      throw new Error(`${table}: ${error.message}`);
+    });
+    const results = await translateRows(supabase, table, data, enabled, {
       force: args.force === true,
       onlyLocales,
       dryRun,
