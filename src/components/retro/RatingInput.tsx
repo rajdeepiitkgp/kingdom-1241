@@ -36,7 +36,6 @@ export function RatingInput({
       className={clsx("rounded-2xl bg-card-soft p-3 sm:p-4", error && "ring-2 ring-danger/60")}
       aria-describedby={error ? errorId : hintId}
       aria-invalid={error ? true : undefined}
-      onReset={() => setValue(null)}
     >
       <legend className="float-start mb-2 w-full">
         <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

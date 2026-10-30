@@ -188,7 +188,7 @@ export function RetroForm({
                 className={clsx("input pe-12", governorError && "border-danger")}
                 inputMode="numeric"
                 autoComplete="off"
-                pattern="[0-9 ]{4,20}"
+                pattern="[0-9 .\\-_]{4,24}"
                 required
                 maxLength={20}
                 dir="ltr"
