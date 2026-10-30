@@ -4,6 +4,7 @@ import { expect, test } from "./support/test";
 test.describe("every page in every language", () => {
   for (const locale of LOCALES) {
     test(`SITE-01 every public page opens in ${locale}`, async ({ page }) => {
+      test.slow(); // every public page in one language: a sweep, three times the budget (the macOS runner takes three to five times longer than Linux for the same pages)
       for (const { path } of PUBLIC_PAGES) {
         await test.step(path, async () => {
           const response = await page.goto(at(locale, path));

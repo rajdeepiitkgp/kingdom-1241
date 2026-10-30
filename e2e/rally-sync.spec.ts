@@ -107,6 +107,7 @@ test("RS-02 Re-sync sets the earliest hit and every leader's start = hit − ral
 });
 
 test("RS-03 a leader who joins or is added mid-rally waits for the next one, then gets their own start on every device", async ({ page, otherDevice }) => {
+  test.slow(); // two devices and two polling rounds: three times the budget
   const code = freshRoom("R");
   await openRoom(page, code, { coordinator: true });
   await page.getByRole("button", { name: t("sync.coord.resync") }).click();
@@ -212,6 +213,7 @@ test("RS-06 counter-rally: slowest march first, each cue = rally timer − (firs
 });
 
 test("RS-07 every room type's guided tour reads to the end", async ({ page }) => {
+  test.slow(); // three rooms, each toured to the end: a sweep, three times the budget
   for (const mode of ["R", "G", "C"] as const) {
     await test.step(mode, async () => {
       await openRoom(page, freshRoom(mode), { coordinator: true });

@@ -4,6 +4,7 @@ import { expect, test } from "./support/test";
 import { tourButton, walkTour } from "./support/tour";
 
 test("TOUR-01 every public guide reads from the first step to Done", async ({ page }) => {
+  test.slow(); // every public tour to its end: a sweep, three times the budget
   const pages = ["/", `/alliances/${encodeURIComponent(SEED_ALLIANCE)}`, "/kvk/prep", "/kvk/feedback"];
   for (const path of pages) {
     await test.step(path, async () => {
@@ -14,6 +15,7 @@ test("TOUR-01 every public guide reads from the first step to Done", async ({ pa
 });
 
 test("TOUR-01 the locked battle pages explain more once they are open", async ({ page }) => {
+  test.slow(); // three locked pages, each unlocked and toured: a sweep, three times the budget
   const areas = [
     { path: "/kvk", password: SEED_PASSWORDS.plan },
     { path: "/kvk/leaders", password: SEED_PASSWORDS.leaders },
@@ -60,6 +62,7 @@ test("TOUR-03 'New here?' shows until the tour is opened or hidden on this devic
 });
 
 test("TOUR-04 tours read right to left in Arabic, also after switching language", async ({ page }) => {
+  test.slow(); // two tours and a language switch: three times the budget
   await page.goto(at("en", "/"));
   await hydrated(page.getByRole("combobox", { name: t("lang.label") }));
   // Switching keeps the English page hidden in the document; the tour must use the Arabic one.
