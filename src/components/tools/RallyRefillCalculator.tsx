@@ -18,6 +18,8 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
   const [target, setTarget] = useState<Record<TroopType, string>>({ infantry: "1", cavalry: "10", archers: "89" });
   const [preset, setPreset] = useState<string | null>("bearGen4");
 
+  // Formatted on the server too: the elements that show a number carry suppressHydrationWarning, because a
+  // browser with older locale data (digits, separators) would otherwise make React redraw the page (#418).
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const pf = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale]);
 
@@ -150,23 +152,37 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
                     <td className="px-3 py-2.5 font-bold text-ink">
                       <span aria-hidden>{TROOP_ICONS[row.type]}</span> {labelFor(row.type)}
                     </td>
-                    <td className="px-3 py-2.5 text-end text-ink-muted">{nf.format(row.current)}</td>
-                    <td className="px-3 py-2.5 text-end text-ink-muted">{nf.format(row.targetCount)}</td>
-                    <td className={clsx("px-3 py-2.5 text-end font-black", row.toSend > 0 ? "text-primary" : "text-ink-faint")}>
+                    <td className="px-3 py-2.5 text-end text-ink-muted" suppressHydrationWarning>
+                      {nf.format(row.current)}
+                    </td>
+                    <td className="px-3 py-2.5 text-end text-ink-muted" suppressHydrationWarning>
+                      {nf.format(row.targetCount)}
+                    </td>
+                    <td className={clsx("px-3 py-2.5 text-end font-black", row.toSend > 0 ? "text-primary" : "text-ink-faint")} suppressHydrationWarning>
                       {row.toSend > 0 ? `+${nf.format(row.toSend)}` : "0"}
                     </td>
-                    <td className="hidden px-3 py-2.5 text-end text-ink sm:table-cell">
+                    <td className="hidden px-3 py-2.5 text-end text-ink sm:table-cell" suppressHydrationWarning>
                       {nf.format(row.after)}{" "}
-                      <span className="text-xs text-ink-faint">({pf.format(row.afterPercent)}%)</span>
+                      <span className="text-xs text-ink-faint" suppressHydrationWarning>
+                        ({pf.format(row.afterPercent)}%)
+                      </span>
                     </td>
                   </tr>
                 ))}
                 <tr className="border-t-2 border-line bg-card-soft font-extrabold">
                   <td className="px-3 py-2.5 text-ink">{dict["tools.refill.total"]}</td>
-                  <td className="px-3 py-2.5 text-end text-ink">{nf.format(result.deployed)}</td>
-                  <td className="px-3 py-2.5 text-end text-ink">{nf.format(result.rows.reduce((a, r) => a + r.targetCount, 0))}</td>
-                  <td className="px-3 py-2.5 text-end text-primary">+{nf.format(result.totalToSend)}</td>
-                  <td className="hidden px-3 py-2.5 text-end text-ink sm:table-cell">{nf.format(result.deployed + result.totalToSend)}</td>
+                  <td className="px-3 py-2.5 text-end text-ink" suppressHydrationWarning>
+                    {nf.format(result.deployed)}
+                  </td>
+                  <td className="px-3 py-2.5 text-end text-ink" suppressHydrationWarning>
+                    {nf.format(result.rows.reduce((a, r) => a + r.targetCount, 0))}
+                  </td>
+                  <td className="px-3 py-2.5 text-end text-primary" suppressHydrationWarning>
+                    +{nf.format(result.totalToSend)}
+                  </td>
+                  <td className="hidden px-3 py-2.5 text-end text-ink sm:table-cell" suppressHydrationWarning>
+                    {nf.format(result.deployed + result.totalToSend)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -193,7 +209,9 @@ function Stat({ label, value, highlight = false }: { label: string; value: strin
   return (
     <div className={clsx("rounded-2xl px-4 py-3", highlight ? "bg-primary text-primary-ink" : "bg-card-soft text-ink")}>
       <p className={clsx("text-xs font-bold", highlight ? "text-primary-ink/80" : "text-ink-muted")}>{label}</p>
-      <p className="text-2xl/tight font-black tabular">{value}</p>
+      <p className="text-2xl/tight font-black tabular" suppressHydrationWarning>
+        {value}
+      </p>
     </div>
   );
 }

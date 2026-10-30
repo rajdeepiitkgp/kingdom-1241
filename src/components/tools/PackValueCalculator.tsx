@@ -65,6 +65,8 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
   const [picker, setPicker] = useState("");
   const toggleId = useId();
 
+  // Formatted on the server too: the elements that show a number carry suppressHydrationWarning, because a
+  // browser with older locale data (digits, separators) would otherwise make React redraw the page (#418).
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const pf = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }), [locale]);
 
@@ -128,7 +130,7 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                     {PACK_CATEGORIES.map((category) => (
                       <optgroup key={category} label={dict[`tools.pack.category.${category}`]}>
                         {PACK_ITEM_CATALOG.filter((i) => i.category === category).map((item) => (
-                          <option key={item.id} value={item.id}>
+                          <option key={item.id} value={item.id} suppressHydrationWarning>
                             {item.name} ({nf.format(item.gems)})
                           </option>
                         ))}
@@ -175,7 +177,9 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
                       <NumberField compact decimals label={dict["tools.pack.gemValue"]} value={line.gems} onChange={(v) => updateLine(line.key, { gems: v })} />
                       <div className="hidden text-end sm:block">
                         <p className="label mb-1 text-xs">{dict["tools.pack.share"]}</p>
-                        <p className="py-2 text-sm font-extrabold text-ink tabular">{lineResult ? `${pf.format(lineResult.share)}%` : "—"}</p>
+                        <p className="py-2 text-sm font-extrabold text-ink tabular" suppressHydrationWarning>
+                          {lineResult ? `${pf.format(lineResult.share)}%` : "—"}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -209,7 +213,9 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
         <div className="space-y-3">
           <div className={clsx("rounded-3xl p-5 text-center", RATING_STYLE[result.rating])}>
             <p className="text-xs font-bold tracking-wider uppercase opacity-80">{dict["tools.pack.valuePercent"]}</p>
-            <p className="mt-1 text-5xl/none font-black tabular">{hasLines ? `${pf.format(result.valuePercent)}%` : "—"}</p>
+            <p className="mt-1 text-5xl/none font-black tabular" suppressHydrationWarning>
+              {hasLines ? `${pf.format(result.valuePercent)}%` : "—"}
+            </p>
             <p className="mt-2 text-sm font-extrabold">{hasLines ? dict[`tools.pack.rating.${result.rating}`] : dict["tools.pack.empty"]}</p>
           </div>
 
@@ -220,11 +226,15 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
           <dl className="grid grid-cols-2 gap-2">
             <div className="rounded-2xl bg-card-soft px-4 py-3">
               <dt className="text-xs font-bold text-ink-muted">{dict["tools.pack.totalGems"]}</dt>
-              <dd className="text-xl font-black text-ink tabular">💎 {nf.format(Math.round(result.totalGems))}</dd>
+              <dd className="text-xl font-black text-ink tabular" suppressHydrationWarning>
+                💎 {nf.format(Math.round(result.totalGems))}
+              </dd>
             </div>
             <div className="rounded-2xl bg-card-soft px-4 py-3">
               <dt className="text-xs font-bold text-ink-muted">{dict["tools.pack.baselineGems"]}</dt>
-              <dd className="text-xl font-black text-ink tabular">💎 {nf.format(Math.round(result.baselineGems))}</dd>
+              <dd className="text-xl font-black text-ink tabular" suppressHydrationWarning>
+                💎 {nf.format(Math.round(result.baselineGems))}
+              </dd>
             </div>
           </dl>
 
