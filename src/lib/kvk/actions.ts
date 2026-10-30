@@ -10,6 +10,7 @@ import { passwordPolicies } from "@/lib/kvk/password-rules";
 import { addressScope, countFailure, planScope, retryAfter, shouldAlert, triesLeft } from "@/lib/kvk/throttle";
 import { addressHash, clearThrottle, countRecentAddresses, takeTry, updateThrottle } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
+import { secureCookies } from "@/lib/secure-cookies";
 
 /**
  * Server Actions for the KvK page locks (the battle plan, the rally-leader
@@ -123,7 +124,7 @@ async function unlockArea(area: KvkArea, _previous: UnlockState, formData: FormD
     value: areaAccessToken(area, page.planId, page.password),
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     path: "/",
     maxAge: KVK_COOKIE_MAX_AGE,
   });

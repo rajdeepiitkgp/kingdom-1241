@@ -97,8 +97,7 @@ jobs:
           retention-days: 14
 
   # The iPhone device of the browser suite, on macOS: Apple's WebKit is what
-  # iPhones run, while WebKit's Linux build differs (it refuses the site's
-  # Secure cookies on http://localhost and has older locale data).
+  # iPhones run; WebKit's Linux build has older locale data than Apple's.
   iphone:
     name: Browser tests (iPhone)
     runs-on: macos-15

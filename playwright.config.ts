@@ -34,6 +34,8 @@ const OFFLINE_ENV: Record<string, string> = {
   // Signs the test server's cookies only; production has its own secret.
   KVK_SESSION_SECRET: "e2e-only-not-a-real-secret",
   RALLY_SYNC_STORE: "memory",
+  // Plain http://localhost: WebKit refuses the Secure flag there (secure-cookies.ts; Vercel ignores this).
+  E2E_HTTP_COOKIES: "1",
   LOG_LEVEL: "warn",
   NEXT_TELEMETRY_DISABLED: "1",
 };

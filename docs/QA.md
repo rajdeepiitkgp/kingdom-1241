@@ -15,11 +15,11 @@ How Kingdom 1241's site is tested, what each test promises, and what still needs
 
 ### The browser suite
 
-The pull-request suite runs against a production build of the branch with **no keys**: no Supabase, no Anthropic, no MightPulse (`playwright.config.ts` blanks every key, which also wins over a local `.env.local`). Pages show the bundled seed content and Rally Sync uses its in-memory rooms (`RALLY_SYNC_STORE=memory`). Nothing a test does can reach production. Each test runs on three devices:
+The pull-request suite runs against a production build of the branch with **no keys**: no Supabase, no Anthropic, no MightPulse (`playwright.config.ts` blanks every key, which also wins over a local `.env.local`). The server is plain `http://localhost`, where WebKit refuses a Secure cookie, so `E2E_HTTP_COOKIES=1` leaves that flag off the battle-page and Rally Sync cookies there (`src/lib/secure-cookies.ts`; Vercel ignores it). Pages show the bundled seed content and Rally Sync uses its in-memory rooms (`RALLY_SYNC_STORE=memory`). Nothing a test does can reach production. Each test runs on three devices:
 
 - `desktop-chromium`: a laptop, Chrome, time zone Pago Pago (UTC−11).
 - `phone-chromium`: an Android phone 390 px wide, Chrome, time zone Kiritimati (UTC+14).
-- `phone-webkit`: an iPhone 13 (390 px), Safari's engine, time zone Seoul. In CI it runs on a macOS machine (the `Browser tests (iPhone)` job): Apple's WebKit is what iPhones run, while WebKit's Linux build refuses the site's Secure cookies on `http://localhost` and has older locale data.
+- `phone-webkit`: an iPhone 13 (390 px), Safari's engine, time zone Seoul. In CI it runs on a macOS machine (the `Browser tests (iPhone)` job): Apple's WebKit is what iPhones run, while WebKit's Linux build has older locale data.
 
 The far-apart time zones make a date drawn on the server (in UTC) and again in the browser disagree whenever the code forgets `timeZone: "UTC"`. React then reports error #418, which fails the test. Every page a test opens is watched: an error in the browser console or an uncaught exception fails the test (`e2e/support/test.ts`). Each page is also checked for its language and direction, for the error page, and for anything wider than the screen (`expectHealthyPage` in `e2e/support/site.ts`).
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { kvkSessionSecret } from "@/lib/kvk/access";
+import { secureCookies } from "@/lib/secure-cookies";
 import { randomInstanceTag, randomRoomCode } from "./room";
 
 /**
@@ -26,7 +27,7 @@ export function roomCookieName(code: string): string {
 }
 
 export function roomCookieOptions() {
-  return { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: ROOM_COOKIE_MAX_AGE };
+  return { httpOnly: true, sameSite: "lax" as const, secure: secureCookies(), path: "/", maxAge: ROOM_COOKIE_MAX_AGE };
 }
 
 const SCRYPT = { N: 16384, r: 8, p: 1, keyLength: 32 };
