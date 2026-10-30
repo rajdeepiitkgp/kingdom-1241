@@ -15,26 +15,38 @@ import { requireEditor } from "@/lib/auth/server";
 
 export const metadata: Metadata = { title: "Users" };
 
-export default async function AdminUsersPage() {
+/** What a redirecting action reports through `?error=`. */
+const NOTICES: Record<string, string> = {
+  remove: "That account can't be removed: not the owner, not yourself, and only the owner removes administrators. Or the removal failed; try again in a moment.",
+  grant: "That pre-authorisation couldn't be removed: only the owner withdraws an administrator's, or the removal failed. Try again in a moment.",
+};
+
+export default async function AdminUsersPage({ searchParams }: PageProps<"/[locale]/admin/users">) {
   const locale = await rootLocale();
   return (
     <Suspense fallback={<AdminContentSkeleton />}>
-      <Users locale={locale} />
+      <Users locale={locale} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Users({ locale }: { locale: string }) {
+async function Users({ locale, searchParams }: { locale: string; searchParams: PageProps<"/[locale]/admin/users">["searchParams"] }) {
   const user = await requireEditor(locale);
   if (!user) return null;
   if (!canManageUsers(user.role)) {
     return <EmptyRow>Only administrators can manage users.</EmptyRow>;
   }
-  const [profiles, grants] = await Promise.all([listProfiles(), listGrants()]);
+  const [params, profiles, grants] = await Promise.all([searchParams, listProfiles(), listGrants()]);
+  const notice = typeof params.error === "string" ? (NOTICES[params.error] ?? "That didn't work. Try again.") : null;
 
   return (
     <div className="space-y-6">
       <SectionTitle icon="👥" title="Users" />
+      {notice && (
+        <p role="status" className="rounded-xl bg-card-soft px-3 py-2 text-sm font-bold text-ink">
+          {notice}
+        </p>
+      )}
 
       <AdminSection
         title="Accounts"
