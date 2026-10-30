@@ -1,6 +1,7 @@
 import { mapAlliance } from "@/lib/data/mappers";
 import type { Alliance } from "@/lib/data/types";
 import type { Localized } from "@/lib/i18n/localized";
+import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
@@ -14,6 +15,16 @@ import { pendingColumns } from "./translation";
 
 const log = createLogger("admin");
 
+/** Next renders a page in parallel with its layouts: every loader checks the role itself (see CLAUDE.md). */
+async function allowed(what: string): Promise<boolean> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) {
+    log.warn("Admin data requested without access", { what, reason: access.denied });
+    return false;
+  }
+  return true;
+}
+
 export interface AdminAllianceProfile extends Alliance {
   /** Columns the pipeline still has to translate. */
   pending: string[];
@@ -25,6 +36,7 @@ function mapProfile(row: Record<string, unknown>): AdminAllianceProfile {
 
 /** Every alliance on the owner's list (hidden ones too), strongest first; null when the database can't be read. */
 export async function listAllianceProfiles(): Promise<AdminAllianceProfile[] | null> {
+  if (!(await allowed("listAllianceProfiles"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient()
     .from("alliances")
@@ -39,6 +51,7 @@ export async function listAllianceProfiles(): Promise<AdminAllianceProfile[] | n
 }
 
 export async function getAllianceProfile(id: string): Promise<AdminAllianceProfile | null> {
+  if (!(await allowed("getAllianceProfile"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient().from("alliances").select("*").eq("id", id).maybeSingle();
   if (error) {
@@ -67,6 +80,7 @@ export interface AdminTransfers {
 
 /** The kingdom's Discord and the transfer section (rows of `site_settings`); null when the database can't be read. */
 export async function getTransfersForEditing(defaults: { open: boolean; info: Localized; contact: Localized }): Promise<AdminTransfers | null> {
+  if (!(await allowed("getTransfersForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient()
     .from("site_settings")

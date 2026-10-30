@@ -1,6 +1,7 @@
 import { missingTable } from "@/lib/content/image-store";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkAccess } from "@/lib/auth/server";
 import { createLogger } from "@/lib/log";
 import type { Localized } from "@/lib/i18n/localized";
 import { announcementLive } from "./content-forms";
@@ -14,6 +15,16 @@ import { pendingColumns } from "./translation";
  */
 
 const log = createLogger("admin");
+
+/** Next renders a page in parallel with its layouts: every loader checks the role itself (see CLAUDE.md). */
+async function allowed(what: string): Promise<boolean> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) {
+    log.warn("Admin data requested without access", { what, reason: access.denied });
+    return false;
+  }
+  return true;
+}
 
 export interface AdminAnnouncement {
   id: string;
@@ -54,6 +65,7 @@ function mapAnnouncement(row: Row, now: number): AdminAnnouncement {
 
 /** Every announcement, pinned first, newest first; null when the database can't be read. */
 export async function listAnnouncements(): Promise<AdminAnnouncement[] | null> {
+  if (!(await allowed("listAnnouncements"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   // `*`: body_source arrives with migration 0020, and the list must work before it.
   const { data, error } = await createAdminClient()
@@ -70,6 +82,7 @@ export async function listAnnouncements(): Promise<AdminAnnouncement[] | null> {
 }
 
 export async function getAnnouncementForEditing(id: string): Promise<AdminAnnouncement | null> {
+  if (!(await allowed("getAnnouncementForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient().from("announcements").select("*").eq("id", id).maybeSingle();
   if (error) {
@@ -129,6 +142,7 @@ function mapTopic(row: Row, rules: AdminRule[]): AdminRuleTopic {
 
 /** Every topic in page order with its rules in order; null when the database can't be read. */
 export async function listRuleTopics(): Promise<AdminRuleTopic[] | null> {
+  if (!(await allowed("listRuleTopics"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const admin = createAdminClient();
   const [topics, rules] = await Promise.all([
@@ -145,6 +159,7 @@ export async function listRuleTopics(): Promise<AdminRuleTopic[] | null> {
 }
 
 export async function getRuleTopicForEditing(id: string): Promise<AdminRuleTopic | null> {
+  if (!(await allowed("getRuleTopicForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient().from("rule_topics").select("*").eq("id", id).maybeSingle();
   if (error) {
@@ -155,6 +170,7 @@ export async function getRuleTopicForEditing(id: string): Promise<AdminRuleTopic
 }
 
 export async function getRuleForEditing(id: string): Promise<AdminRule | null> {
+  if (!(await allowed("getRuleForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient().from("rules").select("*").eq("id", id).maybeSingle();
   if (error) {
@@ -236,6 +252,7 @@ async function readSections(guideId?: string): Promise<AdminGuideSection[] | nul
 
 /** Every guide in page order, hidden ones included; null when the database can't be read. */
 export async function listGuides(): Promise<AdminGuide[] | null> {
+  if (!(await allowed("listGuides"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const [guides, sections] = await Promise.all([createAdminClient().from("guides").select("*").order("sort_order").order("created_at"), readSections()]);
   if (guides.error || sections === undefined) {
@@ -246,6 +263,7 @@ export async function listGuides(): Promise<AdminGuide[] | null> {
 }
 
 export async function getGuideForEditing(id: string): Promise<AdminGuide | null> {
+  if (!(await allowed("getGuideForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const [guide, sections] = await Promise.all([createAdminClient().from("guides").select("*").eq("id", id).maybeSingle(), readSections(id)]);
   if (guide.error) {
@@ -256,6 +274,7 @@ export async function getGuideForEditing(id: string): Promise<AdminGuide | null>
 }
 
 export async function getGuideSectionForEditing(guideId: string, id: string): Promise<AdminGuideSection | null> {
+  if (!(await allowed("getGuideSectionForEditing"))) return null;
   if (!isSupabaseAdminConfigured()) return null;
   const { data, error } = await createAdminClient().from("guide_sections").select("*").eq("id", id).eq("guide_id", guideId).maybeSingle();
   if (error) {
