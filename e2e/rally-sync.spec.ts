@@ -113,7 +113,8 @@ test("RS-03 a leader who joins or is added mid-rally waits for the next one, the
   await expect(me).toContainText(t("sync.row.nextRally"));
   await expect(leader.locator('[data-tour="sync-focus"]')).toContainText("--:--:--");
 
-  // A leader the coordinator adds by hand during the same rally is in from the next one as well.
+  // A leader the coordinator adds by hand (under More options) during the same rally is in from the next one as well.
+  await page.locator('[data-tour="sync-more"]').click();
   const addPanel = page.locator("details", { hasText: t("sync.coord.addLeader") });
   await addPanel.locator("summary").click();
   await addPanel.getByLabel(t("sync.form.name")).fill("E2E Added");
