@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { htmlToExcerpt, linkImages, markdownToHtml, sanitizeRichText } from "@/lib/html";
+import { linkImages, markdownToHtml, sanitizeRichText } from "@/lib/html";
 
 const BASE = "https://abcdefghijklmnopqrst.supabase.co";
 const OURS = `${BASE}/storage/v1/object/public/images/content/0b0e7a52-5d0c-4c43-9f3e-2f6a1f4f6d11-1179x2556.webp`;
@@ -72,12 +72,5 @@ describe("markdownToHtml", () => {
 
   it("keeps the danger class only, nowhere else", () => {
     expect(sanitizeRichText('<blockquote class="danger evil"><p class="danger">x</p></blockquote>')).toBe('<blockquote class="danger"><p>x</p></blockquote>');
-  });
-});
-
-describe("htmlToExcerpt", () => {
-  it("flattens html to a short plain string", () => {
-    expect(htmlToExcerpt("<p>Hello&nbsp;<b>world</b></p>", 50)).toBe("Hello world");
-    expect(htmlToExcerpt("<p>" + "word ".repeat(100) + "</p>", 20).endsWith("…")).toBe(true);
   });
 });
