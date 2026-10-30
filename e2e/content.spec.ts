@@ -6,7 +6,11 @@ import { expect, test } from "./support/test";
 
 test("HOME-01 Home lists the alliances and each opens its own page", async ({ page }) => {
   await page.goto(at("en", "/"));
-  for (const alliance of SEED_ALLIANCES) await expect(page.getByRole("link", { name: alliance.name }).first()).toBeVisible();
+  for (const alliance of SEED_ALLIANCES) {
+    const link = page.getByRole("link", { name: alliance.name }).first();
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", at("en", `/alliances/${encodeURIComponent(alliance.tag)}`));
+  }
   const first = SEED_ALLIANCES[0];
   await page.getByRole("link", { name: first.name }).first().click();
   await expect(page).toHaveURL(at("en", `/alliances/${encodeURIComponent(first.tag)}`));

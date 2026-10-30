@@ -30,6 +30,8 @@ test("SITE-04 the menu reaches every section", async ({ page }) => {
     await mainMenu(page).getByRole("button", { name: t("nav.kvk") }).click();
     await mainMenu(page).getByRole("link", { name: tStart(key) }).click();
     await expect(page).toHaveURL(at("en", path));
+    // On its own pages the KvK entry is marked as the current section.
+    if (path.startsWith("/kvk")) await expect(mainMenu(page).getByRole("button", { name: t("nav.kvk") })).toHaveAttribute("aria-current", "true");
   }
   // The logo leads home from anywhere.
   await page.getByRole("banner").getByRole("link").first().click();

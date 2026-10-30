@@ -110,6 +110,7 @@ export function NavMenuView({
     ref: button,
     type: "button" as const,
     "aria-expanded": open,
+    "aria-current": active ? ("true" as const) : undefined,
     "aria-controls": open ? panelId : undefined,
     onClick: () => setOpen((value) => !value),
   };
