@@ -692,7 +692,9 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
   const value = textField(formData, "value").slice(0, TEXT_LIMITS[column] ?? 400);
 
   const admin = createAdminClient();
-  const { data: row } = await admin.from(table).select("*").eq("id", id).maybeSingle();
+  // Only a row of the plan named by the form: the id alone would reach any plan's text.
+  const planColumn = table === "kvk_plans" ? "id" : "plan_id";
+  const { data: row } = await admin.from(table).select("*").eq("id", id).eq(planColumn, planId).maybeSingle();
   if (!row) return { status: "error", message: "This row no longer exists." };
   if (pendingColumns(table, row).includes(column)) {
     return { status: "error", message: "The machine translation of this text is still running; try again in a moment." };
@@ -707,7 +709,7 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
         }
       : { [column]: withLanguage(current, lang, value) };
   // source_hash is deliberately left alone: the English is unchanged, so the pipeline skips this row.
-  const { error } = await admin.from(table).update(update).eq("id", id);
+  const { error } = await admin.from(table).update(update).eq("id", id).eq(planColumn, planId);
   if (error) return failed(log, "Saving the translation", error);
 
   await audit(access.user, "translation.update", table, id, { column, lang, planId });

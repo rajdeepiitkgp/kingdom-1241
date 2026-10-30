@@ -11,6 +11,8 @@ import { ServerClock } from "@/components/time/ServerClock";
 import { PageGuide } from "@/components/tour/PageGuide";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getAlliances, getAnnouncements, getEvents, getGiftCodes, getSettings } from "@/lib/data";
+import { eventView } from "@/lib/events/view";
+import { giftCodeView } from "@/lib/gift-codes/view";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
@@ -100,7 +102,7 @@ export default async function HomePage() {
             </Link>
           }
         />
-        <EventList events={events} dict={dict} locale={locale} limit={4} />
+        <EventList events={events.map((event) => eventView(event, locale))} dict={dict} locale={locale} limit={4} />
       </section>
 
       {/* Alliances */}
@@ -123,7 +125,7 @@ export default async function HomePage() {
       {/* Gift codes */}
       <section data-tour="home-gift-codes">
         <SectionTitle icon="🎁" title={dict["home.giftCodes"]} />
-        <GiftCodes codes={giftCodes} dict={dict} locale={locale} />
+        <GiftCodes codes={giftCodes.map((code) => giftCodeView(code, locale))} dict={dict} locale={locale} />
       </section>
     </div>
   );

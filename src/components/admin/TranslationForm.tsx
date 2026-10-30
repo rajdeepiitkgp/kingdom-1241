@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { IDLE_STATE, type ActionState } from "@/lib/admin/action-state";
 import { saveTranslation } from "@/lib/admin/kvk-actions";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { SubmitButton } from "./SubmitButton";
 import { Field, Notice } from "./ui";
@@ -47,9 +48,11 @@ export function TranslationForm({
   maxLength: number;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(save, IDLE_STATE);
+  // Always an edit: the corrected text stays on screen after the save.
+  const submit = useSubmitInTransition(action);
   const inputId = `tr-${table}-${id}-${column}`;
   return (
-    <form action={action} className="space-y-3 rounded-2xl bg-card-soft p-3">
+    <form action={action} onSubmit={submit} className="space-y-3 rounded-2xl bg-card-soft p-3">
       <input type="hidden" name="locale" value={locale} />
       {planId && <input type="hidden" name="planId" value={planId} />}
       <input type="hidden" name="table" value={table} />

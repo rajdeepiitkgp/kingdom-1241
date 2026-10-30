@@ -9,6 +9,7 @@ import { addAllianceByHand, addAllianceFromRanking, removeAlliance, saveAlliance
 import { nextAllianceColor, POWER_HINT } from "@/lib/alliances/forms";
 import type { MightPulseAlliance } from "@/lib/alliances/mightpulse-data";
 import { BATTLE_ALLIANCE_TAGS, DAILY_SYNC_UTC, heldForReview, homeRanking, TOP_ALLIANCES } from "@/lib/alliances/sync-plan";
+import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { Field, Notice } from "./ui";
 
 /** The owner's alliances: synced from MightPulse every day, typed by hand while it is down. */
@@ -237,10 +238,12 @@ function AllianceForm({
   submit: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, IDLE_STATE);
+  // Editing keeps what was saved on screen; the add form keeps React's reset, so it clears after an add.
+  const keepOnScreen = useSubmitInTransition(formAction);
   const errors = state.errors ?? {};
   const key = id ?? "new";
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onSubmit={id ? keepOnScreen : undefined} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
       {id && <input type="hidden" name="id" value={id} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

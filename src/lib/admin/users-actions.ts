@@ -95,24 +95,33 @@ export async function addGrant(_previous: ActionState, formData: FormData): Prom
 
 export async function deleteGrant(formData: FormData): Promise<void> {
   const locale = localeField(formData);
+  const usersPage = adminPath(locale, "/users");
   const access = await checkAccess("admin");
-  if ("denied" in access) redirect(adminPath(locale, "/users"));
+  if ("denied" in access) redirect(usersPage);
   const id = uuidField(formData, "id");
   if (id) {
     const log = await actionLogger();
     const admin = createAdminClient();
     // Like appointing one, withdrawing an administrator's pre-authorisation is the owner's call.
     const { data: grant, error: readError } = await admin.from("role_grants").select("role").eq("id", id).maybeSingle();
-    if (readError) log.error("Reading a grant failed", { id, error: readError.message });
-    else if (grant && grantProblem({ actorIsOwner: access.user.isOwner, role: parseRole(grant.role) })) {
+    if (readError) {
+      log.error("Reading a grant failed", { id, error: readError.message });
+      redirect(`${usersPage}?error=grant`);
+    }
+    if (grant && grantProblem({ actorIsOwner: access.user.isOwner, role: parseRole(grant.role) })) {
       log.warn("Grant removal refused: only the owner removes admin grants", { id });
-    } else if (grant) {
+      redirect(`${usersPage}?error=grant`);
+    }
+    if (grant) {
       const { error } = await admin.from("role_grants").delete().eq("id", id);
-      if (error) log.error("Deleting a grant failed", { id, error: error.message });
-      else await audit(access.user, "grant.delete", "role_grants", id);
+      if (error) {
+        log.error("Deleting a grant failed", { id, error: error.message });
+        redirect(`${usersPage}?error=grant`);
+      }
+      await audit(access.user, "grant.delete", "role_grants", id);
     }
   }
-  redirect(adminPath(locale, "/users"));
+  redirect(usersPage);
 }
 
 /**

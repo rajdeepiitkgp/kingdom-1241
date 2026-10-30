@@ -126,7 +126,15 @@ export async function deleteResponse(formData: FormData): Promise<void> {
   if ("denied" in access) redirect(back("error=forbidden"));
   if (id) {
     const log = await actionLogger();
-    const { data, error } = await createAdminClient().from("kvk_retro_responses").delete().eq("id", id).select("retrospective_id").maybeSingle();
+    const admin = createAdminClient();
+    // Only an answer of this plan's retrospective: the id alone would reach any plan's answers.
+    const { data: retro, error: retroError } = await admin.from("kvk_retrospectives").select("id").eq("plan_id", planId).maybeSingle();
+    if (retroError) {
+      log.error("Reading the retrospective failed", { planId, error: retroError.message });
+      redirect(back("error=delete"));
+    }
+    if (!retro) redirect(back("error=delete"));
+    const { data, error } = await admin.from("kvk_retro_responses").delete().eq("id", id).eq("retrospective_id", retro.id).select("retrospective_id").maybeSingle();
     if (error) {
       log.error("Deleting a feedback response failed", { id, error: error.message });
       redirect(back("error=delete"));

@@ -28,7 +28,7 @@ const INTRO_SOURCE_TABLES = new Set(["kvk_plans", "kvk_retrospectives", "kvk_lea
 async function main() {
   if (typeof args.file !== "string") throw new Error("Pass --file <fixes.json> (add --apply to write).");
   const apply = args.apply === true;
-  const [{ createAdminClient }, { getTranslatableTable }, { pendingColumns, withLanguage }, { sanitizeRichText }, review] = await Promise.all([
+  const [{ createAdminClient }, { getTranslatableTable, isHtmlField }, { pendingColumns, withLanguage }, { sanitizeRichText }, review] = await Promise.all([
     import("@/lib/supabase/admin"),
     import("@/lib/translate/tables"),
     import("@/lib/admin/translation"),
@@ -47,7 +47,9 @@ async function main() {
     const config = fix.table ? getTranslatableTable(fix.table) : null;
     const column = config?.columns.find((c) => c.name === fix.column) ?? null;
     const label = `${fix.table} ${fix.id} ${fix.column} ${fix.lang}`;
-    const problems = review.fixProblems(fix, config && config.table !== "ui_strings" ? column : null);
+    // The site settings hold HTML under some keys (the transfer texts): the column alone doesn't say so.
+    const html = config && column ? isHtmlField(config.table, String(fix.id ?? ""), column) : false;
+    const problems = review.fixProblems(fix, config && column && config.table !== "ui_strings" ? { ...column, html } : null);
     if (problems.length > 0 || !config || !column) {
       console.log(`invalid   ${label}: ${problems.join("; ")}`);
       count("invalid");
@@ -68,7 +70,7 @@ async function main() {
       count("skipped");
       continue;
     }
-    const to = column.html ? sanitizeRichText(valid.to) : valid.to;
+    const to = html ? sanitizeRichText(valid.to) : valid.to;
     const value = (current[column.name] ?? {}) as Record<string, string>;
     const decision = review.fixDecision(value, { ...valid, to });
     if (decision !== "apply") {

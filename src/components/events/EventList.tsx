@@ -3,10 +3,9 @@
 import clsx from "clsx";
 import { BookOpen, CalendarClock, Repeat, Shield } from "lucide-react";
 import Link from "next/link";
-import type { GameEvent } from "@/lib/data/types";
 import { daysUntil, nextOccurrence, type Occurrence, roundWeekdays } from "@/lib/events/occurrences";
+import type { EventView } from "@/lib/events/view";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
-import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
 import { formatLocalDateTime, formatUtcDate, formatUtcTime, MINUTE } from "@/lib/time";
 import { formatDuration } from "../time/DurationLabel";
@@ -20,7 +19,8 @@ export function EventList({
   limit,
   compact = false,
 }: {
-  events: GameEvent[];
+  /** Mapped on the server with `eventView`: the visitor's language only. */
+  events: EventView[];
   dict: Dictionary;
   locale: string;
   /** Show only the next N occurrences. */
@@ -43,7 +43,7 @@ export function EventList({
 
   const occurrences = events
     .map((event) => nextOccurrence(event, now))
-    .filter((o): o is Occurrence => o !== null)
+    .filter((o): o is Occurrence<EventView> => o !== null)
     .sort((a, b) => {
       if (a.status === "live" && b.status !== "live") return -1;
       if (b.status === "live" && a.status !== "live") return 1;
@@ -66,7 +66,7 @@ export function EventList({
   );
 }
 
-function recurrenceLabel(event: GameEvent, dict: Dictionary, locale: string): string {
+function recurrenceLabel(event: EventView, dict: Dictionary, locale: string): string {
   if (!event.repeatEveryDays) return dict["events.oneOff"];
   const every =
     event.repeatEveryDays === 1
@@ -102,7 +102,7 @@ function EventCard({
   locale,
   compact,
 }: {
-  occurrence: Occurrence;
+  occurrence: Occurrence<EventView>;
   now: Date;
   dict: Dictionary;
   locale: string;
@@ -124,12 +124,12 @@ function EventCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg/tight font-extrabold text-ink" dir="auto">{pick(event.name, locale)}</h3>
+          <h3 className="text-lg/tight font-extrabold text-ink" dir="auto">{event.name}</h3>
           <span className="chip bg-primary-soft text-primary">{dict[`events.category.${event.category}`]}</span>
           {live && !byAlliance && <span className="chip bg-success-soft text-success">● {dict["time.live"]}</span>}
         </div>
 
-        {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{pick(event.summary, locale)}</p>}
+        {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{event.summary}</p>}
 
         <dl className="mt-3 grid grid-cols-1 gap-1.5 text-sm">
           <div className="flex items-center gap-2 text-ink">

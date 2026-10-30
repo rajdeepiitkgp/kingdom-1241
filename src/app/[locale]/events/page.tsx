@@ -3,6 +3,7 @@ import { locale as rootLocale } from "next/root-params";
 import { EventList } from "@/components/events/EventList";
 import { PageHeader } from "@/components/ui/SectionTitle";
 import { getEvents } from "@/lib/data";
+import { eventView } from "@/lib/events/view";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,7 +18,7 @@ export default async function EventsPage() {
   return (
     <div>
       <PageHeader icon="📅" title={dict["events.title"]} subtitle={dict["events.subtitle"]} />
-      <EventList events={events} dict={dict} locale={locale} />
+      <EventList events={events.map((event) => eventView(event, locale))} dict={dict} locale={locale} />
     </div>
   );
 }

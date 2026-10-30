@@ -2,13 +2,12 @@
 
 import { Check, Copy, ExternalLink, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { GiftCode } from "@/lib/data/types";
 import { KINGSHOT_GIFT_CODES_PAGE, KINGSHOT_SITE, OFFICIAL_REDEEM_PAGE } from "@/lib/gift-codes/kingshot";
+import type { GiftCodeView } from "@/lib/gift-codes/view";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { pick } from "@/lib/i18n/localized";
 import { useNow } from "../time/useNow";
 
-export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Dictionary; locale: string }) {
+export function GiftCodes({ codes, dict, locale }: { codes: GiftCodeView[]; dict: Dictionary; locale: string }) {
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,9 +52,9 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCode[]; dict: Di
                 {code.code}
               </code>
               <div className="col-span-2 min-w-0 text-sm sm:col-span-1">
-                {pick(code.rewards, locale) && (
+                {code.rewards && (
                   <p className="text-ink" dir="auto">
-                    {pick(code.rewards, locale)}
+                    {code.rewards}
                   </p>
                 )}
                 <p className="text-xs font-semibold text-ink-faint" suppressHydrationWarning>
