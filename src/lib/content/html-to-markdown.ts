@@ -91,7 +91,8 @@ function destination(url: string): string {
 }
 
 function title(attrs: Record<string, string>): string {
-  return attrs.title ? ` "${attrs.title.replace(/"/g, '\\"')}"` : "";
+  // Backslashes first, or one before a quote would end the title early.
+  return attrs.title ? ` "${attrs.title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : "";
 }
 
 function inline(nodes: Node[], inTable = false): string {

@@ -57,6 +57,11 @@ describe("htmlToMarkdown", () => {
     expect(htmlToMarkdown(html)).toBe(markdown);
   });
 
+  it("keeps a link's hover title with quotes and backslashes in it", () => {
+    roundTrips('Read [the rules](https://example.com/r "Say \\"hi\\" to C:\\\\")');
+    expect(htmlToMarkdown('<p><a href="https://example.com/r" title="ends in \\">rules</a></p>')).toBe('[rules](https://example.com/r "ends in \\\\")');
+  });
+
   it("escapes what would turn into formatting, and leaves alliance tags alone", () => {
     roundTrips("Price: 5 \\* 3, not *italic*; `code` and \\`ticks\\`.");
     roundTrips("\\- not a list\n\n\\# not a heading\n\n1\\. not numbered");
