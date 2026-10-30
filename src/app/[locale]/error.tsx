@@ -33,7 +33,7 @@ export default function LocaleError({ error, reset }: { error: Error & { digest?
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-md py-16 text-center">
+    <div className="mx-auto max-w-md py-16 text-center" data-error-page>
       <p className="text-6xl" aria-hidden>
         ⚠️
       </p>
