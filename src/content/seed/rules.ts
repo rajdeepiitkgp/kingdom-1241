@@ -16,7 +16,7 @@ export interface SeedRuleTopic {
   rules: SeedRule[];
 }
 
-export const SEED_RULE_TOPICS: SeedRuleTopic[] = [
+const TOPICS: SeedRuleTopic[] = [
   {
     id: "d1000000-0000-4000-8000-000000000001",
     slug: "general",
@@ -142,3 +142,11 @@ export const SEED_RULE_TOPICS: SeedRuleTopic[] = [
     ],
   },
 ];
+
+/** Every seeded rule ends with this line, so nobody takes the boilerplate for the kingdom's rule. */
+export const RULE_PLACEHOLDER_NOTE = "_Placeholder: the kingdom council writes the real rule in Admin → Rules._";
+
+export const SEED_RULE_TOPICS: SeedRuleTopic[] = TOPICS.map((topic) => ({
+  ...topic,
+  rules: topic.rules.map((rule) => ({ ...rule, bodyMarkdown: `${rule.bodyMarkdown}\n\n${RULE_PLACEHOLDER_NOTE}` })),
+}));
