@@ -25,7 +25,7 @@ export function KvkTabs({ locale, dict, current }: { locale: string; dict: Dicti
             )}
           >
             <Icon className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">{label}</span>
+            <span className="line-clamp-2 wrap-break-word">{label}</span>
           </Link>
         );
       })}

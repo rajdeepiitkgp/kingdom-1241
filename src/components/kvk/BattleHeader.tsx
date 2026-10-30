@@ -53,7 +53,10 @@ export function BattleHeader({
           </h2>
           {opponent && (
             <p className="mt-1 text-sm font-bold text-ink-muted">
-              {dict["kvk.opponent"]}: <span className="text-ink">{opponent}</span>
+              {dict["kvk.opponent"]}:{" "}
+              <span className="text-ink" dir="auto">
+                {opponent}
+              </span>
             </p>
           )}
         </div>

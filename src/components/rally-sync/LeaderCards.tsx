@@ -44,10 +44,16 @@ const START_TIME = clsx(BIG_CLOCK, "md:text-8xl/none");
 export function FocusBlock({ me, room, now, clock, dict }: { me: TimedLeaderView | null; room: RoomView; now: number | null; clock: Clock; dict: Dictionary }) {
   const hitAt = room.hitAt ? Date.parse(room.hitAt) : null;
   const hitSetAt = room.hitSetAt ? Date.parse(room.hitSetAt) : null;
+  // The words follow the page's direction; only the clocks are forced left-to-right.
   const footer = (
-    <p className="mt-3 text-sm font-semibold text-ink-muted tabular" dir="ltr">
-      {now !== null && <span>{format(dict["sync.hero.now"], { time: shown(now) })}</span>}
-      {hitAt !== null && me && <span> · {format(dict["sync.hero.lands"], { time: shown(hitAt) })}</span>}
+    <p className="mt-3 text-sm font-semibold text-ink-muted tabular">
+      {now !== null && <ClockPhrase template={dict["sync.hero.now"]} time={shown(now)} />}
+      {hitAt !== null && me && (
+        <>
+          {" · "}
+          <ClockPhrase template={dict["sync.hero.lands"]} time={shown(hitAt)} />
+        </>
+      )}
     </p>
   );
 
@@ -292,5 +298,17 @@ export function LeaderRow({
     </button>
   ) : (
     <div className={rowClass}>{content}</div>
+  );
+}
+
+/** A phrase with a `{time}` placeholder: the clock inside it is left-to-right on every page. */
+function ClockPhrase({ template, time }: { template: string; time: string }) {
+  const [before, after = ""] = template.split("{time}");
+  return (
+    <span>
+      {before}
+      <span dir="ltr">{time}</span>
+      {after}
+    </span>
   );
 }

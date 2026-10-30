@@ -1,4 +1,4 @@
-import { Castle, Swords } from "lucide-react";
+import { ArrowLeft, Castle, Swords } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { RichText } from "@/components/content/RichText";
@@ -72,7 +72,8 @@ export async function RetroGate({ dict, locale }: { dict: Dictionary; locale: st
 
       <p className="text-center">
         <Link href={localePath(locale, "/kvk")} className="btn-ghost btn-sm">
-          ← {dict["retro.backToPlan"]}
+          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+          {dict["retro.backToPlan"]}
         </Link>
       </p>
     </div>
