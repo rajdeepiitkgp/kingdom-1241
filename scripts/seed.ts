@@ -32,12 +32,14 @@ async function main() {
     { createAdminClient },
     { sourceHash },
     { kvkChecklistBriefId, kvkLeaderBriefId },
+    { readAll },
   ] = await Promise.all([
     import("@/content/seed"),
     import("@/lib/data/mappers"),
     import("@/lib/supabase/admin"),
     import("@/lib/translate/hash"),
     import("@/content/seed/kvk"),
+    import("@/lib/supabase/read-all"),
   ]);
 
   const supabase = createAdminClient();
@@ -65,13 +67,10 @@ async function main() {
     replace = overwrite,
   ) {
     if (rows.length === 0) return;
-    const { data: existing, error } = await supabase.from(table).select(key);
-    if (error) throw new Error(`${table}: ${error.message}`);
-    const present = new Set(
-      ((existing ?? []) as unknown as Array<Record<string, unknown>>).map((r) =>
-        String(r[key]),
-      ),
-    );
+    const existing = await readAll<Record<string, unknown>>((from, to) => supabase.from(table).select(key).order(key).range(from, to)).catch((error: Error) => {
+      throw new Error(`${table}: ${error.message}`);
+    });
+    const present = new Set(existing.map((r) => String(r[key])));
     const toWrite = replace
       ? rows
       : rows.filter((r) => !present.has(String(r[key])));
@@ -118,9 +117,10 @@ async function main() {
     source_hash: sourceHash({ text: s.text.en ?? "" }),
   }));
   if (syncUi) {
-    const { data: existingUi, error: uiError } = await supabase.from("ui_strings").select("key, text");
-    if (uiError) throw new Error(`ui_strings: ${uiError.message}`);
-    const byKey = new Map((existingUi ?? []).map((r) => [String(r.key), (r.text ?? {}) as Record<string, string>]));
+    const existingUi = await readAll<{ key: string; text: unknown }>((from, to) => supabase.from("ui_strings").select("key, text").order("key").range(from, to)).catch((error: Error) => {
+      throw new Error(`ui_strings: ${error.message}`);
+    });
+    const byKey = new Map(existingUi.map((r) => [String(r.key), (r.text ?? {}) as Record<string, string>]));
     uiRows = uiRows.map((row) => {
       const existing = byKey.get(row.key);
       return existing && existing.en === row.text.en ? { ...row, text: { ...existing, ...row.text } } : row;

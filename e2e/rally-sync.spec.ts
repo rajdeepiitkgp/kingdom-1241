@@ -94,7 +94,7 @@ test("RS-02 Re-sync sets the earliest hit and every leader's start = hit − ral
   expect(after(now, hit)).toBeLessThanOrEqual(RALLY_TIMER + longest + BUFFER + 3);
 });
 
-test("RS-03 a leader who joins mid-rally waits for the next one, then gets their own start on every device", async ({ page, otherDevice }) => {
+test("RS-03 a leader who joins or is added mid-rally waits for the next one, then gets their own start on every device", async ({ page, otherDevice }) => {
   const code = freshRoom("R");
   await openRoom(page, code, { coordinator: true });
   await page.getByRole("button", { name: t("sync.coord.resync") }).click();
@@ -113,6 +113,16 @@ test("RS-03 a leader who joins mid-rally waits for the next one, then gets their
   await expect(me).toContainText(t("sync.row.nextRally"));
   await expect(leader.locator('[data-tour="sync-focus"]')).toContainText("--:--:--");
 
+  // A leader the coordinator adds by hand (under More options) during the same rally is in from the next one as well.
+  await page.locator('[data-tour="sync-more"]').click();
+  const addPanel = page.locator("details", { hasText: t("sync.coord.addLeader") });
+  await addPanel.locator("summary").click();
+  await addPanel.getByLabel(t("sync.form.name")).fill("E2E Added");
+  await addPanel.getByLabel(t("sync.form.marchSeconds")).fill("40");
+  await addPanel.getByRole("button", { name: t("sync.coord.add"), exact: true }).click();
+  const addedRow = page.locator('[data-tour="sync-leaders"] li', { hasText: "E2E Added" });
+  await expect(addedRow).toContainText(t("sync.row.nextRally"));
+
   // The coordinator sets the next hit time by hand; the leader's page follows without a reload.
   const next = first + 120;
   await page.getByLabel(tPattern("sync.coord.hitAt")).fill(clockText(next));
@@ -122,8 +132,10 @@ test("RS-03 a leader who joins mid-rally waits for the next one, then gets their
   await expect(focus).toContainText(t("sync.yourStart"), { ignoreCase: true, timeout: 15_000 });
   await expect(focus).toContainText(clockText(next - RALLY_TIMER - 50), { timeout: 15_000 });
   await expect(me).not.toContainText(t("sync.row.nextRally"));
-  // And the coordinator sees the new leader's start in the list.
+  // And the coordinator sees both new leaders' starts in the list.
   await expect(page.locator('[data-tour="sync-leaders"]')).toContainText("E2E Leader", { timeout: 15_000 });
+  await expect(addedRow).not.toContainText(t("sync.row.nextRally"));
+  await expect(addedRow).toContainText(clockText(next - RALLY_TIMER - 40));
 });
 
 test("RS-04 Re-sync during a running rally needs a second tap", async ({ page }) => {

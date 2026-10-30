@@ -69,6 +69,7 @@ export function RetroSettingsForm({
         <input key={`open-${String(retro?.open ?? false)}`} type="checkbox" name="open" defaultChecked={retro?.open ?? false} className="size-4" />
         Open — players can answer on /kvk/feedback (only one form can be open at a time; opening this one closes the others)
       </label>
+      {errors.open && <p className="text-xs font-bold text-danger">{errors.open}</p>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Title (English)" htmlFor="retro-title" error={errors.title} className="md:col-span-2">

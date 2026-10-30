@@ -19,6 +19,7 @@ import { audit } from "./audit";
 import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, textField, uuidField } from "./forms";
 import {
   isMoveDirection,
+  activationProblem,
   MAX_FORMATIONS,
   moveInList,
   type OtherPasswords,
@@ -131,6 +132,15 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   // the kingdom without its active plan.
   const activating = input.active && !existing?.active;
   if (activating) row.active = false;
+
+  // The feedback page opens with the active plan's password: a battle's plan stays active while its form is open.
+  const deactivating = Boolean(existing?.active) && !input.active;
+  if (activating || deactivating) {
+    const { data: openFeedback, error: feedbackError } = await admin.from("kvk_retrospectives").select("plan_id").eq("open", true).maybeSingle();
+    if (feedbackError) return failed(log, "Reading the feedback forms", feedbackError);
+    const problem = activationProblem({ planId: id, activating, deactivating }, openFeedback ? { planId: String(openFeedback.plan_id) } : null);
+    if (problem) return invalid({ active: problem });
+  }
 
   const result = id
     ? await admin.from("kvk_plans").update(row).eq("id", id).select("id").single()

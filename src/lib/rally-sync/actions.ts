@@ -317,7 +317,8 @@ export async function joinRoom(code: string, input: LeaderInput, gameOffsetSecon
       instanceId: opened.instance?.id ?? null,
     });
     // From now on the coordinator sees this browser by its leader's name; a name it had as a watcher goes.
-    if (opened.instance?.name) await store.updateInstance(opened.instance.id, { name: null });
+    // Best effort: the leader is in, and the browser must get its token whatever happens to the name.
+    if (opened.instance?.name) await store.updateInstance(opened.instance.id, { name: null }).catch(() => undefined);
     log.info("Leader joined", { room: room.code, leader: row.id });
     return { ok: true, leaderId: row.id, token };
   } catch (error) {
@@ -407,8 +408,10 @@ function hitPatch(room: RoomRow, hitAt: number | null, now: number): RoomPatch {
 /**
  * A new hit time (or none) starts the next rally: march times that waited for
  * it become the leaders' march times, and leaders who joined or came back
- * during the last one are in. Those sitting out stay out. Called before the
- * room is updated, so pages that refetch on the room's ping see both together.
+ * during the last one are in. Those sitting out stay out. Called after the
+ * room is updated: should it fail, the leaders stay "next" under the new hit
+ * (the coordinator's next tap picks them up) instead of entering the rally
+ * that still runs under the old one. Pages see both on the last ping.
  */
 async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]): Promise<void> {
   await Promise.all(
@@ -515,27 +518,28 @@ export async function coordinate(
         const hitAt = parseUtcClock(String(op.text ?? ""), now);
         if (hitAt === null) return { ok: false, error: "invalid" };
         if (hitAt <= now) return { ok: false, error: "past" };
-        await startNextRally(store, await store.leaders(room.id));
         await store.updateRoom(room.id, hitPatch(room, hitAt, now));
+        await startNextRally(store, await store.leaders(room.id));
         return done();
       }
       case "resync": {
         const leaders = await store.leaders(room.id);
         const marches = resyncMarches(leaders);
-        await startNextRally(store, leaders);
         await store.updateRoom(room.id, hitPatch(room, earliestHit(now, room.rallyWaitSeconds, marches, room.bufferSeconds), now));
+        await startNextRally(store, leaders);
         return done({ leaders: marches.length });
       }
       case "clearHit": {
-        await startNextRally(store, await store.leaders(room.id));
         await store.updateRoom(room.id, hitPatch(room, null, now));
+        await startNextRally(store, await store.leaders(room.id));
         return done();
       }
       case "addLeader": {
         const leader = parseLeader(op);
         if (!leader) return { ok: false, error: "invalid" };
         if (await roomFull(store, room)) return { ok: false, error: "leader_limit" };
-        const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, tokenHash: null });
+        // Added during a running rally (on the coordinator's game clock), the leader is in from the next one, like a player who joins.
+        const row = await store.insertLeader({ roomId: room.id, name: leader.name, marchSeconds: leader.marchSeconds, status: joinStatus(rallyRunning(room.hitAt, now)), tokenHash: null });
         return done({ leader: row.id });
       }
       case "editLeader": {

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getAlliances, getSettings } from "@/lib/data";
 import { kvkSessionSecret } from "@/lib/kvk/access";
 import type { LockoutPolicy } from "@/lib/kvk/throttle";
-import { addressHash, takeTry } from "@/lib/kvk/throttle-store";
+import { addressHash, clearThrottle, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HOUR } from "@/lib/time";
@@ -41,8 +41,15 @@ export interface SubmitState {
 
 /** Lookups per address and hour; past it the form just stops checking (nobody is told). */
 const LOOKUP_POLICY: LockoutPolicy = { window: HOUR, maxFailures: 30, firstLock: HOUR, maxLock: HOUR };
-/** Submissions (attempts, not successes) per address: a household of several players fits, a flood does not. */
+/**
+ * Failed submissions per address (a stored answer clears the count): a flood of
+ * bounced forms is stopped, while players behind one carrier address can all
+ * answer. Successful answers are limited by one per Governor ID and the cap.
+ */
 const SUBMIT_POLICY: LockoutPolicy = { window: HOUR, maxFailures: 8, firstLock: HOUR, maxLock: 6 * HOUR };
+
+/** What the database raises when an answer would pass the retrospective's cap (migration 0023). */
+const RETRO_FULL_SIGNAL = "kvk_retro_full";
 
 const baseLog = createLogger("retro");
 
@@ -101,7 +108,8 @@ export async function submitRetro(_previous: SubmitState, formData: FormData): P
     return { status: "ok" }; // a bot learns nothing from a success message
   }
 
-  const budget = await takeTry(`retro:${retro.id}:${addressHash(requestHeaders)}`, now, SUBMIT_POLICY);
+  const submitScope = `retro:${retro.id}:${addressHash(requestHeaders)}`;
+  const budget = await takeTry(submitScope, now, SUBMIT_POLICY);
   if (!budget.allowed) {
     log.info("Feedback refused: address locked", { retro: retro.id, waitMs: budget.retryAt - now });
     return { status: "throttled", retryAt: budget.retryAt };
@@ -160,9 +168,15 @@ export async function submitRetro(_previous: SubmitState, formData: FormData): P
       log.info("Feedback refused: Governor ID already answered", { retro: retro.id });
       return { status: "duplicate" };
     }
+    if (error.message.includes(RETRO_FULL_SIGNAL)) {
+      // Two answers at the same instant on the last free place: the database trigger (migration 0023) kept the cap.
+      log.warn("Feedback refused: retrospective full (database)", { retro: retro.id, max: retro.maxResponses });
+      return { status: "full" };
+    }
     log.error("Saving feedback failed", { retro: retro.id, error: error.message, code: error.code });
     return { status: "unavailable" };
   }
+  await clearThrottle(submitScope);
   log.info("Feedback recorded", {
     retro: retro.id,
     verified: verified !== null,

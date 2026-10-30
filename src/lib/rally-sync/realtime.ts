@@ -83,6 +83,8 @@ export function connectRoomChannel({ url, apiKey, topic, onPing, onStatus }: Roo
 
   function open() {
     if (disposed) return;
+    // Also reached from the browser's `online` event while a socket is up: its heartbeat and a pending retry go with it.
+    stopTimers();
     socket?.close();
     onStatus("connecting");
     const ws = new WebSocket(realtimeSocketUrl(url, apiKey));

@@ -20,6 +20,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
+import { feedbackOpenProblem } from "./kvk-forms";
 import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, uuidField } from "./forms";
 import { getRetrospectiveByPlan, listResponses } from "./retro-data";
 import { parseRetroSettingsForm } from "./retro-forms";
@@ -51,11 +52,14 @@ export async function saveRetrospective(_previous: ActionState, formData: FormDa
 
   const admin = createAdminClient();
   const [{ data: plan }, { data: existing, error: readError }] = await Promise.all([
-    admin.from("kvk_plans").select("id, slug").eq("id", planId).maybeSingle(),
+    admin.from("kvk_plans").select("id, slug, active").eq("id", planId).maybeSingle(),
     admin.from("kvk_retrospectives").select("id, title, intro, intro_source, open").eq("plan_id", planId).maybeSingle(),
   ]);
   if (!plan) return PLAN_GONE;
   if (readError) return failed(log, "Reading the retrospective", readError);
+  // Players unlock the feedback page with the active plan's password (and the plan stays active while the form is open).
+  const openProblem = feedbackOpenProblem(input.open && !existing?.open, Boolean(plan.active));
+  if (openProblem) return invalid({ open: openProblem });
 
   // A changed English text drops the other languages; the pipeline refills them (as for the plan intro).
   const intro =

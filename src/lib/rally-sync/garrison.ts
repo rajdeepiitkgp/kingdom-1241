@@ -36,8 +36,12 @@ export const MIN_SEND_SPACING_SECONDS = 1;
 export const MAX_SEND_SPACING_SECONDS = 30;
 /** A tap moment sent by the coordinator's page must be this close to the server's clock, else the server's own "now" counts. */
 export const MAX_TAP_SKEW_MS = 10_000;
-/** A rally whose predicted hit is longer ago than this has landed (a "lands in" then starts a new one). */
-const LANDED_SLACK_MS = 60_000;
+/**
+ * A rally whose predicted hit is longer ago than this has landed (a "lands in" then starts a new one).
+ * Until then the coordinator's card keeps "Correct landing time": a stale march predicts a hit the
+ * game has not shown yet, and the correction is what records the leader's real march.
+ */
+export const LANDED_SLACK_MS = 60_000;
 /** How long players see "updated" on a refill after the coordinator moved one of its hits. */
 export const UPDATED_FLAG_SECONDS = 20;
 

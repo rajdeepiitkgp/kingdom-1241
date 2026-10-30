@@ -162,6 +162,14 @@ function CreatedRoom({ created, locale }: { created: NonNullable<CreateRoomState
 
 function Secret({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+    } catch {
+      // No clipboard (or blocked): the value is on screen to select by hand.
+    }
+  }
   return (
     <div className={wide ? "min-w-0 sm:col-span-2" : "min-w-0"}>
       <dt className="label">{label}</dt>
@@ -169,16 +177,7 @@ function Secret({ label, value, wide }: { label: string; value: string; wide?: b
         <span className="input min-w-0 flex-1 text-sm break-all" dir="ltr">
           {value}
         </span>
-        <button
-          type="button"
-          className="btn-ghost btn-sm shrink-0"
-          onClick={() =>
-            void navigator.clipboard.writeText(value).then(
-              () => setCopied(true),
-              () => undefined,
-            )
-          }
-        >
+        <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => void copy()}>
           {copied ? "Copied!" : "Copy"}
         </button>
       </dd>

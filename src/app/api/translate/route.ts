@@ -135,7 +135,6 @@ export async function POST(request: Request) {
         results = [await translateRow(supabase, table, data, locales, options)];
       }
 
-      const didWrite = results.some((r) => !r.skipped);
       log.info("Translation finished", {
         table,
         id: id ?? "*",
@@ -143,8 +142,9 @@ export async function POST(request: Request) {
         translated: results.filter((r) => !r.skipped).length,
         skipped: results.filter((r) => r.skipped).map((r) => r.reason ?? "?"),
       });
+      // The table's tag reaches every page that shows the row (each loader tags itself with it);
+      // expiring `all` here as well rebuilt the whole site in every language per translated row.
       revalidate(tag, log);
-      if (didWrite) revalidate(CACHE_TAGS.all, log);
     } catch (error) {
       log.error("Translation failed", { table, id: id ?? "*", ms: elapsedMs(started), error });
       revalidate(tag, log);
