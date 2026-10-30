@@ -51,12 +51,13 @@ jobs:
         run: npm run build
 
       # The browser suite (docs/QA.md) serves the build above, still without
-      # keys: seed content and in-memory Rally Sync rooms, three devices.
-      - name: Install browsers
-        run: npx playwright install --with-deps --only-shell chromium webkit
+      # keys: seed content and in-memory Rally Sync rooms. The laptop and the
+      # Android phone run here; the iPhone runs on macOS (job below).
+      - name: Install browser
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Browser tests
-        run: npm run e2e
+        run: npm run e2e -- --project=desktop-chromium --project=phone-chromium
 
       # The JUnit results of both suites as tables on the run's summary page and
       # notes on the failing tests. Annotate-only needs no write access, so
@@ -74,7 +75,7 @@ jobs:
         uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         with:
           report_paths: reports/junit/e2e.xml
-          check_name: Browser tests
+          check_name: Browser tests (laptop and Android)
           annotate_only: true
           detailed_summary: true
           include_passed: true
@@ -88,6 +89,59 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-reports
+          path: |
+            reports/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The iPhone device of the browser suite, on macOS: Apple's WebKit is what
+  # iPhones run, while WebKit's Linux build differs (it refuses the site's
+  # Secure cookies on http://localhost and has older locale data).
+  iphone:
+    name: Browser tests (iPhone)
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install browser
+        run: npx playwright install webkit
+
+      - name: Browser tests
+        run: npm run e2e -- --project=phone-webkit
+
+      - name: Browser test report
+        if: ${{ !cancelled() && hashFiles('reports/junit/e2e.xml') != '' }}
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        with:
+          report_paths: reports/junit/e2e.xml
+          check_name: Browser tests (iPhone)
+          annotate_only: true
+          detailed_summary: true
+          include_passed: true
+          group_suite: true
+          flaky_summary: true
+
+      - name: Keep the reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-iphone
           path: |
             reports/
             playwright-report/

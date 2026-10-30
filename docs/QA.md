@@ -9,7 +9,7 @@ How Kingdom 1241's site is tested, what each test promises, and what still needs
 | Lint and typecheck | Type errors, React rule breaks, non-canonical Tailwind classes | `npm run lint`, `npm run typecheck` | Every pull request and push to `main` (CI) |
 | Unit tests | The logic under the pages: timings, calendars, parsers, forms, the translation pipeline, access tokens | `tests/` (Vitest), `npm run test` | Every pull request (CI) |
 | Architecture guards | Rules about the code itself: no server module reachable from the browser, edit forms that keep their saved values, every spec here tested | `tests/architecture/` | Every pull request (CI) |
-| Browser suite | The site as players use it: every page in every language, the menu, tours, the locked battle pages, Rally Sync between two devices | `e2e/` (Playwright), `npm run e2e` | Every pull request (CI) |
+| Browser suite | The site as players use it: every page in every language, the menu, tours, the locked battle pages, Rally Sync between two devices | `e2e/` (Playwright), `npm run e2e` | Every pull request (CI: laptop and Android on Linux, iPhone on macOS) |
 | Live check | The deployed site with its real data: pages load in every language the site offers, the database answers | `e2e/live/`, the E2E live workflow | Daily at 06:30 UTC, and by hand |
 | Manual checks | What only a real device or a real account shows: sound, the screen staying awake, Discord sign-in, the admin forms | The list at the end | Before each battle day and after a change in those areas |
 
@@ -19,7 +19,7 @@ The pull-request suite runs against a production build of the branch with **no k
 
 - `desktop-chromium`: a laptop, Chrome, time zone Pago Pago (UTC−11).
 - `phone-chromium`: an Android phone 390 px wide, Chrome, time zone Kiritimati (UTC+14).
-- `phone-webkit`: an iPhone 13 (390 px), Safari's engine, time zone Seoul.
+- `phone-webkit`: an iPhone 13 (390 px), Safari's engine, time zone Seoul. In CI it runs on a macOS machine (the `Browser tests (iPhone)` job): Apple's WebKit is what iPhones run, while WebKit's Linux build refuses the site's Secure cookies on `http://localhost` and has older locale data.
 
 The far-apart time zones make a date drawn on the server (in UTC) and again in the browser disagree whenever the code forgets `timeZone: "UTC"`. React then reports error #418, which fails the test. Every page a test opens is watched: an error in the browser console or an uncaught exception fails the test (`e2e/support/test.ts`). Each page is also checked for its language and direction, for the error page, and for anything wider than the screen (`expectHealthyPage` in `e2e/support/site.ts`).
 
@@ -47,7 +47,7 @@ Each CI run publishes:
 
 - **A results table in the run's summary** (Actions → the run → Summary), made from the JUnit XML of the unit tests (`reports/junit/unit.xml`) and of the browser suite (`reports/junit/e2e.xml`, one line per test and device), with flaky tests listed separately.
 - **Failure notes on the pull request**: each failing test is marked on the file and line of the test.
-- **The `test-reports` artifact**, kept 14 days: both JUnit files, Playwright's HTML report, and for a failed test its screenshot and trace (`npx playwright show-trace trace.zip` replays it step by step). It shows only seed content, so it is safe on a public repository.
+- **The `test-reports` and `test-reports-iphone` artifacts**, kept 14 days: both JUnit files, Playwright's HTML report, and for a failed test its screenshot and trace (`npx playwright show-trace trace.zip` replays it step by step). It shows only seed content, so it is safe on a public repository.
 
 A test that fails once and passes on its retry counts as **flaky** and is listed as such. Fix the cause; don't add retries.
 
@@ -67,6 +67,7 @@ When a feature changes, change its specs first, then the code. A test that fails
 Found by the browser suite and not fixed yet. Each has a decision pending; the tests wait it out so they stay green.
 
 - **A tap in the first moment after a page appears can be lost in Safari's engine.** On the locked battle pages, Rally Sync's Open room and other forms, a tap on the button before the page's scripts have taken over sends nothing: the page stays as it was, the password still in the field, no message. A second tap works. Chrome sends it anyway (as a plain form post). Seen in Playwright's WebKit, which iPhones share; to confirm on a real iPhone on a slow connection. Tests wait for the page with `hydrated()` before tapping.
+- **Numbers on the Tools page can make React redraw it in a browser with older locale data.** The calculators format numbers with `Intl.NumberFormat` on the server (Node, ICU 78) and again in the browser. Older locale data writes Arabic numbers with Arabic-Indic digits and Italian with a thousands dot, so the two disagree. React then reports error #418 and draws the calculators again in the browser: the page works, after a flicker. Seen in WebKit's Linux build (ICU 74); current Chrome and Safari agree with the server. A visitor with an older phone browser would see it. A fix is to show the numbers once the page has loaded in the browser.
 
 ## Specs
 
