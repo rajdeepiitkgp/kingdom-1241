@@ -36,6 +36,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Check the site address is set
+        run: test -n "$E2E_BASE_URL" || { echo "::error::The SITE_URL secret is not set (SETUP.md § 6); nothing to check."; exit 1; }
+
       - name: Install
         run: npm ci
 
