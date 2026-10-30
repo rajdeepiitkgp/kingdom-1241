@@ -32,7 +32,10 @@ async function openRoom(page: Page, code: string, { coordinator = false } = {}) 
   await hydrated(open);
   await page.getByLabel(t("kvk.password")).fill(DEMO.password);
   await open.click();
-  await expect(page.locator('[data-tour="sync-status"]')).toBeVisible();
+  const status = page.locator('[data-tour="sync-status"]');
+  await expect(status).toBeVisible();
+  // Every tap in a room is a JS handler (no plain forms): wait until React has the page.
+  await hydrated(status);
 }
 
 const CLOCK = /\b(\d{2}):(\d{2}):(\d{2})\b/;
@@ -70,6 +73,7 @@ test("RS-01 a room opens with its ID and password, and a wrong password is refus
   await page.getByLabel(t("kvk.password")).fill("wrong-password");
   await page.getByRole("button", { name: t("sync.join.submit") }).click();
   await expect(page.getByText(t("sync.error.wrong"))).toBeVisible();
+  await expect(page.getByLabel(t("sync.roomId"))).toHaveValue(code);
   await page.getByLabel(t("kvk.password")).fill(DEMO.password);
   await page.getByRole("button", { name: t("sync.join.submit") }).click();
   await expect(page).toHaveURL(at("en", `/tools/rally-sync/${code}`));
@@ -143,7 +147,8 @@ test("RS-04 Re-sync during a running rally needs a second tap", async ({ page })
   const resync = page.locator('[data-tour="sync-resync"]');
   await resync.click();
   const first = await hitTime(page);
-  await page.waitForTimeout(1_500);
+  // The rally runs once the page counts down to the hit it was given.
+  await expect(page.locator('[data-tour="sync-focus"]')).toContainText(tPattern("sync.hit.in"));
   await resync.click();
   // The first tap only arms it and says what it would do.
   await expect(resync).toContainText(t("sync.coord.resyncConfirm").split("(")[0].trim());
