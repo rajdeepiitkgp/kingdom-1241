@@ -1,0 +1,78 @@
+# The code guide (guide/, a Starlight site): built on every pull request that
+# touches it, so a broken link between chapters fails the PR, and published to
+# GitHub Pages from main. Its links into the code are checked by the site's own
+# unit tests (tests/architecture/guide-code-links.test.ts), which run on every PR.
+#
+# Owner-side once: Settings → Pages → Build and deployment → Source: GitHub
+# Actions (SETUP.md § 6). The guide is then at
+# https://rajdeepiitkgp.github.io/kingdom-1241/.
+#
+# Actions are pinned to a commit (the version is the comment); Dependabot
+# (.github/dependabot.yml) opens a PR when a new release is out.
+name: Guide
+
+on:
+  pull_request:
+    paths:
+      - "guide/**"
+      - ".github/workflows/guide.yml"
+  push:
+    branches: [main]
+    paths:
+      - "guide/**"
+      - ".github/workflows/guide.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the guide
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: guide
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: guide/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Fails on a broken link between chapters (starlight-links-validator).
+      - name: Build
+        run: npm run build
+
+      - name: Keep the site for Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: guide/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    # One publish at a time; a newer one waits instead of cancelling a running one.
+    concurrency:
+      group: guide-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,18 @@
+---
+/**
+ * A link to a file or folder of the repository on GitHub (main branch). Folders
+ * end with "/". tests/architecture/guide-code-links.test.ts fails when a path no
+ * longer exists, so a moved file shows up in the pull request that moved it.
+ */
+import { Icon } from "@astrojs/starlight/components";
+
+interface Props {
+  path: string;
+}
+const { path } = Astro.props;
+const REPO = "https://github.com/rajdeepiitkgp/kingdom-1241";
+const kind = path.endsWith("/") ? "tree" : "blob";
+const href = `${REPO}/${kind}/main/${path.replace(/\/$/, "")}`;
+---
+
+<a class="code-link" href={href}><Icon name="github" size="0.95em" /><code>{path}</code></a>

@@ -1,0 +1,55 @@
+---
+title: The Kingdom 1241 code guide
+description: How the Kingdom 1241 website is built, explained from the ground up for someone who can write "hello world".
+template: splash
+hero:
+  tagline: How a community website for one kingdom of a mobile game is built, from the first request to the last test. Written for someone who can write "hello world" and wants to explain the whole thing in a job interview.
+  image:
+    file: ../../assets/book.svg
+  actions:
+    - text: Start here
+      link: /kingdom-1241/start-here/how-to-read/
+      icon: right-arrow
+    - text: The big picture
+      link: /kingdom-1241/big-picture/the-pieces/
+      icon: open-book
+      variant: minimal
+---
+
+import { Card, CardGrid, Badge } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="Short chapters" icon="clock">
+    Each chapter opens with a one-minute summary. Read only the summaries and you still know the shape of the project.
+  </Card>
+  <Card title="Pictures first" icon="puzzle">
+    Every chapter has a diagram. The words explain the picture, not the other way round.
+  </Card>
+  <Card title="Straight to the code" icon="github">
+    "Where to look" links open the exact file on GitHub, and a test keeps them from going stale.
+  </Card>
+  <Card title="Ready for the interview" icon="comment">
+    Every chapter ends with questions an interviewer might ask, with a good answer folded underneath.
+  </Card>
+</CardGrid>
+
+## The map
+
+The guide grows a part or two at a time. Parts without a link are still being written.
+
+| Part | What it covers | |
+| --- | --- | --- |
+| 1 | [Start here](/kingdom-1241/start-here/how-to-read/): how to read the guide, the project in one minute, the glossary | <Badge text="Ready" variant="success" /> |
+| 2 | [The big picture](/kingdom-1241/big-picture/the-pieces/): the services, the people, the jobs that run on their own, the hard problems | <Badge text="Ready" variant="success" /> |
+| 3 | The tools, and why each one was chosen | <Badge text="Coming" variant="note" /> |
+| 4 | A walk through the folders | <Badge text="Coming" variant="note" /> |
+| 5 | Following one page from the request to the screen | <Badge text="Coming" variant="note" /> |
+| 6 | Ten languages and machine translation | <Badge text="Coming" variant="note" /> |
+| 7 | Caching, and why it costs money | <Badge text="Coming" variant="note" /> |
+| 8 | Data and security | <Badge text="Coming" variant="note" /> |
+| 9 | The admin area and publishing | <Badge text="Coming" variant="note" /> |
+| 10 | The features, one chapter each: Rally Sync, the KvK pages, prep days, feedback, gift codes, alliances, transfers | <Badge text="Coming" variant="note" /> |
+| 11 | Background jobs and workflows | <Badge text="Coming" variant="note" /> |
+| 12 | Testing and QA | <Badge text="Coming" variant="note" /> |
+| 13 | How a change ships | <Badge text="Coming" variant="note" /> |
+| 14 | Costs and limits | <Badge text="Coming" variant="note" /> |

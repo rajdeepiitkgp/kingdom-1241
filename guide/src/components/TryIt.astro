@@ -1,0 +1,9 @@
+---
+/** A small thing to do on your own machine. Never against the live site's data. */
+import { Icon } from "@astrojs/starlight/components";
+---
+
+<aside class="try-it" aria-label="Try it yourself">
+  <p class="try-it__label"><Icon name="laptop" size="1.1em" /> Try it yourself</p>
+  <div class="try-it__body"><slot /></div>
+</aside>

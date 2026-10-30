@@ -11,7 +11,7 @@ Community website for **Kingshot Kingdom 1241** — rules, announcements, event 
 - AI translations — [Anthropic Claude](https://platform.claude.com) by default, [Gemini](https://ai.google.dev) as the free alternative, or off — run only when content is added or edited, never on page view
 - Tailwind CSS v4, self-hosted fonts (Nunito, Noto Sans KR, Noto Sans Arabic)
 
-See **[SETUP.md](SETUP.md)** for getting the keys, deploying and the CI/CD pipeline, **[docs/PLAN.md](docs/PLAN.md)** for the full product plan and phases, and **[CLAUDE.md](CLAUDE.md)** for the working conventions.
+See **[SETUP.md](SETUP.md)** for getting the keys, deploying and the CI/CD pipeline, **[docs/PLAN.md](docs/PLAN.md)** for the full product plan and phases, and **[CLAUDE.md](CLAUDE.md)** for the working conventions. **[guide/](guide/README.md)** is the code guide: the whole project explained chapter by chapter for a newcomer, published to GitHub Pages.
 
 ## Quick start
 
@@ -73,7 +73,8 @@ scripts/
   prune.ts                npm run prune (deletes battle feedback past its retention period, closed Rally Sync rooms and unused editor images, SETUP.md § 9a/9b/9f)
   prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
 vercel.json               runs the server code in Frankfurt (fra1), next to the database (SETUP.md § 5)
-.github/workflows/        CI (lint/typecheck/test/build/browser tests, JUnit summary), E2E live (daily read-only check of the live site), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Prune deployments (old Vercel deployments, after every deploy); dependabot.yml for updates
+guide/                    the code guide (Starlight, its own package.json): chapters in guide/src/content/docs, published to GitHub Pages by the Guide workflow
+.github/workflows/        CI (lint/typecheck/test/build/browser tests, JUnit summary), E2E live (daily read-only check of the live site), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Gift codes (hourly kingshot.net check), Prune deployments (old Vercel deployments, after every deploy), Guide (builds the code guide and publishes it to GitHub Pages); dependabot.yml for updates
 ```
 
 ### Languages and translation

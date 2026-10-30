@@ -137,6 +137,7 @@ These workflows live in `.github/workflows/`:
 | **Gift codes** | every hour, or manually | asks the site to check kingshot.net's gift codes (§ 9d) |
 | **E2E live** | daily at 06:30 UTC, or manually | opens the live site's pages like a visitor, in every language it offers, read-only (`docs/QA.md`, the live check); a failure e-mails you like any failed workflow |
 | **Prune deployments** | after every finished Vercel deployment, daily, or manually (a dry run by default) | deletes old Vercel deployments, keeping the live one, the one before it and open pull requests' previews (§ 5) |
+| **Guide** | a PR or a push to `main` that touches `guide/`, or manually | builds the code guide (`guide/`, a Starlight site; a broken link between chapters fails it) and, from `main`, publishes it to GitHub Pages (step f) |
 
 **a. Add the secrets** — GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
@@ -164,6 +165,8 @@ These workflows live in `.github/workflows/`:
 **d. Adding a migration later** — add `supabase/migrations/000N_<name>.sql`, open a PR (the Deploy database workflow shows what it would apply), merge. CI checks the code, Deploy database applies the SQL, Vercel deploys the app. The two deploys run side by side, so a migration must be additive and work with the previous code (CLAUDE.md § Data and security). Never edit a migration that has already run; add a new file.
 
 **e. Versions** — the actions in the workflows are pinned to a commit and the Supabase CLI to a version (`SUPABASE_CLI_VERSION` in `deploy-database.yml` and `maintenance.yml`; keep the two equal). Dependabot opens a weekly PR for new action releases and npm updates (`.github/dependabot.yml`); merge them when CI is green. Bump the CLI version by hand now and then, after running `npx supabase@<version> db push --linked --dry-run` locally once.
+
+**f. The code guide on GitHub Pages** (once) — **Settings → Pages → Build and deployment → Source: GitHub Actions**. The next **Guide** run on `main` publishes `guide/` to `https://rajdeepiitkgp.github.io/kingdom-1241/` (the address shows the GitHub account, like the repository; the kingdom's site never links to it, and the guide asks search engines to stay away). Nothing else to set: the workflow needs no secret.
 
 ## 7. Supabase → site webhooks (automatic translation)
 

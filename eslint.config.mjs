@@ -44,6 +44,8 @@ const eslintConfig = defineConfig([
     // Playwright writes these after a failed local run; they are no code of ours.
     "playwright-report/**",
     "test-results/**",
+    // The code guide is its own Astro project with its own tooling (guide/README.md).
+    "guide/**",
     "next-env.d.ts",
   ]),
 ]);

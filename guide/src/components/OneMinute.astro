@@ -1,0 +1,9 @@
+---
+/** The summary that opens every chapter: what the chapter says, readable in a minute. */
+import { Icon } from "@astrojs/starlight/components";
+---
+
+<aside class="one-minute" aria-label="In one minute">
+  <p class="one-minute__label"><Icon name="clock" size="1.1em" /> In one minute</p>
+  <div class="one-minute__body"><slot /></div>
+</aside>
