@@ -1,0 +1,174 @@
+/*
+ * The guide's look: the kingdom site's gold as the accent, three typefaces
+ * with one job each (Nunito for reading, like the site; Fraunces for titles
+ * and the "in one minute" summaries; JetBrains Mono for code), and the boxes
+ * every chapter uses (OneMinute, TryIt, Interview, CodeLink).
+ */
+
+:root {
+  --sl-font: "Nunito Variable", system-ui, sans-serif;
+  --sl-font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --guide-display: "Fraunces Variable", Georgia, serif;
+
+  /* Dark theme (Starlight's default). */
+  --sl-color-accent-low: #3a2a07;
+  --sl-color-accent: #f7c45c;
+  --sl-color-accent-high: #ffe7b0;
+  --guide-minute-bg: #2b2210;
+  --guide-minute-edge: #f7c45c;
+  --guide-try-bg: #14233f;
+  --guide-try-edge: #6ea4ff;
+  --guide-qa-bg: #1b2236;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #fff1cf;
+  --sl-color-accent: #9a6400;
+  --sl-color-accent-high: #4a3300;
+  --guide-minute-bg: #fff6df;
+  --guide-minute-edge: #d8961c;
+  --guide-try-bg: #eaf2ff;
+  --guide-try-edge: #2f6fdc;
+  --guide-qa-bg: #f5f7fb;
+}
+
+/* Titles in Fraunces: the page title, the site title and the chapter's headings. */
+h1#_top,
+.site-title,
+.sl-markdown-content :is(h2, h3) {
+  font-family: var(--guide-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+h1#_top {
+  font-weight: 650;
+}
+.sl-markdown-content h2 {
+  font-weight: 600;
+}
+
+/* ---- In one minute ---------------------------------------------------- */
+.one-minute {
+  margin-block: 1.25rem 2rem;
+  padding: 1rem 1.25rem;
+  border-inline-start: 4px solid var(--guide-minute-edge);
+  border-radius: 0.75rem;
+  background: var(--guide-minute-bg);
+}
+.one-minute__label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--guide-display);
+  font-size: var(--sl-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent);
+}
+.one-minute__body {
+  margin-top: 0.5rem;
+  font-family: var(--guide-display);
+  font-size: var(--sl-text-base);
+  font-style: italic;
+  font-weight: 420;
+  line-height: 1.55;
+}
+.one-minute__body > :first-child {
+  margin-top: 0;
+}
+@media (min-width: 50rem) {
+  .one-minute__body {
+    font-size: var(--sl-text-lg);
+  }
+}
+
+/* ---- Try it yourself ---------------------------------------------------- */
+.try-it {
+  margin-block: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--guide-try-edge);
+  border-radius: 0.75rem;
+  background: var(--guide-try-bg);
+}
+.try-it__label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 800;
+  color: var(--guide-try-edge);
+}
+.try-it__body > :first-child {
+  margin-top: 0.5rem;
+}
+
+/* ---- Interview questions ------------------------------------------------ */
+.qa {
+  margin-block: 0.75rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  background: var(--guide-qa-bg);
+}
+.qa > summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  font-family: var(--guide-display);
+  font-size: var(--sl-text-base);
+  font-weight: 600;
+  list-style-position: inside;
+}
+.qa[open] > summary {
+  border-bottom: 1px solid var(--sl-color-gray-5);
+}
+.qa__answer {
+  padding: 0.25rem 1rem 0.75rem;
+}
+.qa__answer::before {
+  content: "A good answer";
+  display: block;
+  margin-top: 0.5rem;
+  font-size: var(--sl-text-xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+
+/* ---- Links to the code -------------------------------------------------- */
+/* Inline, not flex: a long path has to be able to break onto the next line on a phone. */
+.code-link {
+  text-decoration: none;
+}
+.code-link svg {
+  display: inline;
+  margin-inline-end: 0.25rem;
+  vertical-align: -0.12em;
+}
+.code-link code {
+  color: var(--sl-color-accent-high);
+  overflow-wrap: anywhere;
+}
+.code-link:hover code {
+  text-decoration: underline;
+}
+
+/*
+ * Diagrams keep their natural size (16px text): a wide one scrolls sideways inside
+ * its own box on a phone instead of shrinking to an unreadable size. astro-mermaid
+ * makes the box a centred flex container and caps the svg at max-width: 100%; its
+ * styles are unlayered and Starlight puts this file in a cascade layer, so only
+ * !important wins here. Auto margins centre a diagram that fits and start one that
+ * scrolls at its left edge (centring would cut off its left part).
+ */
+.sl-markdown-content pre.mermaid {
+  max-width: 100%;
+  overflow-x: auto;
+  justify-content: flex-start !important;
+}
+.sl-markdown-content pre.mermaid svg {
+  flex: none !important;
+  max-width: none !important;
+  margin-inline: auto;
+}

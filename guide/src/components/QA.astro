@@ -1,0 +1,15 @@
+---
+/**
+ * One interview question. The answer stays folded until you open it, so you can
+ * say your own answer out loud first.
+ */
+interface Props {
+  q: string;
+}
+const { q } = Astro.props;
+---
+
+<details class="qa">
+  <summary>{q}</summary>
+  <div class="qa__answer"><slot /></div>
+</details>
