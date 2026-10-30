@@ -240,7 +240,11 @@ test("RS-11 the invite link opens the room without the password", async ({ page,
   await expectHealthyPage(guest, "en");
 });
 
-test("RS-12 the coordinator can log another browser out, and it needs the password again", async ({ page, otherDevice }) => {
+test.describe("a removed browser", () => {
+  // The removed browser's next check-in is answered 403 on purpose (that is how it learns): the browser notes the resource failure.
+  test.use({ consoleAllow: [/status of 403/] });
+
+  test("RS-12 the coordinator can log another browser out, and it needs the password again", async ({ page, otherDevice }) => {
   test.setTimeout(90_000);
   const code = freshRoom("R");
   await openRoom(page, code, { coordinator: true });
@@ -258,6 +262,7 @@ test("RS-12 the coordinator can log another browser out, and it needs the passwo
   // The removed browser learns it on its next check-in (polling, as the offline build has no Realtime) and asks for the password.
   await expect(watcher.getByLabel(t("kvk.password"))).toBeVisible({ timeout: 45_000 });
   await expectHealthyPage(watcher, "en");
+  });
 });
 
 test("RS-13 garrison: the wave copies for the game chat, and Clear all needs two taps", async ({ page }) => {

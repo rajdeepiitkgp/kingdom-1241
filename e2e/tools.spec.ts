@@ -16,7 +16,8 @@ test("TOOLS-01 the calculators answer as the numbers change", async ({ page }) =
 
   // Pack value: a pack twice the price is worth half as much per unit of money.
   const pack = page.getByRole("region", { name: t("tools.pack.title") });
-  const percent = pack.getByText(/^\d[\d,.]*%$/).first();
+  // The big number under the "Pack value" label (the lines' own shares are percentages too).
+  const percent = pack.getByText(t("tools.pack.valuePercent"), { exact: true }).locator("xpath=following-sibling::p[1]");
   const before = Number((await percent.innerText()).replace(/\D/g, ""));
   expect(before).toBeGreaterThan(0);
   await pack.getByLabel(t("tools.pack.price")).fill("9.98");
