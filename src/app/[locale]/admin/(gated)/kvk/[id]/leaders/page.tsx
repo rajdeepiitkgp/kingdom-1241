@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/admin/forms";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
@@ -60,11 +61,12 @@ async function LeadersEditor({ locale, params, searchParams }: { locale: string;
   const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!(await requireEditor(locale))) return null;
   if (id === "new") notFound();
+  if (!isUuid(id)) notFound();
 
   const [plan, heroes, alliances, languages] = await Promise.all([getLeaderPlanForEditing(id), getHeroes(), getAlliances(), getLanguages()]);
   if (!plan) notFound();
   const enabled = languages.filter((l) => l.enabled);
-  const lang = parseEditLang(typeof query.lang === "string" ? query.lang : locale, enabled.map((l) => l.code));
+  const lang = parseEditLang(typeof query.lang === "string" ? query.lang : "en", enabled.map((l) => l.code));
   const heroBySlug = new Map(heroes.map((h) => [h.slug, h]));
   const editorHref = adminPath(locale, `/kvk/${plan.planId}/leaders`);
   const notice = typeof query.error === "string" ? (NOTICES[query.error] ?? "That didn't work. Try again.") : null;
