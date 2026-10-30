@@ -58,6 +58,14 @@ async function hitTime(page: Page): Promise<number> {
   return seconds((await focus.innerText()).match(CLOCK)?.[0] ?? "");
 }
 
+/** The page's own clock, as the focus block shows it ("now HH:MM:SS"). */
+async function pageClock(page: Page): Promise<number> {
+  const text = await page.locator('[data-tour="sync-focus"]').innerText();
+  const prefix = t("sync.hero.now").split("{time}")[0];
+  const at = text.indexOf(prefix);
+  return at === -1 ? -1 : seconds(text.slice(at + prefix.length));
+}
+
 /** The leaders' rows as shown: start time, name and march, top to bottom. */
 async function leaderRows(list: Locator) {
   const text = await list.innerText();
@@ -147,8 +155,10 @@ test("RS-04 Re-sync during a running rally needs a second tap", async ({ page })
   const resync = page.locator('[data-tour="sync-resync"]');
   await resync.click();
   const first = await hitTime(page);
-  // The rally runs once the page counts down to the hit it was given.
-  await expect(page.locator('[data-tour="sync-focus"]')).toContainText(tPattern("sync.hit.in"));
+  // Two seconds later on the page's own clock: the rally is running, and the Re-sync confirmed
+  // below lands on a later hit than the first whatever the rounding.
+  const clockAtFirst = await pageClock(page);
+  await expect.poll(() => pageClock(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(clockAtFirst + 2);
   await resync.click();
   // The first tap only arms it and says what it would do.
   await expect(resync).toContainText(t("sync.coord.resyncConfirm").split("(")[0].trim());
