@@ -137,7 +137,7 @@ async function AllianceArticle({ params }: Pick<Props, "params">) {
           className="btn-primary mt-5"
           data-tour="alliance-discord"
         >
-          Discord <ExternalLink className="size-4" aria-hidden />
+          {dict["common.discord"]} <ExternalLink className="size-4" aria-hidden />
         </a>
       )}
 

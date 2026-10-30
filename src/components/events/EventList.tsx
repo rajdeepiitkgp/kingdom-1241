@@ -90,7 +90,7 @@ function relativeDay(days: number, dict: Dictionary, locale: string): string {
 }
 
 function durationLabel(minutes: number, dict: Dictionary): string {
-  if (minutes % (24 * 60) === 0) return `${minutes / (24 * 60)} ${dict["common.days"]}`;
+  if (minutes % (24 * 60) === 0) return `${minutes / (24 * 60)} ${dict[minutes === 24 * 60 ? "common.day" : "common.days"]}`;
   if (minutes % 60 === 0) return `${minutes / 60} ${dict["common.hours"]}`;
   return `${minutes} ${dict["common.minutes"]}`;
 }
@@ -131,24 +131,24 @@ function EventCard({
 
         {!compact && <p className="mt-1 text-sm text-ink-muted" dir="auto">{event.summary}</p>}
 
-        <dl className="mt-3 grid grid-cols-1 gap-1.5 text-sm">
-          <div className="flex items-center gap-2 text-ink">
+        <div className="mt-3 grid grid-cols-1 gap-1.5 text-sm">
+          <p className="flex items-center gap-2 text-ink">
             <CalendarClock className="size-4 shrink-0 text-primary" aria-hidden />
-            <dt className="sr-only">{dict["events.next"]}</dt>
-            <dd className="font-bold" suppressHydrationWarning>
+            <span className="sr-only">{dict["events.next"]}</span>
+            <span className="font-bold" suppressHydrationWarning>
               {byAlliance ? formatUtcDate(start, locale) : formatLocalDateTime(start, locale)}
               <span className="ms-2 text-xs font-semibold whitespace-nowrap text-ink-faint" dir="ltr">
                 ({byAlliance ? "UTC" : formatUtcTime(start)})
               </span>
-            </dd>
-          </div>
+            </span>
+          </p>
           {byAlliance && (
             <p className="flex items-center gap-2 font-semibold text-ink">
               <Shield className="size-4 shrink-0 text-primary" aria-hidden />
               {dict["events.allianceTimes"]}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ink-muted">
             <span className="inline-flex items-center gap-1.5">
               <Repeat className="size-4 text-primary" aria-hidden />
               {recurrenceLabel(event, dict, locale)}
@@ -156,8 +156,8 @@ function EventCard({
             <span>
               {dict["events.duration"]}: <span className="font-bold text-ink">{durationLabel(event.durationMinutes, dict)}</span>
             </span>
-          </div>
-        </dl>
+          </p>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <p
