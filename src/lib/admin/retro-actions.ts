@@ -156,7 +156,11 @@ export async function deleteAllResponses(formData: FormData): Promise<void> {
   const log = await actionLogger();
 
   const admin = createAdminClient();
-  const { data: retro } = await admin.from("kvk_retrospectives").select("id").eq("plan_id", planId).maybeSingle();
+  const { data: retro, error: retroError } = await admin.from("kvk_retrospectives").select("id").eq("plan_id", planId).maybeSingle();
+  if (retroError) {
+    log.error("Reading the retrospective failed", { planId, error: retroError.message });
+    redirect(resultsPath(locale, planId, "error=delete"));
+  }
   if (!retro) redirect(adminPath(locale, "/feedback?error=missing"));
   const retroId = String(retro.id);
   const { count } = await admin.from("kvk_retro_responses").select("id", { count: "exact", head: true }).eq("retrospective_id", retroId);
