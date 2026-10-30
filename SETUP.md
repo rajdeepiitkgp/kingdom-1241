@@ -12,6 +12,8 @@ git push / merge to main
    ├─ GitHub Actions "Deploy database" applies supabase/migrations/*.sql  (only when a migration changed)
    └─ Vercel (Git integration)         builds and deploys main → production URL
                                        builds every PR → preview URL
+                                       (skipped when only the guide, docs, tests or CI
+                                        changed, or while PAUSE_DEPLOYS is on: § 5)
 ```
 
 Content (announcements, events, rules, guides, the KvK plan…) is edited in the admin area and shows up within seconds through the webhook — no deploy needed.
@@ -112,6 +114,14 @@ Without any env vars the site still runs with the bundled English seed content (
 3. **Deploy**. Note the URL (`https://<project>.vercel.app`): it goes into the GitHub secret `SITE_URL` (step 6), the webhook installer (step 7) and `supabase/config.toml` (step 8.1). A custom domain can be added under **Settings → Domains** at any time.
 
 From now on Vercel deploys **every push to `main` to production** and **every pull request to a preview URL** (the link appears on the PR). Vercel's build doesn't wait for GitHub Actions, so protect `main` (step 6c) — then only code that passed CI can reach `main`.
+
+**Skipped builds and the pause switch.** Every build costs build minutes, so Vercel first runs `scripts/vercel-ignore-build.sh` (`ignoreCommand` in `vercel.json`) and builds only when it is worth it:
+
+- **Automatically**: a push is skipped when every file that changed since that branch's last successful deployment is one the site doesn't use: the code guide, `docs/`, the tests, the workflows, the SQL in `supabase/`, `scripts/`, Markdown notes. A pull request's first preview compares with the point where it left `main`. Nothing gets lost: the next build compares with the last deployment that was actually built, so it brings everything since. A redeploy of an unchanged commit (after changing an environment variable) always builds.
+- **By hand**: add the environment variable `PAUSE_DEPLOYS` with the value `1` (Vercel → the project → **Settings → Environment Variables**). Ticked for **Preview**, it stops the pull-request previews (CI builds and tests every pull request on its own, so a preview is only for looking at a branch on a phone). Ticked for **Production**, merges to `main` stop going live. Tick both to stop everything. The next push reads it; no deploy is needed.
+- **Resume** by deleting the variable (or setting it to `0`): the next push builds again, with everything merged in the meantime. To publish `main` at once without a push: **Deployments** → the newest deployment of `main` → **⋯ → Redeploy**. While the switch is still on for Production, untick **Use project's Ignore Build Step** in that dialog.
+
+A skipped deployment shows in Vercel as *Canceled* and on GitHub as a green "Canceled by Ignored Build Step"; it takes a few seconds. The check's own log is at the top of that deployment's build log.
 
 The site sends `noindex` headers and a `robots.txt` that blocks every crawler; it is only reachable through the shared link.
 
@@ -431,6 +441,8 @@ If only Vercel is gone, steps 6 and 9 (the environment variables and nothing els
 **KvK prep days** (`/kvk/prep`, public). Nothing to do per round: the page moves to the next round by itself (every 28 days from Sunday 1 Nov 2026). The schedule, the item × day table, the points and the tips are code (`src/lib/kvk/prep.ts`, texts `prep.*` in `src/content/seed/ui-strings.ts`), so a change is a PR; after a wording change run Maintenance → `sync-ui`, then `translate`. If the game ever shifts a round, change `FIRST_PREP_ROUND` in the same file.
 
 **Restore content.** From the weekly backup, § 10.
+
+**Pause or resume deploys.** Vercel environment variable `PAUSE_DEPLOYS=1` (Preview, Production or both), § 5 "Skipped builds". Builds that only change the guide, docs, tests or CI are skipped without it.
 
 **Refresh the cache now.** Content is cached for up to a day when nothing expires it. To refresh immediately: Maintenance workflow → `revalidate`, or
 

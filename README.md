@@ -72,7 +72,8 @@ scripts/
   backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
   prune.ts                npm run prune (deletes battle feedback past its retention period, closed Rally Sync rooms and unused editor images, SETUP.md § 9a/9b/9f)
   prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
-vercel.json               runs the server code in Frankfurt (fra1), next to the database (SETUP.md § 5)
+  vercel-ignore-build.sh  Vercel runs it before each build: skips builds nothing on the site needs, and the PAUSE_DEPLOYS switch (SETUP.md § 5)
+vercel.json               runs the server code in Frankfurt (fra1), next to the database, and names the build check above (SETUP.md § 5)
 guide/                    the code guide (Starlight, its own package.json): chapters in guide/src/content/docs, published to GitHub Pages by the Guide workflow
 .github/workflows/        CI (lint/typecheck/test/build/browser tests, JUnit summary), E2E live (daily read-only check of the live site), Deploy database (migrations; dry run on PRs), Maintenance (seed, translate, revalidate, weekly encrypted backup, webhooks, config push), Gift codes (hourly kingshot.net check), Prune deployments (old Vercel deployments, after every deploy), Guide (builds the code guide and publishes it to GitHub Pages); dependabot.yml for updates
 ```
