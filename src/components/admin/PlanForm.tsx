@@ -120,6 +120,7 @@ export function PlanForm({ plan, locale }: { plan: AdminKvkPlan | null; locale: 
           <input key={`published-${String(plan?.published ?? true)}`} type="checkbox" name="published" defaultChecked={plan?.published ?? true} className="size-4" />
           Published
         </label>
+        {errors.active && <p className="w-full text-xs font-bold text-danger">{errors.active}</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3" data-tour="plan-save">

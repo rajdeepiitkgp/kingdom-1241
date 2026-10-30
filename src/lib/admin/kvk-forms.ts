@@ -203,6 +203,36 @@ export function passwordClash(password: string, others: OtherPasswords): string 
   return null;
 }
 
+/** How the Active flag of a plan is about to change. */
+export interface ActiveChange {
+  /** The plan being saved (null for a new one). */
+  planId: string | null;
+  activating: boolean;
+  deactivating: boolean;
+}
+
+/**
+ * Why a plan's Active flag can't change while a feedback form is open, or null.
+ * The feedback page opens with the active plan's password, so a battle's plan
+ * stays active until its feedback is closed, and the next plan is activated
+ * after. `openFeedback` is the plan of the one open form, if any.
+ */
+export function activationProblem(change: ActiveChange, openFeedback: { planId: string } | null): string | null {
+  if (!openFeedback) return null;
+  if (change.activating && openFeedback.planId !== change.planId) {
+    return "Another battle's feedback form is still open: close it first (that plan → Player feedback → untick Open), or players could no longer unlock the feedback page.";
+  }
+  if (change.deactivating && openFeedback.planId === change.planId) {
+    return "This battle's feedback form is still open: close it first (Player feedback → untick Open), or players could no longer unlock it.";
+  }
+  return null;
+}
+
+/** Why a feedback form can't be opened for this plan, or null: players unlock it with the active plan's password. */
+export function feedbackOpenProblem(opening: boolean, planActive: boolean): string | null {
+  return opening && !planActive ? "Feedback opens for the active battle plan only: players unlock it with the plan's password. Activate the plan first." : null;
+}
+
 export interface PageBriefInput {
   password: string;
   /** Markdown written by the admin; rendered to sanitised HTML on save. */

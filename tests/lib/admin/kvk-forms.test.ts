@@ -12,6 +12,8 @@ import {
   parseRallyLeaderForm,
   parseRuleForm,
   passwordClash,
+  activationProblem,
+  feedbackOpenProblem,
 } from "@/lib/admin/kvk-forms";
 
 function form(entries: Record<string, string>): FormData {
@@ -185,6 +187,31 @@ describe("passwordClash", () => {
     expect(passwordClash("rally", { leaders: " rally " })).toMatch(/rally leaders' password/);
     expect(passwordClash("rally", { plan: "1241", leaders: "other", checklist: null })).toBeNull();
     expect(passwordClash("", { plan: "" })).toBeNull();
+  });
+});
+
+describe("activationProblem", () => {
+  const a = { planId: "plan-a" };
+
+  it("keeps a battle's plan active until its feedback form is closed", () => {
+    expect(activationProblem({ planId: "plan-b", activating: true, deactivating: false }, a)).toMatch(/Another battle's feedback form is still open/);
+    expect(activationProblem({ planId: null, activating: true, deactivating: false }, a)).toMatch(/Another battle's feedback form/);
+    expect(activationProblem({ planId: "plan-a", activating: false, deactivating: true }, a)).toMatch(/This battle's feedback form is still open/);
+  });
+
+  it("allows every other change", () => {
+    expect(activationProblem({ planId: "plan-b", activating: true, deactivating: false }, null)).toBeNull();
+    expect(activationProblem({ planId: "plan-a", activating: true, deactivating: false }, a)).toBeNull();
+    expect(activationProblem({ planId: "plan-b", activating: false, deactivating: true }, a)).toBeNull();
+    expect(activationProblem({ planId: "plan-a", activating: false, deactivating: false }, a)).toBeNull();
+  });
+});
+
+describe("feedbackOpenProblem", () => {
+  it("opens a form for the active plan only", () => {
+    expect(feedbackOpenProblem(true, false)).toMatch(/active battle plan only/);
+    expect(feedbackOpenProblem(true, true)).toBeNull();
+    expect(feedbackOpenProblem(false, false)).toBeNull();
   });
 });
 

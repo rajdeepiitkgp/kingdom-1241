@@ -162,7 +162,11 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Introduction",
         "What players read first. **bold**, lists with “- ”. Write {{when}} or {{time}} instead of “tomorrow” or a clock time: everyone sees the battle time in their own words and time zone, so the text never goes stale.",
       ),
-      step("plan-flags", "Active and Published", "Active makes this the plan players see and replaces the previous one. Untick Published to keep it hidden while you work on it."),
+      step(
+        "plan-flags",
+        "Active and Published",
+        "Active makes this the plan players see and replaces the previous one. While a battle's feedback form is open, its plan stays active: close that form before activating the next plan. Untick Published to keep it hidden while you work on it.",
+      ),
       step("plan-save", "Save", "Nothing is kept until you save. Discard changes undoes what you typed since the last save."),
       step(
         "plan-rules",
@@ -182,7 +186,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "plan-feedback",
         "Player feedback",
-        "The short form players fill in after the battle, behind the plan's password. Choose the questions and how long answers are kept here, tick Open after the battle, and read the answers under Feedback.",
+        "The short form players fill in after the battle, behind the plan's password. Choose the questions and how long answers are kept here, tick Open after the battle (the plan must be active, and it stays active until you untick Open), and read the answers under Feedback.",
       ),
       step("plan-view", "Check what players see", "Opens the players' page in a new tab. You type the password once, like any player."),
     ],
