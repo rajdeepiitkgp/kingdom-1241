@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { at, hydrated, SEED_ALLIANCE, SEED_PASSWORDS, t, unlock } from "./support/site";
 import { expect, test } from "./support/test";
 import { tourButton, walkTour } from "./support/tour";

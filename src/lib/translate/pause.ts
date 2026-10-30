@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 /**
  * The owner's brake on machine translation (pure; app_config "translation").
  * While paused, the webhook only refreshes the cache, `npm run translate`
