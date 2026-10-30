@@ -107,6 +107,7 @@ test("RS-02 Re-sync sets the earliest hit and every leader's start = hit − ral
 });
 
 test("RS-03 a leader who joins or is added mid-rally waits for the next one, then gets their own start on every device", async ({ page, otherDevice }) => {
+  test.slow(); // two devices and two polling rounds: three times the budget
   const code = freshRoom("R");
   await openRoom(page, code, { coordinator: true });
   await page.getByRole("button", { name: t("sync.coord.resync") }).click();
@@ -165,6 +166,7 @@ test("RS-04 Re-sync during a running rally needs a second tap", async ({ page })
   expect(await hitTime(page)).toBe(first);
   await resync.click();
   await expect.poll(() => hitTime(page)).toBeGreaterThan(first);
+  await expectHealthyPage(page, "en");
 });
 
 test("RS-05 garrison: a marked enemy rally lands after its countdown plus march, and players get send times", async ({ page, otherDevice }) => {
@@ -211,10 +213,107 @@ test("RS-06 counter-rally: slowest march first, each cue = rally timer − (firs
 });
 
 test("RS-07 every room type's guided tour reads to the end", async ({ page }) => {
+  test.slow(); // three rooms, each toured to the end: a sweep, three times the budget
   for (const mode of ["R", "G", "C"] as const) {
     await test.step(mode, async () => {
       await openRoom(page, freshRoom(mode), { coordinator: true });
       expect(await walkTour(page)).toBeGreaterThan(1);
     });
   }
+});
+
+test("RS-11 the invite link opens the room without the password", async ({ page, otherDevice }) => {
+  const code = freshRoom("R");
+  await openRoom(page, code, { coordinator: true });
+  await page.locator('[data-tour="sync-more"]').click();
+  const invite = page.locator("details", { hasText: t("sync.invite.title") });
+  await invite.locator("summary").click();
+  // The panel first checks what this device saved (a server call), then shows the link, or offers to make it from the typed password.
+  const show = invite.getByRole("button", { name: t("sync.invite.makeLink"), exact: true });
+  const link = invite.locator("p.input", { hasText: "#k=" }).first();
+  await expect(link.or(show).first()).toBeVisible({ timeout: 15_000 });
+  if (await show.isVisible()) await show.click();
+  await expect(link).toBeVisible();
+  const url = (await link.innerText()).trim();
+
+  const guest = await otherDevice();
+  await guest.goto(url);
+  await expect(guest.locator('[data-tour="sync-status"]')).toBeVisible();
+  await expect(guest.getByLabel(t("kvk.password"))).toHaveCount(0);
+  await expectHealthyPage(guest, "en");
+});
+
+test.describe("a removed browser", () => {
+  // The removed browser's next check-in is answered 403 on purpose (that is how it learns): the browser notes the resource failure.
+  test.use({ consoleAllow: [/status of 403/] });
+
+  test("RS-12 the coordinator can log another browser out, and it needs the password again", async ({ page, otherDevice }) => {
+  test.setTimeout(90_000);
+  const code = freshRoom("R");
+  await openRoom(page, code, { coordinator: true });
+  const watcher = await otherDevice();
+  await openRoom(watcher, code);
+
+  await page.locator('[data-tour="sync-more"]').click();
+  const inRoom = page.locator("details", { hasText: tPattern("sync.instances.title") });
+  await inRoom.locator("summary").click();
+  const remove = inRoom.getByRole("button", { name: t("sync.instances.remove"), exact: true }).first();
+  await expect(remove).toBeVisible({ timeout: 15_000 });
+  await remove.click();
+  await inRoom.getByRole("button", { name: t("sync.instances.removeConfirm"), exact: true }).click();
+  await expect(inRoom.getByText(t("sync.instances.removed"))).toBeVisible();
+  // The removed browser learns it on its next check-in (polling, as the offline build has no Realtime) and asks for the password.
+  await expect(watcher.getByLabel(t("kvk.password"))).toBeVisible({ timeout: 45_000 });
+  await expectHealthyPage(watcher, "en");
+  });
+});
+
+test("RS-13 garrison: the wave copies for the game chat, and Clear all needs two taps", async ({ page }) => {
+  await openRoom(page, freshRoom("G"), { coordinator: true });
+  const enemy = page.locator('[data-tour="gar-enemies"] > li').filter({ hasText: "Demo enemy A" });
+  await enemy.getByRole("button", { name: t("sync.gar.rallyStarted") }).click();
+  await enemy.getByRole("button", { name: "4:45", exact: true }).click();
+  await expect(enemy).toContainText(tPattern("sync.gar.launchesIn"));
+
+  // Copied, or shown to copy by hand where the browser keeps the clipboard away from the page.
+  await page.getByRole("button", { name: t("sync.copyChat"), exact: true }).first().click();
+  await expect(page.getByText(t("common.copied")).or(page.getByText(t("sync.copyByHand"))).first()).toBeVisible();
+
+  await page.getByRole("button", { name: t("sync.gar.clear"), exact: true }).click();
+  const confirm = page.getByRole("button", { name: t("sync.gar.clearConfirm"), exact: true });
+  await expect(confirm).toBeVisible();
+  await expect(enemy).toContainText(tPattern("sync.gar.launchesIn")); // one tap changes nothing
+  await confirm.click();
+  await expect(enemy.getByRole("button", { name: t("sync.gar.rallyStarted") })).toBeVisible();
+  await expectHealthyPage(page, "en");
+});
+
+test("RS-14 the screen-awake switch asks the browser for a wake lock, and hides where the browser has none", async ({ page, otherDevice }) => {
+  await page.addInitScript(() => {
+    const calls: string[] = [];
+    (window as unknown as { __wakeCalls: string[] }).__wakeCalls = calls;
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: {
+        request: async (type: string) => {
+          calls.push(type);
+          return { released: false, release: async () => undefined, addEventListener: () => undefined };
+        },
+      },
+    });
+  });
+  const code = freshRoom("R");
+  await openRoom(page, code);
+  const wake = page.locator('[data-tour="sync-wake"]');
+  await expect(wake).toBeVisible();
+  if ((await wake.getAttribute("aria-label")) === t("sync.wake.off")) await wake.click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __wakeCalls: string[] }).__wakeCalls.length)).toBeGreaterThan(0);
+
+  const plain = await otherDevice();
+  await plain.addInitScript(() => {
+    delete (Navigator.prototype as unknown as Record<string, unknown>).wakeLock;
+  });
+  await openRoom(plain, code);
+  await expect(plain.locator('[data-tour="sync-wake"]')).toHaveCount(0);
+  await expectHealthyPage(plain, "en");
 });

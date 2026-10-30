@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { builtinModules } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -46,7 +47,13 @@ const SERVER_ONLY = [
   "lib/admin/gift-codes-data.ts",
   "lib/admin/usage-data.ts",
   "lib/admin/content-data.ts",
+  "lib/admin/events-data.ts",
+  "lib/admin/kingdom-data.ts",
   "lib/admin/content-write.ts",
+  "lib/api-auth.ts",
+  "lib/retro/gate.ts",
+  "lib/translate/anthropic.ts",
+  "lib/translate/gemini.ts",
   "lib/content/image-store.ts",
   "lib/alerts.ts",
   "lib/translate/translate-row.ts",
@@ -55,7 +62,8 @@ const SERVER_ONLY = [
   "lib/backup/tables.ts",
   "content/seed/index.ts",
 ];
-const SERVER_ONLY_PACKAGES = ["sanitize-html", "marked", "@supabase/supabase-js", "@supabase/ssr", "@anthropic-ai/sdk", "@google/genai", "server-only"];
+// Also every Node built-in, with or without the `node:` prefix, and Next's request-time APIs.
+const SERVER_ONLY_PACKAGES = ["sanitize-html", "marked", "@supabase/supabase-js", "@supabase/ssr", "@anthropic-ai/sdk", "@google/genai", "server-only", "next/headers", "next/server"];
 
 const SOURCE_EXT = [".ts", ".tsx"];
 
@@ -163,7 +171,7 @@ describe("client components", () => {
       for (const [mod, path] of graph) {
         const pkg = mod.startsWith("pkg:") ? mod.slice(4) : null;
         const forbidden = pkg
-          ? SERVER_ONLY_PACKAGES.some((name) => pkg === name || pkg.startsWith(`${name}/`)) || pkg.startsWith("node:")
+          ? SERVER_ONLY_PACKAGES.some((name) => pkg === name || pkg.startsWith(`${name}/`)) || pkg.startsWith("node:") || builtinModules.includes(pkg)
           : SERVER_ONLY.includes(mod);
         if (forbidden) offences.push(path.join(" → "));
       }

@@ -41,7 +41,12 @@ const OFFLINE_ENV: Record<string, string> = {
 };
 
 // CI has built the site in the step before; a local run builds it here, offline.
-const serve = `npm run start -- --port ${PORT}`;
+// Idle connections stay open longer than any test runs (45 s; RS-12 90 s): Node closes them after
+// 5 s by default, and WebKit reuses a connection the server has just closed and fails a Server
+// Action with "The network connection was lost" (a GET it retries, a POST never; Chromium retries
+// both). Only this test server is affected: Vercel's edge keeps the browser's connections itself.
+const KEEP_ALIVE_MS = 120_000;
+const serve = `npm run start -- --port ${PORT} --keepAliveTimeout ${KEEP_ALIVE_MS}`;
 
 export default defineConfig({
   testDir: "e2e",

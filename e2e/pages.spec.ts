@@ -4,6 +4,7 @@ import { expect, test } from "./support/test";
 test.describe("every page in every language", () => {
   for (const locale of LOCALES) {
     test(`SITE-01 every public page opens in ${locale}`, async ({ page }) => {
+      test.slow(); // every public page in one language: a sweep, three times the budget (the macOS runner takes three to five times longer than Linux for the same pages)
       for (const { path } of PUBLIC_PAGES) {
         await test.step(path, async () => {
           const response = await page.goto(at(locale, path));
@@ -42,4 +43,11 @@ test("SITE-08 search engines are asked to stay away", async ({ page, request }) 
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   const robots = await request.get("/robots.txt");
   expect(await robots.text()).toMatch(/^Disallow: \/$/m);
+});
+
+test("SITE-10 the admin area asks to sign in when nobody is signed in", async ({ page }) => {
+  await page.goto(at("en", "/admin"));
+  await expect(page).toHaveURL(/\/en\/admin\/login/);
+  await expect(page.getByRole("heading", { level: 1, name: "Admin area" })).toBeVisible();
+  await expectHealthyPage(page, "en");
 });

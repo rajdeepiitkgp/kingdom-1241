@@ -1,4 +1,5 @@
 import { SEED_ALLIANCES } from "@/content/seed/alliances";
+import { KINGSHOT_GIFT_CODES_PAGE, OFFICIAL_REDEEM_PAGE } from "@/lib/gift-codes/kingshot";
 import { SEED_EVENTS } from "@/content/seed/events";
 import { SEED_RULE_TOPICS } from "@/content/seed/rules";
 import { at, expectHealthyPage, hydrated, t } from "./support/site";
@@ -66,4 +67,25 @@ test("CONT-03 the guides list opens each guide", async ({ page }) => {
       await expectHealthyPage(page, "en");
     });
   }
+});
+
+test("HOME-03 Home shows the gift codes, or says there are none, with kingshot.net's credit and the official redeem page", async ({ page }) => {
+  await page.goto(at("en", "/"));
+  const codes = page.locator('[data-tour="home-gift-codes"]');
+  // The offline build holds no codes: the empty line shows, the credit and the redeem link stay.
+  await expect(codes.getByText(t("home.noGiftCodes"))).toBeVisible();
+  await expect(codes.getByRole("link", { name: t("home.giftCodesRedeem") })).toHaveAttribute("href", OFFICIAL_REDEEM_PAGE);
+  await expect(codes.locator(`a[href="${KINGSHOT_GIFT_CODES_PAGE}"]`)).toBeVisible();
+  await expectHealthyPage(page, "en");
+});
+
+test("CONT-07 an event each alliance schedules itself shows its day and says so", async ({ page }) => {
+  await page.goto(at("en", "/events"));
+  const byAlliance = SEED_EVENTS.find((e) => e.timing === "alliance");
+  const fixed = SEED_EVENTS.find((e) => e.timing !== "alliance");
+  if (!byAlliance || !fixed) throw new Error("the seed needs an event of each timing");
+  const card = (name: string) => page.locator("main li", { hasText: name }).first();
+  await expect(card(byAlliance.name)).toContainText(t("events.allianceTimes"));
+  await expect(card(fixed.name)).not.toContainText(t("events.allianceTimes"));
+  await expectHealthyPage(page, "en");
 });

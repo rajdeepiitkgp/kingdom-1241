@@ -6,6 +6,7 @@ import { expect, test } from "./support/test";
 const mainMenu = (page: Page) => page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
 
 test("SITE-04 the menu reaches every section", async ({ page }) => {
+  test.slow(); // every section and KvK page in turn: a sweep, three times the budget
   await page.goto(at("en", "/"));
   const sections = [
     { key: "nav.events", path: "/events" },
@@ -71,6 +72,7 @@ test("SITE-06 dark mode stays on across pages and a language switch", async ({ p
 });
 
 test("SITE-07 the largest text size is kept across pages and every page still fits", async ({ page }) => {
+  test.slow(); // every public page at the largest text size: a sweep, three times the budget
   await page.goto(at("de", "/"));
   const larger = page.getByRole("button", { name: t("textSize.larger", "de") });
   await hydrated(larger);
