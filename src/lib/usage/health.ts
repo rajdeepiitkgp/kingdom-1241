@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { AllianceSyncState } from "@/lib/alliances/sync-plan";
 import type { GiftCodeSyncState } from "@/lib/gift-codes/sync-plan";
-import { IMAGE_BUDGET_BYTES } from "@/lib/content/images";
+import { IMAGE_BUDGET_BYTES, IMAGE_TARGET_BYTES } from "@/lib/content/images";
 import { BROWSER_BUDGET } from "@/lib/rally-sync/capacity";
 import { DAY, HOUR, MINUTE } from "@/lib/time";
 
@@ -234,7 +234,7 @@ function databaseChecks(snapshot: UsageSnapshot | null, ref: string | null): Che
           value: `${formatBytes(snapshot.storageBytes)} of ${formatBytes(IMAGE_BUDGET_BYTES)} for images, ${plural(snapshot.storageObjects ?? 0, "file")}`,
           level: shareLevel(snapshot.storageBytes / IMAGE_BUDGET_BYTES),
           share: snapshot.storageBytes / IMAGE_BUDGET_BYTES,
-          detail: `The images of announcements, rules and guides, in Supabase Storage (free plan: ${formatBytes(FREE_PLAN.storageBytes)}). The editor stops uploads at ${formatBytes(IMAGE_BUDGET_BYTES)}, half of it; each image is shrunk to 600 KB or less first, and images no text uses any more are deleted once a day. To make room sooner, take images out of old announcements.`,
+          detail: `The images of announcements, rules and guides, in Supabase Storage (free plan: ${formatBytes(FREE_PLAN.storageBytes)}). The editor stops uploads at ${formatBytes(IMAGE_BUDGET_BYTES)}, half of it; each image is shrunk to about ${formatBytes(IMAGE_TARGET_BYTES)} first, and images no text uses any more are deleted once a day. To make room sooner, take images out of old announcements.`,
         },
   );
   if (snapshot.connections !== null && snapshot.maxConnections) {

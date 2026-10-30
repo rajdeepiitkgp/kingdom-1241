@@ -146,7 +146,8 @@ function AllianceRow({ alliance, ranking, locale }: { alliance: OwnerAlliance; r
           </button>
         </form>
       </div>
-      <Notice state={showState.status === "error" ? showState : removeState} className="ms-7" />
+      <Notice state={showState} className="ms-7" />
+      <Notice state={removeState} className="ms-7" />
       {editing && (
         <div className="ms-7 rounded-xl border border-line p-4">
           <AllianceForm action={saveAlliance} locale={locale} initial={alliance} id={alliance.id} submit="Save" />

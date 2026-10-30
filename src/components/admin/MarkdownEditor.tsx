@@ -6,7 +6,7 @@ import { Bold, Heading2, ImagePlus, Italic, Link, List, ListOrdered, OctagonAler
 import { type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { SanitizedHtml } from "@/components/content/SanitizedHtml";
 import { previewMarkdown, uploadContentImage } from "@/lib/admin/content-actions";
-import { IMAGE_MAX_BYTES, IMAGE_MAX_HEIGHT, IMAGE_MAX_WIDTH, type ImageKind, IMAGES_PER_TEXT, imageUrls } from "@/lib/content/images";
+import { IMAGE_MAX_BYTES, IMAGE_MAX_HEIGHT, IMAGE_MAX_WIDTH, IMAGE_TARGET_BYTES, type ImageKind, IMAGES_PER_TEXT, imageUrls } from "@/lib/content/images";
 import { imageMarkdown, insertBlock, insertLink, TABLE_TEMPLATE, type TextEdit, toggleDangerBox, toggleLinePrefix, toggleWrap } from "@/lib/content/markdown-edit";
 import { canShrinkImages, ShrinkError, shrinkImage } from "@/lib/content/shrink";
 
@@ -285,8 +285,8 @@ export function MarkdownEditor({
       )}
       {canUpload ? (
         <p className="border-t border-line bg-card-soft px-3 py-1.5 text-xs text-ink-faint">
-          Images: up to {maxImages}. Any screenshot or photo works: it is shrunk to at most {IMAGE_MAX_WIDTH} × {IMAGE_MAX_HEIGHT} pixels and under{" "}
-          {Math.round(IMAGE_MAX_BYTES / 1024)} KB before it uploads. Images from other sites aren&apos;t shown.
+          Images: up to {maxImages}. Any screenshot or photo works: it is shrunk to at most {IMAGE_MAX_WIDTH} × {IMAGE_MAX_HEIGHT} pixels and about{" "}
+          {Math.round(IMAGE_TARGET_BYTES / 1024)} KB (never over {Math.round(IMAGE_MAX_BYTES / 1024)} KB) before it uploads. Images from other sites aren&apos;t shown.
         </p>
       ) : (
         locked && (

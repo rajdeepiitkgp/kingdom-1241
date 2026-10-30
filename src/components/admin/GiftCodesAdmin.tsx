@@ -144,7 +144,8 @@ function CodeRow({ code, locale }: { code: AdminGiftCode; locale: string }) {
           </form>
         )}
       </div>
-      <Notice state={showState.status === "error" ? showState : deleteState} />
+      <Notice state={showState} />
+      <Notice state={deleteState} />
       {editing && (
         <div className="rounded-xl border border-line p-4">
           <CodeForm locale={locale} code={code} />
