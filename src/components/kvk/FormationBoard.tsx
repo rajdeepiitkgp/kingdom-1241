@@ -16,6 +16,7 @@ import {
   sortFormations,
   type FormationFilter,
 } from "@/lib/kvk/formations";
+import { useClipboardAvailable } from "../ui/useClipboardAvailable";
 import { HeroAvatar } from "./HeroAvatar";
 import { TroopRatioBar } from "./TroopRatioBar";
 
@@ -128,6 +129,7 @@ export function FormationBoard({
     writeSaved(key, [...next]);
   }
 
+  const canCopy = useClipboardAvailable();
   async function copy(f: KvkFormation) {
     try {
       await navigator.clipboard.writeText(formationSummary(f, heroNames(f), { troops: troopLabels, otherHeroes }));
@@ -279,12 +281,14 @@ export function FormationBoard({
                     </p>
                   )}
 
-                  <footer className="mt-auto flex justify-end">
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => copy(f)}>
-                      {copied === f.id ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-                      <span>{copied === f.id ? dict["common.copied"] : dict["common.copy"]}</span>
-                    </button>
-                  </footer>
+                  {canCopy && (
+                    <footer className="mt-auto flex justify-end">
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => copy(f)}>
+                        {copied === f.id ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+                        <span>{copied === f.id ? dict["common.copied"] : dict["common.copy"]}</span>
+                      </button>
+                    </footer>
+                  )}
                 </article>
               </li>
             );
