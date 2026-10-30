@@ -120,7 +120,7 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                   </Link>
                   {alliance.discordUrl && (
                     <a href={alliance.discordUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm">
-                      Discord <ExternalLink className="size-3.5" aria-hidden />
+                      {dict["common.discord"]} <ExternalLink className="size-3.5" aria-hidden />
                     </a>
                   )}
                 </div>

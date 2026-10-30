@@ -10,6 +10,7 @@ import { ContentTranslationMode } from "@/components/admin/ContentTranslationMod
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { type AdminAnnouncement, getAnnouncementForEditing } from "@/lib/admin/content-data";
 import { BODY_MAX, bodySourceFor, TITLE_MAX } from "@/lib/admin/content-forms";
+import { isUuid } from "@/lib/admin/forms";
 import { parseEditLang } from "@/lib/admin/translation";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
@@ -58,6 +59,7 @@ async function Editor({ locale, params, searchParams }: { locale: string; params
     );
   }
 
+  if (!isUuid(id)) notFound();
   const [announcement, languages] = await Promise.all([getAnnouncementForEditing(id), getLanguages()]);
   if (!announcement) notFound();
   const enabled = languages.filter((l) => l.enabled);

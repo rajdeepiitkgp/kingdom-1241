@@ -33,7 +33,8 @@ export async function setRole(_previous: ActionState, formData: FormData): Promi
   if (!(ROLES as readonly string[]).includes(role)) return { status: "error", message: "Unknown role." };
 
   const admin = createAdminClient();
-  const { data: target } = await admin.from("profiles").select("role, discord_id, discord_username, email").eq("id", id).maybeSingle();
+  const { data: target, error: readError } = await admin.from("profiles").select("role, discord_id, discord_username, email").eq("id", id).maybeSingle();
+  if (readError) return failed(log, "Reading the account", readError);
   if (!target) return UNKNOWN_ACCOUNT;
   const problem = roleChangeProblem({
     actorIsOwner: access.user.isOwner,
@@ -140,7 +141,11 @@ export async function removeAccount(formData: FormData): Promise<void> {
   const log = await actionLogger();
 
   const admin = createAdminClient();
-  const { data: target } = await admin.from("profiles").select("role, discord_id, discord_username, email, game_name").eq("id", id).maybeSingle();
+  const { data: target, error: readError } = await admin.from("profiles").select("role, discord_id, discord_username, email, game_name").eq("id", id).maybeSingle();
+  if (readError) {
+    log.error("Reading the account failed", { id, error: readError.message });
+    redirect(`${usersPage}?error=remove`);
+  }
   if (!target) redirect(usersPage);
   const problem = removeAccountProblem({
     actorIsOwner: access.user.isOwner,

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { ReactNode } from "react";
 
 /** A quiet fold-out section of the coordinator's panel; `onToggle` hears it open and close. */

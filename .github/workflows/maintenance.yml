@@ -223,6 +223,9 @@ jobs:
         run: |
           test -n "$SITE_URL" || { echo "SITE_URL secret is missing"; exit 1; }
           test -n "$TRANSLATE_WEBHOOK_SECRET" || { echo "TRANSLATE_WEBHOOK_SECRET secret is missing"; exit 1; }
+          # Both go into SQL through sed: only characters that can't end the quote or the sed expression.
+          [[ "${SITE_URL%/}" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$ ]] || { echo "SITE_URL must be a plain https address"; exit 1; }
+          [[ "$TRANSLATE_WEBHOOK_SECRET" =~ ^[A-Za-z0-9._~-]{16,}$ ]] || { echo "TRANSLATE_WEBHOOK_SECRET must be 16+ letters, digits, . _ ~ -"; exit 1; }
           sed -e "s|https://YOUR-SITE.vercel.app|${SITE_URL%/}|" \
               -e "s|YOUR_TRANSLATE_WEBHOOK_SECRET|$TRANSLATE_WEBHOOK_SECRET|" \
               supabase/webhooks.sql > "$RUNNER_TEMP/webhooks.sql"

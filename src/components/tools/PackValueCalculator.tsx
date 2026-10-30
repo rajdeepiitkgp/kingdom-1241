@@ -3,7 +3,7 @@
 
 import clsx from "clsx";
 import { Gem, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import {
   calculatePackValue,
@@ -32,16 +32,13 @@ const RATING_STYLE: Record<PackRating, string> = {
   poor: "bg-danger-soft text-danger",
 };
 
-let nextKey = 1;
-const newKey = () => nextKey++;
-
-function lineFromCatalog(itemId: string): LineState {
+function lineFromCatalog(itemId: string, key: number): LineState {
   if (itemId === "custom") {
-    return { key: newKey(), itemId: "custom", name: "", quantity: "1", gems: "0", basicResource: false };
+    return { key, itemId: "custom", name: "", quantity: "1", gems: "0", basicResource: false };
   }
   const item = PACK_ITEM_CATALOG.find((i) => i.id === itemId) ?? PACK_ITEM_CATALOG[0];
   return {
-    key: newKey(),
+    key,
     itemId: item.id,
     name: item.name,
     quantity: "1",
@@ -51,10 +48,10 @@ function lineFromCatalog(itemId: string): LineState {
 }
 
 const DEFAULT_LINES = (): LineState[] => [
-  { ...lineFromCatalog("gem"), quantity: "1000" },
-  { ...lineFromCatalog("speedup-1h"), quantity: "10" },
-  { ...lineFromCatalog("forgehammer"), quantity: "5" },
-  { ...lineFromCatalog("bread-10k"), quantity: "100" },
+  { ...lineFromCatalog("gem", 1), quantity: "1000" },
+  { ...lineFromCatalog("speedup-1h", 2), quantity: "10" },
+  { ...lineFromCatalog("forgehammer", 3), quantity: "5" },
+  { ...lineFromCatalog("bread-10k", 4), quantity: "100" },
 ];
 
 export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale: string }) {
@@ -64,6 +61,8 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
   const [lines, setLines] = useState<LineState[]>(DEFAULT_LINES);
   const [picker, setPicker] = useState("");
   const toggleId = useId();
+  // Keys for lines added here; the four default lines took 1 to 4.
+  const nextKey = useRef(5);
 
   // Formatted on the server too: the elements that show a number carry suppressHydrationWarning, because a
   // browser with older locale data (digits, separators) would otherwise make React redraw the page (#418).
@@ -83,7 +82,8 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
 
   function addItem(itemId: string) {
     if (!itemId) return;
-    setLines((current) => [...current, lineFromCatalog(itemId)]);
+    const key = nextKey.current++;
+    setLines((current) => [...current, lineFromCatalog(itemId, key)]);
     setPicker("");
   }
 

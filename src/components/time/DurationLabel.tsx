@@ -11,7 +11,7 @@ export function formatDuration(ms: number, dict: Dictionary, clock = false): str
     return `${pad2(d.hours)}:${pad2(d.minutes)}:${pad2(d.seconds)}`;
   }
   const parts: string[] = [];
-  if (d.days > 0) parts.push(`${d.days} ${dict["common.days"]}`);
+  if (d.days > 0) parts.push(`${d.days} ${dict[d.days === 1 ? "common.day" : "common.days"]}`);
   if (d.days > 0 || d.hours > 0) parts.push(`${d.hours} ${dict["common.hours"]}`);
   parts.push(`${d.minutes} ${dict["common.minutes"]}`);
   if (d.days === 0) parts.push(`${pad2(d.seconds)} ${dict["common.seconds"]}`);
@@ -21,7 +21,7 @@ export function formatDuration(ms: number, dict: Dictionary, clock = false): str
 export function DurationUnits({ ms, dict }: { ms: number; dict: Dictionary }) {
   const d = splitDuration(ms);
   const units: Array<[number, string]> = [];
-  if (d.days > 0) units.push([d.days, dict["common.days"]]);
+  if (d.days > 0) units.push([d.days, dict[d.days === 1 ? "common.day" : "common.days"]]);
   units.push([d.hours, dict["common.hours"]]);
   units.push([d.minutes, dict["common.minutes"]]);
   if (d.days === 0) units.push([d.seconds, dict["common.seconds"]]);

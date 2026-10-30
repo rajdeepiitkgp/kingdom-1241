@@ -43,7 +43,8 @@ jobs:
   migrate:
     name: ${{ github.event_name == 'pull_request' && 'Dry run' || 'Apply migrations' }}
     # Pull requests from forks have no secrets; the dry run only makes sense for branches of this repository.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Dependabot's runs get no secrets, so its pull requests skip the dry run (CI still builds them).
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

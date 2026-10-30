@@ -189,7 +189,7 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
           </div>
 
           {/* Visual ratio bar: after refill */}
-          <RatioBar rows={result.rows} labelFor={labelFor} />
+          <RatioBar rows={result.rows} labelFor={labelFor} pf={pf} />
         </div>
       </div>
     </section>
@@ -225,9 +225,11 @@ const BAR_COLORS: Record<TroopType, string> = {
 function RatioBar({
   rows,
   labelFor,
+  pf,
 }: {
   rows: Array<{ type: TroopType; afterPercent: number }>;
   labelFor: (type: TroopType) => string;
+  pf: Intl.NumberFormat;
 }) {
   return (
     <div>
@@ -240,7 +242,10 @@ function RatioBar({
         {rows.map((row) => (
           <li key={row.type} className="inline-flex items-center gap-1.5">
             <span className={clsx("size-2.5 rounded-full", BAR_COLORS[row.type])} aria-hidden />
-            {labelFor(row.type)} <span className="text-ink tabular">{row.afterPercent.toFixed(1)}%</span>
+            {labelFor(row.type)}{" "}
+            <span className="text-ink tabular" suppressHydrationWarning>
+              {pf.format(row.afterPercent)}%
+            </span>
           </li>
         ))}
       </ul>

@@ -8,7 +8,12 @@ export function alliancePath(tag: string): string {
   return `/alliances/${encodeURIComponent(tag)}`;
 }
 
-/** The tag in an address segment (decoded once; a segment that isn't valid encoding is taken as typed). */
+/**
+ * The tag in an address segment. Next hands a route param decoded already; a link built
+ * elsewhere (a chat, a bookmark) may still carry the encoded form, so a segment with a `%`
+ * is decoded once more. A tag with a literal percent sign would need encoding twice; none
+ * of the kingdom's tags has one. A segment that isn't valid encoding is taken as typed.
+ */
 export function tagFromSegment(segment: string): string {
   if (!segment.includes("%")) return segment;
   try {

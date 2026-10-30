@@ -14,6 +14,7 @@ import { battleMinutes } from "@/lib/kvk/battle-window";
 import { latestPetsOffset } from "@/lib/kvk/leaders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
+import { nextSortOrder as nextSortOrderIn } from "./content-write";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
 import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, textField, uuidField } from "./forms";
@@ -88,7 +89,8 @@ export async function savePlan(_previous: ActionState, formData: FormData): Prom
   type ExistingPlan = { title: Localized; intro: Localized; intro_source: Localized | null; battle_at: string | null; battle_end_at?: string | null; active?: boolean };
   let existing: ExistingPlan | null = null;
   if (id) {
-    const { data } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();
+    const { data, error: readError } = await admin.from("kvk_plans").select("*").eq("id", id).maybeSingle();
+    if (readError) return failed(log, "Reading the plan", readError);
     if (!data) return PLAN_GONE;
     existing = data as ExistingPlan;
   }
@@ -232,7 +234,8 @@ export async function duplicatePlan(formData: FormData): Promise<void> {
     "kvk_checklist_items",
     "kvk_checklist_rules",
   ] as const) {
-    const { data: rows } = await admin.from(table).select("*").eq("plan_id", id);
+    const { data: rows, error: rowsError } = await admin.from(table).select("*").eq("plan_id", id);
+    if (rowsError) log.error("Reading plan rows to copy failed", { table, from: id, error: rowsError.message });
     if (!rows || rows.length === 0) continue;
     // Rally start times belong to the old battle, like its battle time.
     const copies = rows.map((row) => ({ ...withoutRowMeta(row as Record<string, unknown>), plan_id: newId, ...(table === "kvk_rally_leaders" ? { start_at: null } : {}) }));
@@ -282,18 +285,12 @@ async function planExists(planId: string): Promise<boolean> {
  * guessing 0 would put the new row at the top.
  */
 async function nextSortOrder(log: Logger, table: ChildTable, planId: string): Promise<number | null> {
-  const { data, error } = await createAdminClient()
-    .from(table)
-    .select("sort_order")
-    .eq("plan_id", planId)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    log.error(`Reading the last position in ${table} failed`, { planId, error: error.message });
+  const next = await nextSortOrderIn(createAdminClient(), table, { column: "plan_id", value: planId });
+  if ("error" in next) {
+    log.error(`Reading the last position in ${table} failed`, { planId, error: next.error.message });
     return null;
   }
-  return typeof data?.sort_order === "number" ? data.sort_order + 1 : 0;
+  return next.value;
 }
 
 async function saveChild(
@@ -380,7 +377,8 @@ export async function saveCoordinator(_previous: ActionState, formData: FormData
   const log = await actionLogger();
   const planId = uuidField(formData, "planId");
   if (!planId || !(await planExists(planId))) return PLAN_GONE;
-  const { data: alliances } = await createAdminClient().from("alliances").select("tag");
+  const { data: alliances, error: alliancesError } = await createAdminClient().from("alliances").select("tag");
+  if (alliancesError) return failed(log, "Reading the alliances", alliancesError);
   const parsed = parseCoordinatorForm(formData, (alliances ?? []).map((a) => String(a.tag)));
   if (!parsed.ok) return invalid(parsed.errors);
   const id = uuidField(formData, "id");
@@ -405,7 +403,8 @@ export async function saveFormation(_previous: ActionState, formData: FormData):
   const planId = uuidField(formData, "planId");
   if (!planId || !(await planExists(planId))) return PLAN_GONE;
   const admin = createAdminClient();
-  const { data: heroes } = await admin.from("heroes").select("slug");
+  const { data: heroes, error: heroesError } = await admin.from("heroes").select("slug");
+  if (heroesError) return failed(log, "Reading the heroes", heroesError);
   const parsed = parseFormationForm(formData, (heroes ?? []).map((h) => String(h.slug)));
   if (!parsed.ok) return invalid(parsed.errors);
   const id = uuidField(formData, "id");
