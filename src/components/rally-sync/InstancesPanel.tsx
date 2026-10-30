@@ -2,7 +2,7 @@
 "use client";
 
 import { LogOut, UserX } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { coordinate, listInstances } from "@/lib/rally-sync/actions";
 import { HEARTBEAT_MS, instanceLabel, type InstanceView } from "@/lib/rally-sync/room";
@@ -15,13 +15,16 @@ const ON_SCREEN_MS = HEARTBEAT_MS + 60_000;
 /**
  * The coordinator's "In the room" list: every browser that opened the room,
  * shown by its own name, its leaders' names or its random tag, with Remove for
- * each other one and "log everyone else out". Loaded again whenever the room
- * changes (`version`), so joins and removals show up on their own.
+ * each other one and "log everyone else out". Loaded once for the count in its
+ * title, then again whenever the room changes (`version`) while the fold is
+ * open (`active`), so joins and removals show up on their own without a server
+ * call per room change while nobody is looking.
  */
 export function InstancesPanel({
   code,
   token,
   version,
+  active,
   now,
   dict,
   onCount,
@@ -30,6 +33,8 @@ export function InstancesPanel({
   token: string;
   /** Changes whenever the room's state was fetched again. */
   version: number | null;
+  /** Whether the fold that holds the list is open. */
+  active: boolean;
   now: number | null;
   dict: Dictionary;
   onCount: (count: number) => void;
@@ -50,7 +55,12 @@ export function InstancesPanel({
   }, [code, token, onCount]);
   const { pending, run, errorFor } = useRunner(load);
 
-  useEffect(load, [load, version]);
+  const loadedOnce = useRef(false);
+  useEffect(() => {
+    if (!active && loadedOnce.current) return; // folded: the count from the first load is enough
+    loadedOnce.current = true;
+    load();
+  }, [load, version, active]);
 
   async function remove(instanceId: string) {
     setConfirm(null);

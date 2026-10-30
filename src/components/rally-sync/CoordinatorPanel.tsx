@@ -73,6 +73,7 @@ export function CoordinatorPanel({
   const [confirmDestroy, setConfirmDestroy] = useState(false);
   const [more, setMore] = useState(false);
   const [instanceCount, setInstanceCount] = useState<number | null>(null);
+  const [instancesOpen, setInstancesOpen] = useState(false);
   // While a rally runs, Re-sync would replace its hit time under every leader: the first tap only arms it.
   const [resyncArmed, setResyncArmed] = useState(false);
   useEffect(() => {
@@ -291,8 +292,8 @@ export function CoordinatorPanel({
           <InvitePanel code={room.code} token={token} dict={dict} />
         </Disclosure>
 
-        <Disclosure title={format(dict["sync.instances.title"], { n: instanceCount ?? "…" })}>
-          <InstancesPanel code={room.code} token={token} version={version} now={now} dict={dict} onCount={setInstanceCount} />
+        <Disclosure title={format(dict["sync.instances.title"], { n: instanceCount ?? "…" })} onToggle={setInstancesOpen}>
+          <InstancesPanel code={room.code} token={token} version={version} active={instancesOpen} now={now} dict={dict} onCount={setInstanceCount} />
         </Disclosure>
 
         {room.mode === "rally" && room.history.length > 0 && (
