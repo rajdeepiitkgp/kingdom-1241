@@ -67,7 +67,6 @@ When a feature changes, change its specs first, then the code. A test that fails
 Found by the browser suite and not fixed yet. Each has a decision pending; the tests wait it out so they stay green.
 
 - **A tap in the first moment after a page appears can be lost in Safari's engine.** On the locked battle pages, Rally Sync's Open room and other forms, a tap on the button before the page's scripts have taken over sends nothing: the page stays as it was, the password still in the field, no message. A second tap works. Chrome sends it anyway (as a plain form post). Seen in Playwright's WebKit, which iPhones share; to confirm on a real iPhone on a slow connection. Tests wait for the page with `hydrated()` before tapping.
-- **Numbers on the Tools page can make React redraw it in a browser with older locale data.** The calculators format numbers with `Intl.NumberFormat` on the server (Node, ICU 78) and again in the browser. Older locale data writes Arabic numbers with Arabic-Indic digits and Italian with a thousands dot, so the two disagree. React then reports error #418 and draws the calculators again in the browser: the page works, after a flicker. Seen in WebKit's Linux build (ICU 74); current Chrome and Safari agree with the server. A visitor with an older phone browser would see it. A fix is to show the numbers once the page has loaded in the browser.
 
 ## Specs
 
@@ -121,6 +120,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | KVK-05 | The feedback page says so when there is no feedback form. | Browser |
 | KVK-06 | The prep calendar: rounds every 28 days from 1 Nov 2026, the day boundaries, the Saturday shield and battle times, the intel stacking days. | Unit: tests/lib/kvk/prep.test.ts |
 | KVK-07 | Wrong passwords lock out one address for a while and only alert for the plan; nobody is ever locked out by other players' guesses. | Unit: tests/lib/kvk/throttle.test.ts |
+| KVK-08 | A battle's plan stays active while its feedback form is open: the editor refuses to activate another plan or deactivate this one until the form is closed, and a form opens for the active plan only. | Unit: tests/lib/admin/kvk-forms.test.ts |
 
 ### Rally Sync
 
@@ -128,7 +128,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | --- | --- | --- |
 | RS-01 | A room opens with its ID and password from the Rally Sync page; a wrong password is refused and the typed room ID stays. | Browser |
 | RS-02 | Re-sync sets the earliest hit everyone can make (now + rally timer + longest march + buffer), and every leader's start is hit − rally timer − march, earliest first. | Browser |
-| RS-03 | A leader who joins during a running rally is in from the next one (nothing moves under the others); when the coordinator sets the next hit time, the leader's own start appears on their device without a reload. | Browser |
+| RS-03 | A leader who joins, or whom the coordinator adds, during a running rally is in from the next one (nothing moves under the others); when the coordinator sets the next hit time, the leader's own start appears on their device without a reload. | Browser |
 | RS-04 | Re-sync while a rally runs needs a second tap: the first only shows what it would do. | Browser |
 | RS-05 | Garrison: a marked enemy rally launches after the countdown it showed and lands a march later; a defender who enters their march sees when to send, without a reload. | Browser |
 | RS-06 | Counter-rally: leaders go slowest march first, and each cue is rally timer − (that leader's march − own march). | Browser |

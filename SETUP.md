@@ -268,7 +268,7 @@ Formations tagged with a side or role get filter chips on the page (attack, defe
 
 ### 9a. Battle feedback (retrospective)
 
-After a battle the council can open a short feedback form for that plan: Admin → battle plan → **Player feedback** → tick *Open* and save. Players reach it from the card at the top of the battle plan or at `/kvk/feedback`, behind the same password as the plan (the cookie of the active plan is accepted too, so the previous battle can collect feedback while the next plan is already live). One form is open at a time; opening one closes the others.
+After a battle the council can open a short feedback form for that plan: Admin → battle plan → **Player feedback** → tick *Open* and save. Players reach it from the card at the top of the battle plan or at `/kvk/feedback`, behind the same password as the plan. Keep that plan active while its form is open (the editor refuses to activate the next plan, or to deactivate this one, until the form is closed, and a form opens for the active plan only): players unlock the feedback page with the active plan's password. One form is open at a time; opening one closes the others.
 
 **What players fill in:** their Governor ID (one answer per id; a second one is refused), their in-game name and alliance, star ratings from 0 to 5 for the questions you chose, and up to three short texts (500 characters each, any language). The questions come from a fixed catalogue (`src/lib/retro/questions.ts`, translated with the interface strings); per battle you tick which ones are **shown** and which are **required**. Texts are optional by default. The title and intro are yours (English, Markdown), translated by the pipeline like the plan intro and correctable per language in the editor's language dropdown.
 
@@ -423,7 +423,7 @@ If only Vercel is gone, steps 6 and 9 (the environment variables and nothing els
 
 **Fix a translation by hand.** Edit the language's value in the JSON. It stays until the English text of that row changes, which re-translates every language.
 
-**After a battle.** Admin → the plan → *Player feedback* → tick *Open*, save; a day or two later read the results under *Feedback*, export the CSV, then untick *Open* (or let the closing time do it). § 9a.
+**After a battle.** Admin → the plan → *Player feedback* → tick *Open*, save; a day or two later read the results under *Feedback*, export the CSV, then untick *Open* (or let the closing time do it); only then activate the next plan. § 9a.
 
 **KvK prep days** (`/kvk/prep`, public). Nothing to do per round: the page moves to the next round by itself (every 28 days from Sunday 1 Nov 2026). The schedule, the item × day table, the points and the tips are code (`src/lib/kvk/prep.ts`, texts `prep.*` in `src/content/seed/ui-strings.ts`), so a change is a PR; after a wording change run Maintenance → `sync-ui`, then `translate`. If the game ever shifts a round, change `FIRST_PREP_ROUND` in the same file.
 
