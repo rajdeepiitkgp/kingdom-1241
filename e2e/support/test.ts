@@ -37,13 +37,20 @@ export const test = base.extend<{
 });
 
 /**
- * Noise that isn't the site's: WebKit reports a link prefetch (`?_rsc=`) that
- * a navigation cancelled as an access-control failure; the next page loads fine.
+ * Noise that isn't the site's: WebKit reports a request to the page's own site
+ * that a navigation cancelled (a link prefetch `?_rsc=`, a Rally Sync room's
+ * refresh) as an access-control failure, which Playwright passes on as an
+ * uncaught error ("/localhost:3100/api/rally-sync/E2GABD due to access control
+ * checks."). A request to its own site can't fail that check, the site catches
+ * it and the next page loads fine. One to another site still counts.
  */
-const BROWSER_NOISE = [/\?_rsc=\S+ due to access control checks/];
+function cancelledOwnRequest(page: Page, text: string): boolean {
+  if (!text.includes("due to access control checks") || !URL.canParse(page.url())) return false;
+  return text.includes(`/${new URL(page.url()).host}/`);
+}
 
 function watchConsole(page: Page, problems: string[], allow: RegExp[]) {
-  const expected = (text: string) => [...BROWSER_NOISE, ...allow].some((pattern) => pattern.test(text));
+  const expected = (text: string) => cancelledOwnRequest(page, text) || allow.some((pattern) => pattern.test(text));
   page.on("console", (message) => {
     if (message.type() === "error" && !expected(message.text())) problems.push(`${page.url()}: ${message.text()}`);
   });
