@@ -59,8 +59,8 @@ The page cache has no job. A cached page is kept for up to a day; the first visi
 %%{init: {"flowchart": {"wrappingWidth": 200}}}%%
 flowchart LR
   E1["Text saved in English"] --> T["database trigger → the site<br/>translates into 9 languages"]
-  E2["Pull request opened or updated"] --> C["checks: lint, types, unit tests,<br/>build, browser tests on 3 devices<br/>+ a preview site"]
-  E3["Merged to main"] --> D["Vercel deploys the site<br/>+ new migrations applied to the database<br/>+ old builds deleted"]
+  E2["Pull request opened or updated"] --> C["checks: lint, types, unit tests,<br/>build, browser tests on 3 devices<br/>+ a preview site if site files changed"]
+  E3["Merged to main"] --> D["Vercel deploys the site if site files changed<br/>+ new migrations applied to the database<br/>+ old builds deleted"]
   E4["Many wrong passwords on one plan"] --> A["alert in the council's Discord"]
 ```
 

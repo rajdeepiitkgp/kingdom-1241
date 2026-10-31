@@ -84,7 +84,7 @@ flowchart TB
 | **Prerendering** | Making a page's HTML at build time instead of per request. | Public pages are prerendered in every language. |
 | **ISR** | Incremental Static Regeneration: a prerendered page is rebuilt later, when it's stale or expired. Each rebuild is an **ISR write**, which costs money. | The reason pages refresh once a day, not every five minutes. |
 | **Tailwind CSS** | Styling by short class names in the markup (`p-4 text-sm`). | Version 4, with the site's colours as variables. |
-| **Vercel** | The company that hosts the site. | Builds every pull request as a **preview** and `main` as production. |
+| **Vercel** | The company that hosts the site. | Builds every pull request as a **preview** and `main` as production, unless only files the site doesn't use changed. |
 | **Supabase** | A hosted Postgres database with sign-in, file storage and Realtime. | The site's data, admin sign-in, images, and Rally Sync's pings. |
 | **PostgreSQL (Postgres)** | A relational database: data in tables, queried with SQL. | 33 tables. |
 | **Realtime** | Supabase's service that pushes messages to browsers over WebSockets. | Carries "this room changed" pings, never the data itself. |
