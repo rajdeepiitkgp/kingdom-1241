@@ -87,6 +87,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | SITE-09 | Reviewed translations keep every placeholder of the English and step aside once the English changes. | Unit: tests/content/seed/ui-reviewed.test.ts |
 | SITE-10 | The admin area asks to sign in when nobody is signed in: the login page, never the error page. | Browser |
 | SITE-11 | A link in a language the site knows but doesn't show opens the same page in the visitor's language. | Unit: tests/lib/i18n/negotiate.test.ts |
+| SITE-12 | A theme, text-size or language change made while a new page is still fading in happens at once and leaves no error in the console (a new crossfade would cut React's short, and React reports that as an error). | Browser |
 
 ### Guided tours
 

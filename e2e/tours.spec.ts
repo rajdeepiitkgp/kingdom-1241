@@ -24,6 +24,9 @@ test("TOUR-01 the locked battle pages explain more once they are open", async ({
   for (const { path, password } of areas) {
     await test.step(path, async () => {
       await page.goto(at("en", path));
+      // The password card streams in after the header's "?": opened before it, the tour would have no step for it,
+      // and the card's field (autofocus) would take the focus the closing tour hands back to the "?".
+      await expect(page.locator('[data-tour="kvk-unlock"]')).toBeVisible();
       const locked = await walkTour(page);
       await unlock(page, password);
       await expect(page.getByRole("button", { name: t("kvk.lock") })).toBeVisible();

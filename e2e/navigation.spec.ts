@@ -89,3 +89,31 @@ test("SITE-07 the largest text size is kept across pages and every page still fi
     });
   }
 });
+
+test("SITE-12 a theme or language change while a page is still fading in happens without an error", async ({ page }) => {
+  await page.goto(at("en", "/rules"));
+  const toggle = page.getByRole("button", { name: t("theme.toggle") });
+  await hydrated(toggle);
+  // A page change's crossfade as React runs it: React keeps a handle on it, waits for it before its next one,
+  // and reports one cut short by another crossfade as an uncaught "Transition was skipped". Held open to act in it.
+  const fadingIn = () =>
+    page.evaluate(async () => {
+      const doc = document as Document & { __reactViewTransition?: ViewTransition | null };
+      await doc.__reactViewTransition?.finished;
+      const fade = document.startViewTransition(() => new Promise<void>((resolve) => setTimeout(resolve, 800)));
+      doc.__reactViewTransition = fade;
+      fade.ready.catch((error: unknown) => setTimeout(() => reportError(error)));
+      void fade.finished.finally(() => {
+        if (doc.__reactViewTransition === fade) doc.__reactViewTransition = null;
+      });
+    });
+  const isDark = async () => ((await page.locator("html").getAttribute("class")) ?? "").split(/\s+/).includes("dark");
+  const wanted = !(await isDark());
+  await fadingIn();
+  await toggle.press("Enter");
+  await expect.poll(isDark).toBe(wanted);
+  await fadingIn();
+  await page.getByRole("combobox", { name: t("lang.label") }).selectOption("ko");
+  await expect(page).toHaveURL(at("ko", "/rules"));
+  await expectHealthyPage(page, "ko");
+});
