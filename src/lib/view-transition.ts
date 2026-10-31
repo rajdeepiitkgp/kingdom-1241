@@ -2,17 +2,28 @@
  * Short crossfades via the browser's View Transitions API. Everything falls
  * back to an instant change when the API is missing or the visitor prefers
  * reduced motion. Route navigations inside one language are handled
- * declaratively by React's <ViewTransition> in the root layout; language
+ * declaratively by React's <ViewTransition> in the route template; language
  * switches (which replace the root layout) use `withNavigationTransition`.
  */
 
 type StartViewTransition = (callback: () => void | Promise<void>) => { ready?: Promise<unknown> } | undefined;
+type TransitionDocument = Document & {
+  startViewTransition?: StartViewTransition;
+  /** The crossfade running now, null without one (browsers that have it). */
+  activeViewTransition?: unknown;
+  /** React's handle on its own crossfade of a page change, the fallback where the browser has no `activeViewTransition`. */
+  __reactViewTransition?: unknown;
+};
 
 function startViewTransition(): StartViewTransition | null {
   if (typeof document === "undefined") return null;
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return null;
-  const start = (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition;
+  const doc = document as TransitionDocument;
+  const start = doc.startViewTransition;
   if (typeof start !== "function") return null;
+  // A new crossfade skips the one running, and React reports its skipped page change as an uncaught
+  // "Transition was skipped" (a theme or language tap while the new page fades in), so that change happens at once.
+  if (doc.activeViewTransition ?? doc.__reactViewTransition) return null;
   return (callback) => {
     const transition = start.call(document, callback);
     // A crossfade cut short by a newer one (a quick tap on a link right after the theme switch) rejects `ready`
