@@ -7,6 +7,8 @@ import {
   earliestHit,
   formatSeconds,
   isTooLate,
+  minuteOrder,
+  minuteStartHit,
   parseDuration,
   parseUtcClock,
   stepTime,
@@ -177,6 +179,44 @@ describe("rally sync timing", () => {
       ["Late joiner", null],
       ["In", hit - 360_000],
       ["Out", null],
+    ]);
+  });
+});
+
+describe("Re-sync on the next :00", () => {
+  const at = (time: string) => Date.parse(`2026-11-07T${time}Z`);
+  const marches = [90, 48, 35];
+  const firstStart = (now: string, buffer = 30) => new Date(minuteStartHit(at(now), 300, marches, buffer) - 390_000).toISOString().slice(11, 19);
+
+  it("starts the slowest leader on a whole minute and lands everyone a timer and the longest march later", () => {
+    const hit = minuteStartHit(at("11:22:20"), 300, marches, 30);
+    expect(new Date(hit).toISOString()).toBe("2026-11-07T11:29:30.000Z");
+    // The slowest leader's start (hit − timer − march) is 11:23:00, the others follow by the march difference.
+    expect(new Date(hit - (300 + 90) * 1000).toISOString()).toBe("2026-11-07T11:23:00.000Z");
+    expect(new Date(hit - (300 + 48) * 1000).toISOString()).toBe("2026-11-07T11:23:42.000Z");
+  });
+
+  it("takes the first :00 at least the buffer away", () => {
+    expect(firstStart("11:22:30")).toBe("11:23:00"); // exactly the buffer
+    expect(firstStart("11:22:30.5")).toBe("11:24:00");
+    expect(firstStart("11:22:33")).toBe("11:24:00");
+    expect(firstStart("11:22:33", 90)).toBe("11:25:00");
+    expect(firstStart("11:22:59", 0)).toBe("11:23:00");
+    expect(firstStart("11:23:00", 0)).toBe("11:24:00"); // never the current second
+  });
+
+  it("gives the order for any minute: slowest at 0, the others longest march − own march later", () => {
+    const order = minuteOrder([
+      { name: "Zed", marchSeconds: 10 },
+      { name: "Rajx", marchSeconds: 90 },
+      { name: "Mira", marchSeconds: 48 },
+      { name: "Ann", marchSeconds: 48 },
+    ]);
+    expect(order.map((l) => [l.name, l.afterSeconds])).toEqual([
+      ["Rajx", 0],
+      ["Ann", 42],
+      ["Mira", 42],
+      ["Zed", 80],
     ]);
   });
 });

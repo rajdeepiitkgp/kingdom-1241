@@ -2,16 +2,16 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronDown, Crown, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronDown, Crown, RefreshCw, Timer, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 import { coordinate, type CoordinatorOp } from "@/lib/rally-sync/actions";
-import { counterChat, rallyChat } from "@/lib/rally-sync/chat";
+import { counterChat, minuteChat, rallyChat } from "@/lib/rally-sync/chat";
 import { counterOrder } from "@/lib/rally-sync/counter";
 import { updateDevice } from "@/lib/rally-sync/device";
-import { IDLE_CLOSE_MS, rallyRunning, resyncMarches, type RoomView } from "@/lib/rally-sync/room";
+import { IDLE_CLOSE_MS, nextRallyMarch, rallyRunning, resyncMarches, type RoomView } from "@/lib/rally-sync/room";
 import {
   earliestHit,
   formatSeconds,
@@ -19,6 +19,7 @@ import {
   MAX_BUFFER_SECONDS,
   MAX_RALLY_WAIT_SECONDS,
   MIN_RALLY_WAIT_SECONDS,
+  minuteStartHit,
   parseDuration,
 } from "@/lib/rally-sync/timing";
 import { CopyForChat } from "./CopyForChat";
@@ -33,7 +34,7 @@ import { stepKeys } from "./step-keys";
 
 /**
  * The coordinator's controls. Always visible: the hit time in a rally room
- * (one-tap Re-sync or a typed time), the order's copy button in a counter room,
+ * (one-tap Re-sync now or on the next :00, or a typed time), the order's copy button in a counter room,
  * the enemy marking in a garrison room. Behind "More options": settings, adding
  * a leader, inviting, the previous hit times, clearing the hit time and
  * destroying the room. Times are typed and
@@ -74,13 +75,13 @@ export function CoordinatorPanel({
   const [more, setMore] = useState(false);
   const [instanceCount, setInstanceCount] = useState<number | null>(null);
   const [instancesOpen, setInstancesOpen] = useState(false);
-  // While a rally runs, Re-sync would replace its hit time under every leader: the first tap only arms it.
-  const [resyncArmed, setResyncArmed] = useState(false);
+  // While a rally runs, either Re-sync would replace its hit time under every leader: the first tap only arms it.
+  const [armed, setArmed] = useState<"resync" | "minuteStart" | null>(null);
   useEffect(() => {
-    if (!resyncArmed) return;
-    const timer = window.setTimeout(() => setResyncArmed(false), RESYNC_CONFIRM_MS);
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(null), RESYNC_CONFIRM_MS);
     return () => window.clearTimeout(timer);
-  }, [resyncArmed]);
+  }, [armed]);
   // Remounts the "add a leader" form after each add, so it starts empty again.
   const [added, setAdded] = useState(0);
   const send = (where: string, op: CoordinatorOp) => run(where, () => coordinate(room.code, token, op, clock.offsetSeconds));
@@ -90,8 +91,10 @@ export function CoordinatorPanel({
   // Re-sync starts the next rally: march times waiting for it count, leaders sitting out don't.
   const longest = Math.max(0, ...resyncMarches(leaders));
   const preview = now === null ? null : earliestHit(now, room.rallyWaitSeconds, [longest], room.bufferSeconds);
+  // On the next :00: the slowest leader starts on the first whole minute at least the buffer away, the others after them.
+  const minutePreview = now === null ? null : minuteStartHit(now, room.rallyWaitSeconds, [longest], room.bufferSeconds);
   const running = now !== null && rallyRunning(room.hitAt, now);
-  const confirmingResync = running && resyncArmed;
+  const confirming = (op: "resync" | "minuteStart") => running && armed === op;
   // Garrison and counter rooms are different tools: marking enemy rallies, or a launch order without a hit time.
   const garrison = room.mode === "garrison";
   const counter = room.mode === "counter";
@@ -99,16 +102,19 @@ export function CoordinatorPanel({
   const counterSteps = counter ? counterOrder(leaders, room.rallyWaitSeconds) : [];
   const chat =
     !counter && !garrison && room.hitAt && leaders.some((l) => l.startAt !== null)
-      ? rallyChat({ hitAt: Date.parse(room.hitAt), rallyWaitSeconds: room.rallyWaitSeconds, hitSetAt, leaders }, clock.label, dict)
+      ? rallyChat({ hitAt: Date.parse(room.hitAt), hitSetAt, leaders }, clock.label, dict)
       : null;
+  // The same order without a clock, for any minute the coordinator calls in the chat.
+  const nextRally = leaders.filter((l) => l.status !== "inactive").map((l) => ({ name: l.name, marchSeconds: nextRallyMarch(l) }));
+  const orderChat = !counter && !garrison && nextRally.length > 0 ? minuteChat(nextRally, dict) : null;
 
-  function resync() {
-    if (running && !resyncArmed) {
-      setResyncArmed(true);
+  function resync(op: "resync" | "minuteStart") {
+    if (running && armed !== op) {
+      setArmed(op);
       return;
     }
-    setResyncArmed(false);
-    void send("resync", { type: "resync" });
+    setArmed(null);
+    void send(op, { type: op });
   }
 
   /** A one-field form (time or duration): sends the op and clears the field when it worked. */
@@ -177,32 +183,64 @@ export function CoordinatorPanel({
       ) : (
         <>
           <div className="mt-4 space-y-3">
-            <button
-              type="button"
-              className={clsx("w-full py-4 text-lg", confirmingResync ? "btn-primary bg-danger" : "btn-gold")}
-              onClick={resync}
-              disabled={pending !== null}
-              data-tour="sync-resync"
-            >
-              <RefreshCw className={clsx("size-5 shrink-0", pending === "resync" && "motion-safe:animate-spin")} aria-hidden />
-              {confirmingResync && preview !== null ? <ResyncConfirmLabel template={dict["sync.coord.resyncConfirm"]} time={`${shown(preview)} ${clock.label}`} /> : dict["sync.coord.resync"]}
-            </button>
-            <p className="text-xs text-ink-muted">
-              {format(dict["sync.coord.resyncHint"], {
-                wait: formatSeconds(room.rallyWaitSeconds),
-                march: formatSeconds(longest),
-                buffer: formatSeconds(room.bufferSeconds),
-              })}
-              {preview !== null && (
-                <>
-                  {" "}
-                  <span className="font-bold text-ink tabular" dir="ltr">
-                    ≈ {shown(preview)} {clock.label}
-                  </span>
-                </>
-              )}
-            </p>
+            <div className="grid grid-cols-1 gap-x-2 gap-y-3 sm:grid-cols-2">
+              <div>
+                <button
+                  type="button"
+                  className={clsx("w-full py-4 text-lg", confirming("resync") ? "btn-primary bg-danger" : "btn-gold")}
+                  onClick={() => resync("resync")}
+                  disabled={pending !== null}
+                  data-tour="sync-resync"
+                >
+                  <RefreshCw className={clsx("size-5 shrink-0", pending === "resync" && "motion-safe:animate-spin")} aria-hidden />
+                  {confirming("resync") && preview !== null ? <ResyncConfirmLabel template={dict["sync.coord.resyncConfirm"]} time={`${shown(preview)} ${clock.label}`} /> : dict["sync.coord.resync"]}
+                </button>
+                <p className="mt-2 text-xs text-ink-muted">
+                  {format(dict["sync.coord.resyncHint"], {
+                    wait: formatSeconds(room.rallyWaitSeconds),
+                    march: formatSeconds(longest),
+                    buffer: formatSeconds(room.bufferSeconds),
+                  })}
+                  {preview !== null && (
+                    <>
+                      {" "}
+                      <span className="font-bold text-ink tabular" dir="ltr">
+                        ≈ {shown(preview)} {clock.label}
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  className={clsx("w-full py-4 text-lg", confirming("minuteStart") ? "btn-primary bg-danger" : "btn-gold")}
+                  onClick={() => resync("minuteStart")}
+                  disabled={pending !== null}
+                  data-tour="sync-minute"
+                >
+                  <Timer className={clsx("size-5 shrink-0", pending === "minuteStart" && "motion-safe:animate-spin")} aria-hidden />
+                  {confirming("minuteStart") && minutePreview !== null ? (
+                    <ResyncConfirmLabel template={dict["sync.coord.resyncConfirm"]} time={`${shown(minutePreview)} ${clock.label}`} />
+                  ) : (
+                    dict["sync.coord.minute"]
+                  )}
+                </button>
+                <p className="mt-2 text-xs text-ink-muted">
+                  {format(dict["sync.coord.minuteHint"], { buffer: formatSeconds(room.bufferSeconds) })}
+                  {minutePreview !== null && (
+                    <>
+                      {" "}
+                      <span className="font-bold text-ink tabular" dir="ltr">
+                        ≈ {shown(minutePreview)} {clock.label}
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
             {errorLine("resync")}
+            {errorLine("minuteStart")}
             <TimeForm
               id="sync-hit"
               label={format(dict["sync.coord.hitAt"], { clock: clock.label })}
@@ -220,9 +258,19 @@ export function CoordinatorPanel({
               {format(dict["sync.coord.late"], { names: late.map((l) => l.name).join(", ") })}
             </p>
           )}
-          {chat !== null && (
-            <div className="mt-3 flex flex-wrap items-center gap-2" data-tour="sync-copy">
-              <CopyForChat text={chat} dict={dict} />
+          {/* The clock times of the hit that is set, and the start order for any minute (no clock). */}
+          {(chat !== null || orderChat !== null) && (
+            <div className="mt-3 flex flex-wrap items-start gap-x-2 gap-y-3">
+              {chat !== null && (
+                <div className="flex flex-wrap items-center gap-2" data-tour="sync-copy">
+                  <CopyForChat text={chat} dict={dict} />
+                </div>
+              )}
+              {orderChat !== null && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <CopyForChat text={orderChat} label={dict["sync.copyMinute"]} dict={dict} />
+                </div>
+              )}
             </div>
           )}
         </>

@@ -147,6 +147,8 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | RS-12 | The coordinator can log another browser out; it needs the password again. | Browser |
 | RS-13 | Garrison: the wave copies for the game chat (or shows the text to copy by hand), and Clear all needs two taps. | Browser |
 | RS-14 | The screen-awake switch asks the browser for a wake lock, and hides where the browser has none. | Browser |
+| RS-15 | Re-sync on the next :00 sets the hit so the slowest leader starts on the first whole minute at least the room's buffer away and every start is hit − rally timer − march; the clock copy and the start order for any minute both copy. | Browser |
+| RS-16 | The next :00 moves to the minute after when it is closer than the buffer; the start order for any minute puts the slowest leader at 0:00 and the others longest march − own march later, with no clock. | Unit: tests/lib/rally-sync/timing.test.ts |
 
 ### Tools
 

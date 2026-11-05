@@ -72,7 +72,31 @@ export function earliestHit(now: number, rallyWaitSeconds: number, marchSeconds:
   const longest = marchSeconds.reduce((max, s) => Math.max(max, s), 0);
   return ceilToSecond(now + (rallyWaitSeconds + longest + bufferSeconds) * SECOND);
 }
+const MINUTE = 60 * SECOND;
 
+/**
+ * The hit for "Re-sync on the next :00": the slowest leader starts on the
+ * first whole minute at least the buffer from now, the time Re-sync gives them
+ * to get ready (with 0:30, at 11:22:20 that is 11:23:00, at 11:22:33 it is
+ * 11:24:00), every other leader after them by the difference in march, so all
+ * land together. Never the current second, even without a buffer.
+ */
+export function minuteStartHit(now: number, rallyWaitSeconds: number, marchSeconds: readonly number[], bufferSeconds: number): number {
+  const longest = marchSeconds.reduce((max, s) => Math.max(max, s), 0);
+  const firstStart = Math.max(Math.ceil((now + bufferSeconds * SECOND) / MINUTE), Math.floor(now / MINUTE) + 1) * MINUTE;
+  return firstStart + (rallyWaitSeconds + longest) * SECOND;
+}
+
+/**
+ * The start order without a clock: the slowest leader at 0, everyone else
+ * that many seconds later (longest march − own march), slowest first, ties by name.
+ */
+export function minuteOrder<T extends { name: string; marchSeconds: number }>(leaders: readonly T[]): Array<T & { afterSeconds: number }> {
+  const longest = leaders.reduce((max, l) => Math.max(max, l.marchSeconds), 0);
+  return leaders
+    .map((leader) => ({ ...leader, afterSeconds: longest - leader.marchSeconds }))
+    .sort((a, b) => a.afterSeconds - b.afterSeconds || a.name.localeCompare(b.name));
+}
 
 /** Whole seconds until `at` as a clock shows them: 0 during the second of `at`, negative afterwards. */
 export function secondsUntil(at: number, now: number): number {

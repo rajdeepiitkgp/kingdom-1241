@@ -645,6 +645,20 @@ export const UI_STRINGS = {
     pl: "Ustawia najwcześniejsze uderzenie, na które wszyscy zdążą: teraz + czas zbiórki {wait} + najdłuższy marsz {march} + zapas {buffer} (lider z najdłuższym marszem ma zapas na przygotowanie przed startem; pozostali mają więcej).",
     ar: "يضبط أبكر وقت إصابة يستطيعه الجميع: الآن + مؤقت الحشد {wait} + أطول مسيرة {march} + هامش {buffer} (فيحصل صاحب أطول مسيرة على الهامش للاستعداد قبل البدء، والباقون على وقت أطول).",
   },
+  "sync.coord.minute": {
+    en: "Re-sync on the next :00",
+    de: "Neu synchronisieren zur nächsten :00",
+    ko: "다음 :00에 재동기화",
+    pl: "Synchronizuj na następne :00",
+    ar: "إعادة المزامنة عند :00 التالية",
+  },
+  "sync.coord.minuteHint": {
+    en: "The slowest leader starts at :00 of the first minute at least the buffer {buffer} away, the others after them by the difference in march, so all land together.",
+    de: "Der langsamste Leiter startet zur :00 der ersten Minute, die mindestens den Puffer {buffer} entfernt ist, die anderen um den Marschunterschied später, damit alle zusammen einschlagen.",
+    ko: "행군이 가장 긴 대장이 최소 여유 {buffer} 뒤의 첫 분 :00에 출발하고, 나머지는 행군 차이만큼 뒤에 출발해 모두 함께 도착합니다.",
+    pl: "Najwolniejszy lider startuje o :00 pierwszej minuty oddalonej co najmniej o zapas {buffer}, pozostali później o różnicę marszu, więc wszyscy uderzają razem.",
+    ar: "يبدأ القائد الأبطأ عند :00 من أول دقيقة تبعد الهامش {buffer} على الأقل، والباقون بعده بفارق المسيرة، فيصل الجميع معًا.",
+  },
   "sync.coord.hitAt": {
     en: "Or set the hit time ({clock}, HH:MM:SS)",
     de: "Oder Einschlagzeit festlegen ({clock}, HH:MM:SS)",
@@ -1021,6 +1035,13 @@ export const UI_STRINGS = {
     ar: "انطلق هذا الحشد: يُحتسب الزمن الجديد من حشده التالي. لتصحيح هذا استخدم «صحّح وقت الضربة».",
   },
   "sync.copyChat": { en: "Copy for game chat", de: "Für den Spielchat kopieren", ko: "게임 채팅용 복사", pl: "Kopiuj do czatu gry", ar: "انسخ لدردشة اللعبة" },
+  "sync.copyMinute": {
+    en: "Copy start order (any minute)",
+    de: "Startreihenfolge kopieren (jede Minute)",
+    ko: "출발 순서 복사 (아무 분)",
+    pl: "Kopiuj kolejność startu (dowolna minuta)",
+    ar: "انسخ ترتيب البدء (أي دقيقة)",
+  },
   "sync.copyByHand": {
     en: "The browser blocked copying. Select this text and copy it:",
     de: "Der Browser hat das Kopieren blockiert. Markiere diesen Text und kopiere ihn:",
@@ -1036,11 +1057,11 @@ export const UI_STRINGS = {
     ar: "تضرب حشودنا {time} ({clock})",
   },
   "sync.chat.start": {
-    en: "Start your rally ({wait} timer) at:",
-    de: "Starte deine Rally ({wait}-Timer) um:",
-    ko: "집결 시작 시각 ({wait} 타이머):",
-    pl: "Rozpocznij rajd (licznik {wait}) o:",
-    ar: "ابدأ حشدك (مؤقت {wait}) في:",
+    en: "Start your rally at:",
+    de: "Starte deine Rally um:",
+    ko: "집결 시작 시각:",
+    pl: "Rozpocznij rajd o:",
+    ar: "ابدأ حشدك في:",
   },
   "sync.chat.late": {
     en: "{name}: too late for this hit",
@@ -1048,6 +1069,13 @@ export const UI_STRINGS = {
     ko: "{name}: 이번 도착 시간에는 늦음",
     pl: "{name}: za późno na to uderzenie",
     ar: "{name}: متأخر عن هذه الضربة",
+  },
+  "sync.chat.minuteTitle": {
+    en: "Start the rallies in this order (after :00):",
+    de: "Startet die Rallys in dieser Reihenfolge (nach :00):",
+    ko: "이 순서로 집결을 시작하세요 (:00 이후):",
+    pl: "Startujcie rajdy w tej kolejności (po :00):",
+    ar: "ابدؤوا الحشود بهذا الترتيب (بعد :00):",
   },
   "sync.chat.counterTitle": {
     en: "Counter order ({wait} timer), start when that rally shows:",
@@ -2198,6 +2226,13 @@ export const UI_STRINGS = {
     ko: "모든 대장이 아직 맞출 수 있는 가장 빠른 도착 시간을 정합니다. 집결이 진행 중이면 한 번 더 탭해야 하므로 실수로 눌러도 바뀌지 않습니다.",
     pl: "Ustawia najwcześniejszy czas uderzenia, który każdy lider jeszcze zdąży. Gdy rajd trwa, trzeba dotknąć drugi raz, więc przypadkowe dotknięcie niczego nie zmieni.",
     ar: "تضبط أبكر وقت إصابة ما زال كل قائد يستطيع إدراكه. أثناء حشد جارٍ تطلب ضغطة ثانية، فلا تغيّره ضغطة عابرة.",
+  },
+  "tour.sync.minute.body": {
+    en: "Or let the slowest leader start exactly on the next whole minute and the others follow. {{ui:sync.copyMinute}} copies the same order without a clock, for any minute you call in the chat.",
+    de: "Oder lass den langsamsten Leiter genau zur nächsten vollen Minute starten, die anderen folgen. {{ui:sync.copyMinute}} kopiert dieselbe Reihenfolge ohne Uhrzeit, für jede Minute, die du im Chat ansagst.",
+    ko: "또는 가장 느린 대장이 다음 정각 분에 정확히 출발하고 나머지가 뒤따르게 하세요. {{ui:sync.copyMinute}} 버튼은 같은 순서를 시각 없이 복사해, 채팅에서 정하는 어떤 분에도 쓸 수 있습니다.",
+    pl: "Albo niech najwolniejszy lider wystartuje dokładnie w następnej pełnej minucie, a pozostali za nim. {{ui:sync.copyMinute}} kopiuje tę samą kolejność bez godziny, na dowolną minutę ogłoszoną na czacie.",
+    ar: "أو اجعل القائد الأبطأ يبدأ تمامًا عند الدقيقة الكاملة التالية ويتبعه الباقون. {{ui:sync.copyMinute}} ينسخ الترتيب نفسه دون ساعة، لأي دقيقة تعلنها في الدردشة.",
   },
   "tour.sync.hit.title": { en: "Your own hit time", de: "Eigene Einschlagzeit", ko: "직접 정하는 도착 시간", pl: "Własny czas uderzenia", ar: "وقت إصابة تحدده بنفسك" },
   "tour.sync.hit.body": {

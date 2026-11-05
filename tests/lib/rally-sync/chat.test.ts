@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { UI_STRINGS } from "@/content/seed/ui-strings";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { counterChat, garrisonChat, rallyChat } from "@/lib/rally-sync/chat";
+import { counterChat, garrisonChat, minuteChat, rallyChat } from "@/lib/rally-sync/chat";
 import { counterOrder } from "@/lib/rally-sync/counter";
 import type { EnemyRally } from "@/lib/rally-sync/garrison";
 
@@ -41,11 +41,11 @@ describe("the rally chat summary", () => {
     { name: "Alice", startAt: at("21:39:12") },
   ];
 
-  it("gives the hit time, then every leader's start, earliest first, with the rally timer", () => {
-    expect(rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", en).split("\n")).toEqual([
+  it("gives the hit time, then every leader's start, earliest first", () => {
+    expect(rallyChat({ hitAt: at("21:45:00"), hitSetAt: null, leaders }, "UTC", en).split("\n")).toEqual([
       "Our rallies hit 21:45:00 (UTC)",
       "",
-      "Start your rally (5:00 timer) at:",
+      "Start your rally at:",
       "Alice 21:39:12",
       "Bob 21:39:20",
     ]);
@@ -53,13 +53,13 @@ describe("the rally chat summary", () => {
 
   it("marks a leader whose start was over when the hit time was set, instead of a time that has gone", () => {
     // The hit was typed at 21:39:15 with a 5:00 rally timer: Alice's start was already over.
-    const text = rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: at("21:39:15"), leaders }, "UTC", en);
+    const text = rallyChat({ hitAt: at("21:45:00"), hitSetAt: at("21:39:15"), leaders }, "UTC", en);
     expect(text.split("\n").slice(-2)).toEqual(["Alice: too late for this hit", "Bob 21:39:20"]);
   });
 
   it("uses the coordinator's language", () => {
-    const text = rallyChat({ hitAt: at("21:45:00"), rallyWaitSeconds: 300, hitSetAt: null, leaders }, "UTC", dictionary("de"));
-    expect(text.split("\n").slice(0, 3)).toEqual(["Unsere Rallys treffen 21:45:00 (UTC)", "", "Starte deine Rally (5:00-Timer) um:"]);
+    const text = rallyChat({ hitAt: at("21:45:00"), hitSetAt: null, leaders }, "UTC", dictionary("de"));
+    expect(text.split("\n").slice(0, 3)).toEqual(["Unsere Rallys treffen 21:45:00 (UTC)", "", "Starte deine Rally um:"]);
   });
 });
 
@@ -87,5 +87,17 @@ describe("the counter-rally chat summary", () => {
   it("counts seconds after the first start when a rally's countdown has already run out", () => {
     const steps = counterOrder([{ name: "Ali", marchSeconds: 45 }, { name: "New", marchSeconds: 30 }], 10);
     expect(counterChat(steps, 10, en).split("\n").at(-1)).toBe("2. New: 15 s after Ali");
+  });
+});
+
+describe("the start order for any minute", () => {
+  it("has no clock: the slowest leader at 0:00, the others after by the march difference", () => {
+    const leaders = [
+      { name: "Mira", marchSeconds: 48 },
+      { name: "Rajx", marchSeconds: 90 },
+      { name: "Zed", marchSeconds: 10 },
+    ];
+    expect(minuteChat(leaders, en).split("\n")).toEqual(["Start the rallies in this order (after :00):", "Rajx 0:00", "Mira 0:42", "Zed 1:20"]);
+    expect(minuteChat(leaders, dictionary("de")).split("\n")[0]).toBe("Startet die Rallys in dieser Reihenfolge (nach :00):");
   });
 });
