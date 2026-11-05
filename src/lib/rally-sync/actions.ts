@@ -61,7 +61,7 @@ import {
 } from "./room";
 import { findOpenRoom, roomAccess, roomCapacity } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
-import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, parseUtcClock, toGameTime } from "./timing";
+import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, minuteStartHit, parseUtcClock, toGameTime } from "./timing";
 
 /**
  * Server Actions of a Rally Sync room. Like every Server Function they can be
@@ -112,6 +112,8 @@ export type CoordinatorOp =
   | { type: "settings"; mode: RoomMode; rallyWaitSeconds: number; bufferSeconds: number; counterOffsetSeconds: number }
   | { type: "hitClock"; text: string }
   | { type: "resync" }
+  /** The slowest leader starts on the next whole minute at least the buffer away, the others after them (minuteStartHit). */
+  | { type: "minuteStart" }
   | { type: "clearHit" }
   | { type: "addLeader"; name: string; marchSeconds: number }
   | { type: "editLeader"; leaderId: string; name: string; marchSeconds: number }
@@ -148,7 +150,7 @@ const GARRISON_WRITE_ROUNDS = 5;
 
 const GARRISON_OPS: ReadonlySet<string> = new Set(["enemySave", "enemyActive", "enemyRemove", "rallyMark", "rallyLands", "rallyNudge", "rallyRemove", "ralliesClear"]);
 /** Only rally rooms have a hit time: counter rooms give a launch order (counter.ts), garrison rooms mark enemy rallies. */
-const HIT_OPS: ReadonlySet<string> = new Set(["hitClock", "resync", "clearHit"]);
+const HIT_OPS: ReadonlySet<string> = new Set(["hitClock", "resync", "minuteStart", "clearHit"]);
 
 const baseLog = createLogger("rally-sync");
 
@@ -526,6 +528,13 @@ export async function coordinate(
         const leaders = await store.leaders(room.id);
         const marches = resyncMarches(leaders);
         await store.updateRoom(room.id, hitPatch(room, earliestHit(now, room.rallyWaitSeconds, marches, room.bufferSeconds), now));
+        await startNextRally(store, leaders);
+        return done({ leaders: marches.length });
+      }
+      case "minuteStart": {
+        const leaders = await store.leaders(room.id);
+        const marches = resyncMarches(leaders);
+        await store.updateRoom(room.id, hitPatch(room, minuteStartHit(now, room.rallyWaitSeconds, marches, room.bufferSeconds), now));
         await startNextRally(store, leaders);
         return done({ leaders: marches.length });
       }

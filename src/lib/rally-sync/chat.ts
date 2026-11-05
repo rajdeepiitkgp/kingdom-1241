@@ -3,7 +3,7 @@ import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { formatUtcClock } from "@/lib/time";
 import type { CounterCue, CounterStep } from "./counter";
 import { chatSummary, type EnemyRally } from "./garrison";
-import { formatSeconds, isTooLate } from "./timing";
+import { formatSeconds, isTooLate, minuteOrder } from "./timing";
 
 /**
  * What the coordinator pastes into the game chat for players without the page
@@ -25,21 +25,28 @@ export function garrisonChat(wave: readonly EnemyRally[], clockLabel: string, di
 
 export interface RallyChat {
   hitAt: number;
-  rallyWaitSeconds: number;
   /** When the hit time was set: a leader whose start was already over then is marked "too late" instead of given a start. */
   hitSetAt: number | null;
   /** Leaders without a start time (sitting out, or in from the next rally) are left out. */
   leaders: ReadonlyArray<{ name: string; startAt: number | null }>;
 }
 
-/** Rally: the hit time, then every leader's start time, earliest first (the rally timer is named, so a leader on another timer notices). */
-export function rallyChat({ hitAt, rallyWaitSeconds, hitSetAt, leaders }: RallyChat, clockLabel: string, dict: Dictionary): string {
+/** Rally: the hit time, then every leader's start time, earliest first. */
+export function rallyChat({ hitAt, hitSetAt, leaders }: RallyChat, clockLabel: string, dict: Dictionary): string {
   const lines = [format(dict["sync.chat.hit"], { time: clock(hitAt), clock: clockLabel })];
   const starts = leaders
     .flatMap((l) => (l.startAt === null ? [] : [{ name: l.name, at: l.startAt }]))
     .sort((a, b) => a.at - b.at || a.name.localeCompare(b.name));
-  if (starts.length > 0) lines.push("", format(dict["sync.chat.start"], { wait: formatSeconds(rallyWaitSeconds) }), ...starts.map((s) => (isTooLate(s.at, hitSetAt) ? format(dict["sync.chat.late"], { name: s.name }) : `${s.name} ${clock(s.at)}`)));
+  if (starts.length > 0) lines.push("", dict["sync.chat.start"], ...starts.map((s) => (isTooLate(s.at, hitSetAt) ? format(dict["sync.chat.late"], { name: s.name }) : `${s.name} ${clock(s.at)}`)));
   return lines.join("\n");
+}
+
+/**
+ * Rally: the start order for any minute, without a clock ("Rajx 0:00", "Mira 0:42", "Zed 1:20"): the slowest
+ * leader starts on :00, everyone else that long after, so all land together. The same whatever the time.
+ */
+export function minuteChat(leaders: ReadonlyArray<{ name: string; marchSeconds: number }>, dict: Dictionary): string {
+  return [dict["sync.chat.minuteTitle"], ...minuteOrder(leaders).map((l) => `${l.name} ${formatSeconds(l.afterSeconds)}`)].join("\n");
 }
 
 /**

@@ -106,6 +106,28 @@ test("RS-02 Re-sync sets the earliest hit and every leader's start = hit − ral
   expect(after(now, hit)).toBeLessThanOrEqual(RALLY_TIMER + longest + BUFFER + 3);
 });
 
+test("RS-15 Re-sync on the next :00 starts the slowest leader on a whole minute, and the start order copies without a clock", async ({ page }) => {
+  await openRoom(page, freshRoom("R"), { coordinator: true });
+  const before = await pageClock(page);
+  await page.getByRole("button", { name: t("sync.coord.minute") }).click();
+  const hit = await hitTime(page);
+  const rows = await leaderRows(page.locator('[data-tour="sync-leaders"]'));
+  for (const row of rows) expect(clockText(row.start), `${row.name}'s start`).toBe(clockText(hit - RALLY_TIMER - row.march));
+  // The slowest leader starts first, on :00, at least the buffer and at most a minute more after the tap.
+  const slowest = rows[0];
+  expect(slowest.march).toBe(Math.max(...rows.map((r) => r.march)));
+  expect(slowest.start % 60).toBe(0);
+  expect(after(before, slowest.start)).toBeGreaterThanOrEqual(BUFFER - 1);
+  expect(after(before, slowest.start)).toBeLessThanOrEqual(BUFFER + 61);
+
+  // Both copies: the clock times of this hit, and the order for any minute.
+  await page.getByRole("button", { name: t("sync.copyChat"), exact: true }).click();
+  await expect(page.getByText(t("common.copied")).or(page.getByText(t("sync.copyByHand"))).first()).toBeVisible();
+  await page.getByRole("button", { name: t("sync.copyMinute"), exact: true }).click();
+  await expect(page.getByText(t("common.copied")).or(page.getByText(t("sync.copyByHand"))).first()).toBeVisible();
+  await expectHealthyPage(page, "en");
+});
+
 test("RS-03 a leader who joins or is added mid-rally waits for the next one, then gets their own start on every device", async ({ page, otherDevice }) => {
   test.slow(); // two devices and two polling rounds: three times the budget
   const code = freshRoom("R");

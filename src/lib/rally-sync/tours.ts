@@ -21,7 +21,7 @@ const more = uiStep("sync-more", "sync.more", "sync.coord.more");
 export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
   rally: {
     id: "sync-rally",
-    version: 1,
+    version: 2,
     steps: [
       status,
       clock,
@@ -32,6 +32,7 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
       uiStep("sync-leaders", "sync.leaders"),
       coordinator,
       uiStep("sync-resync", "sync.resync"),
+      uiStep("sync-minute", "sync.minute", "sync.coord.minute"),
       uiStep("sync-hit", "sync.hit"),
       uiStep("sync-copy", "sync.copy", "sync.copyChat"),
       more,

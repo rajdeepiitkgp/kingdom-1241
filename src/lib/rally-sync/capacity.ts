@@ -7,7 +7,7 @@ import type { RoomMode } from "./room";
  * unit-tested). The owner sets the limits per room type on the settings page;
  * they are stored in `app_config` ("rally_sync_capacity") and enforced by the
  * database, which repeats DEFAULT_CAPACITY and CAPACITY_BOUNDS (migration
- * 0016; a test compares them).
+ * 0016, the garrison bound raised by 0024; a test compares them).
  *
  * The three room types share one budget: every browser with a room open holds
  * one live connection to Supabase Realtime, and the free plan allows 200. So
@@ -60,7 +60,8 @@ export const DEFAULT_CAPACITY: Capacity = {
 /** The smallest and largest value of every number. */
 export const CAPACITY_BOUNDS: Record<RoomMode, Record<CapacityField, readonly [number, number]>> = {
   rally: { rooms: [1, 8], leaders: [2, 15], browsers: [5, 30] },
-  garrison: { rooms: [1, 8], leaders: [0, 0], browsers: [5, 60] },
+  // One garrison room may take most of the budget: one coordinator, many defenders watching (migration 0024).
+  garrison: { rooms: [1, 8], leaders: [0, 0], browsers: [5, 160] },
   counter: { rooms: [1, 2], leaders: [2, 15], browsers: [2, 20] },
 };
 
