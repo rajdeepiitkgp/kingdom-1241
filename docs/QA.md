@@ -149,6 +149,9 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | RS-14 | The screen-awake switch asks the browser for a wake lock, and hides where the browser has none. | Browser |
 | RS-15 | Re-sync on the next :00 sets the hit so the slowest leader starts on the first whole minute at least the room's buffer away and every start is hit − rally timer − march; the clock copy and the start order for any minute both copy. | Browser |
 | RS-16 | The next :00 moves to the minute after when it is closer than the buffer; the start order for any minute puts the slowest leader at 0:00 and the others longest march − own march later, with no clock. | Unit: tests/lib/rally-sync/timing.test.ts |
+| RS-17 | The rally timer can't change while a rally runs (every start is hit − timer − march, so it would move them all); the buffer can. | Browser |
+| RS-18 | A leader in from the next rally, or a march time waiting for it, is in once the hit has passed, with or without a new hit time. | Browser |
+| RS-19 | New browsers from one address in one room are budgeted (30 per 10 minutes, then the address waits 10 minutes), so a leaked password can't fill a room by script; the store lists every browser the largest room may hold. | Unit: tests/lib/rally-sync/capacity.test.ts |
 
 ### Tools
 

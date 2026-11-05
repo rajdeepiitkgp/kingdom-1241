@@ -1310,12 +1310,26 @@ export const UI_STRINGS = {
     pl: "Ten moment już minął. Wybierz późniejszy czas.",
     ar: "مضت تلك اللحظة بالفعل. اختر وقتًا لاحقًا.",
   },
+  "sync.error.running": {
+    en: "A rally is running. Change the rally timer after it lands, or clear the hit time first.",
+    de: "Gerade läuft eine Rally. Ändere den Rally-Timer, wenn sie eingeschlagen ist, oder lösche zuerst die Einschlagzeit.",
+    ko: "집결이 진행 중입니다. 도착한 뒤에 집결 대기를 바꾸거나, 먼저 도착 시간을 지우세요.",
+    pl: "Trwa rajd. Zmień czas zbiórki po uderzeniu albo najpierw wyczyść czas uderzenia.",
+    ar: "هناك حشد جارٍ. غيّر مؤقت الحشد بعد وصوله، أو امسح وقت الإصابة أولًا.",
+  },
   "sync.error.instance_limit": {
     en: "This room is full. Ask the coordinator to remove someone who doesn't need to be in it.",
     de: "Dieser Raum ist voll. Bitte den Koordinator, jemanden zu entfernen, der nicht drin sein muss.",
     ko: "이 방은 가득 찼습니다. 코디네이터에게 필요 없는 사람을 내보내 달라고 요청하세요.",
     pl: "Ten pokój jest pełny. Poproś koordynatora, aby usunął kogoś, kto nie musi w nim być.",
     ar: "هذه الغرفة ممتلئة. اطلب من المنسق إزالة من لا يحتاج إلى البقاء فيها.",
+  },
+  "sync.error.join_limit": {
+    en: "Too many browsers have joined this room from your connection just now. Try again in a few minutes.",
+    de: "Von deiner Verbindung sind gerade zu viele Browser in diesen Raum gekommen. Versuch es in ein paar Minuten wieder.",
+    ko: "방금 같은 연결에서 너무 많은 브라우저가 이 방에 들어왔습니다. 몇 분 뒤 다시 시도하세요.",
+    pl: "Z twojego połączenia dołączyło właśnie zbyt wiele przeglądarek do tego pokoju. Spróbuj ponownie za kilka minut.",
+    ar: "انضم الآن عدد كبير جدًا من المتصفحات إلى هذه الغرفة من اتصالك. حاول مجددًا بعد بضع دقائق.",
   },
   "sync.error.launched": {
     en: "That rally has launched: only “Correct landing time” can change it now.",

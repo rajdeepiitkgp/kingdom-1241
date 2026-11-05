@@ -339,3 +339,40 @@ test("RS-14 the screen-awake switch asks the browser for a wake lock, and hides 
   await expect(plain.locator('[data-tour="sync-wake"]')).toHaveCount(0);
   await expectHealthyPage(plain, "en");
 });
+
+test("RS-17 the rally timer can't change while a rally runs", async ({ page }) => {
+  await openRoom(page, freshRoom("R"), { coordinator: true });
+  await page.getByRole("button", { name: t("sync.coord.resync") }).click();
+  await hitTime(page);
+  await page.locator('[data-tour="sync-more"]').click();
+  const settings = page.locator("details", { hasText: t("sync.coord.settings") });
+  await settings.locator("summary").click();
+  await settings.getByLabel(t("sync.coord.wait")).fill("4:00");
+  await settings.getByRole("button", { name: t("sync.save"), exact: true }).click();
+  // Refused: every start is hit − timer − march, so a new timer would move them all under the leaders.
+  await expect(settings.getByRole("alert")).toContainText(t("sync.error.running"));
+  await expect(page.locator('[data-tour="sync-leaders"]')).toContainText(`${t("sync.march")} 1:35`);
+  await expectHealthyPage(page, "en");
+});
+
+test("RS-18 a leader in from the next rally is in once the hit has passed, without a new hit time", async ({ page }) => {
+  await openRoom(page, freshRoom("R"), { coordinator: true });
+  // A hit a few seconds ahead, then a leader added during that rally waits for the next one.
+  const now = await pageClock(page);
+  await page.getByLabel(tPattern("sync.coord.hitAt")).fill(clockText(now + 8));
+  await page.getByRole("button", { name: t("sync.coord.set"), exact: true }).click();
+  await expect(page.locator('[data-tour="sync-focus"]')).toContainText(clockText(now + 8));
+  await page.locator('[data-tour="sync-more"]').click();
+  const addPanel = page.locator("details", { hasText: t("sync.coord.addLeader") });
+  await addPanel.locator("summary").click();
+  await addPanel.getByLabel(t("sync.form.name")).fill("E2E Late");
+  await addPanel.getByLabel(t("sync.form.marchSeconds")).fill("40");
+  await addPanel.getByRole("button", { name: t("sync.coord.add"), exact: true }).click();
+  const row = page.locator('[data-tour="sync-leaders"] li', { hasText: "E2E Late" });
+  await expect(row).toContainText(t("sync.row.nextRally"));
+  // Once the hit has passed, the next read of the room brings the leader in (nothing waits for a hit op).
+  await page.waitForTimeout(9_000);
+  await page.reload();
+  await expect(page.locator('[data-tour="sync-leaders"] li', { hasText: "E2E Late" })).not.toContainText(t("sync.row.nextRally"));
+  await expectHealthyPage(page, "en");
+});

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { syncAlliances } from "@/lib/alliances/sync";
 import { isAuthorized } from "@/lib/api-auth";
-import { CACHE_TAGS } from "@/lib/data";
+import { CACHE_TAGS, routesForTag } from "@/lib/data";
 import { createLogger, requestId } from "@/lib/log";
 
 /**
@@ -36,6 +36,8 @@ export async function POST(request: Request) {
     return reply({ ok: false, ...result }, 503);
   }
   revalidateTag(CACHE_TAGS.alliances, { expire: 0 });
+  // The alliance and guide pages keep their previous render on the first visit after a tag expiry: expire them by path too.
+  for (const route of routesForTag(CACHE_TAGS.alliances)) revalidatePath(route, "page");
   // A new tag also changed the battle plans' coordinators and rally leaders (database trigger, 0017).
   if (result.renamed.length > 0) revalidateTag(CACHE_TAGS.kvk, { expire: 0 });
   return reply({ ok: true, ...result });

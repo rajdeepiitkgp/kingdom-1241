@@ -2,14 +2,19 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { chargeTry, type ThrottleState } from "@/lib/kvk/throttle";
 import {
   ACTIVE_BROWSER_MINUTES,
+  ACTIVE_BROWSER_MS,
   BROWSER_BUDGET,
   type Capacity,
   CAPACITY_BOUNDS,
   CAPACITY_MODES,
   capacityFixes,
   capacityTotals,
+  INSTANCE_LIST_LIMIT,
+  JOIN_POLICY,
+  ROOM_LIST_LIMIT,
   DEFAULT_CAPACITY,
   parseCapacity,
   parseCapacityForm,
@@ -110,5 +115,29 @@ describe("rally sync capacity", () => {
     expect(literal("bounds")).toEqual(JSON.parse(JSON.stringify(CAPACITY_BOUNDS)));
     expect(sql.match(new RegExp(`interval '${ACTIVE_BROWSER_MINUTES} minutes'`, "g"))).toHaveLength(2);
     expect(sql).toContain(`>= ${BROWSER_BUDGET} then`);
+  });
+});
+
+describe("the join budget of one address in one room", () => {
+  it("lets 30 new browsers in per window and refuses the 31st for the same window", () => {
+    const start = Date.parse("2026-11-07T12:00:00Z");
+    let state: ThrottleState | null = null;
+    for (let n = 1; n <= JOIN_POLICY.maxFailures; n++) {
+      const charge = chargeTry(state, start + n * 1000, JOIN_POLICY);
+      expect("next" in charge, `browser ${n}`).toBe(true);
+      if ("next" in charge) state = charge.next;
+    }
+    const refused = chargeTry(state, start + 31_000, JOIN_POLICY);
+    expect("retryAt" in refused).toBe(true);
+    if ("retryAt" in refused) expect(refused.retryAt - (start + 30_000)).toBe(ACTIVE_BROWSER_MS);
+    // After the window the address starts afresh (no doubling: a budget, not a lockout ladder).
+    expect("next" in chargeTry(state, start + 30_000 + ACTIVE_BROWSER_MS + 1, JOIN_POLICY)).toBe(true);
+  });
+
+  it("lists every browser the largest room may hold, and every room that may be open", () => {
+    const largest = Math.max(...CAPACITY_MODES.map((mode) => CAPACITY_BOUNDS[mode].browsers[1]));
+    expect(INSTANCE_LIST_LIMIT).toBeGreaterThan(largest);
+    const mostRooms = CAPACITY_MODES.reduce((sum, mode) => sum + CAPACITY_BOUNDS[mode].rooms[1], 0);
+    expect(ROOM_LIST_LIMIT).toBeGreaterThan(mostRooms);
   });
 });

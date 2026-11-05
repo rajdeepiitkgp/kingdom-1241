@@ -8,7 +8,7 @@ import { adminPath } from "@/lib/auth/paths";
 import { checkOwner, type CurrentUser } from "@/lib/auth/server";
 import { type ConfigKey, readConfig, writeConfig } from "@/lib/config/app-config";
 import { parseNumberForm } from "@/lib/config/numbers";
-import { CACHE_TAGS } from "@/lib/data/cache-tags";
+import { CACHE_TAGS, routesForTag } from "@/lib/data/cache-tags";
 import { parsePasswordRules, parsePasswordRulesForm } from "@/lib/kvk/password-rules";
 import type { Logger } from "@/lib/log";
 import { parseCapacityForm } from "@/lib/rally-sync/capacity";
@@ -167,6 +167,8 @@ const TAG_TAKEN = "Another alliance on the list already has that tag.";
 /** `retagged`: a new tag also changed the battle plans' coordinators and rally leaders (database trigger, 0017). */
 function alliancesChanged(formData: FormData, retagged = false) {
   updateTag(CACHE_TAGS.alliances);
+  // The alliance and guide pages keep their previous render on the first visit after a tag expiry: expire them by path too.
+  for (const route of routesForTag(CACHE_TAGS.alliances)) revalidatePath(route, "page");
   if (retagged) updateTag(CACHE_TAGS.kvk);
   revalidatePath(settingsPath(formData, "alliances"));
 }

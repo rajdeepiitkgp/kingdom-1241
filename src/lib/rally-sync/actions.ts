@@ -25,6 +25,7 @@ import {
   tokenMatches,
   verifyPassword,
 } from "./access";
+import { JOIN_POLICY } from "./capacity";
 import {
   clearRallies,
   defaultEnemyName,
@@ -59,7 +60,7 @@ import {
   sortInstances,
   statusAfter,
 } from "./room";
-import { findOpenRoom, roomAccess, roomCapacity } from "./session";
+import { findOpenRoom, roomAccess, roomCapacity, startNextRally } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
 import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, minuteStartHit, parseUtcClock, toGameTime } from "./timing";
 
@@ -83,9 +84,13 @@ export type SyncError =
   | "not_coordinator"
   | "not_yours"
   | "past"
+  /** The rally timer can't change under a running rally (every start would move). */
+  | "running"
   | "room_limit"
   | "leader_limit"
   | "instance_limit"
+  /** Too many new browsers from one address in one room within the window (JOIN_POLICY). */
+  | "join_limit"
   /** Garrison: the rally has launched, so only a measured landing may change it. */
   | "launched"
   /** Garrison: the list of enemy leaders or incoming rallies is full. */
@@ -166,6 +171,8 @@ async function context(): Promise<{ log: Logger; address: string }> {
  */
 const roomScope = (roomId: string, address: string) => `sync:ip:${roomId}:${address}`;
 const codeScope = (address: string) => `sync:code:${address}`;
+/** Successful unlocks by browsers without the cookie: new browsers one address brings into a room. */
+const joinScope = (roomId: string, address: string) => `sync:join:${roomId}:${address}`;
 
 // ---------------------------------------------------------------------------
 // Unlocking (password form, invite link)
@@ -202,7 +209,7 @@ export async function unlockRoom(_previous: UnlockRoomState, formData: FormData)
   }
 
   const { store, room } = opened;
-  const problem = await enterRoom(store, room, log);
+  const problem = await enterRoom(store, room, log, address);
   if (problem) return { status: "error", error: problem };
   if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "password" });
@@ -224,7 +231,7 @@ export async function unlockRoomWithKey(code: string, key: string): Promise<Sync
     log.info("Room unlock failed", { room: room.code, reason: "invite key", failures: attempt.state?.failures });
     return { ok: false, error: "wrong" };
   }
-  const problem = await enterRoom(store, room, log);
+  const problem = await enterRoom(store, room, log, address);
   if (problem) return { ok: false, error: problem };
   if (attempt.state) await clearThrottle(scope);
   log.info("Room unlocked", { room: room.code, via: "invite link" });
@@ -236,9 +243,17 @@ export async function unlockRoomWithKey(code: string, key: string): Promise<Sync
  * (a browser that is already in keeps its instance). While a deploy runs ahead of
  * migration 0014 there is no instance table yet: the old password-bound cookie then.
  */
-async function enterRoom(store: RallyStore, room: RoomRow, log: Logger): Promise<SyncError | null> {
+async function enterRoom(store: RallyStore, room: RoomRow, log: Logger, address: string): Promise<SyncError | null> {
   const current = await roomAccess(store, room).catch(() => null);
   if (current?.instance) return null;
+  // New browsers from one address are budgeted (JOIN_POLICY), so a leaked password can't fill the room by script.
+  if (store.kind === "supabase") {
+    const budget = await takeTry(joinScope(room.id, address), Date.now(), JOIN_POLICY);
+    if (!budget.allowed) {
+      log.info("Room join budget reached", { room: room.code });
+      return "join_limit";
+    }
+  }
   let value: string;
   try {
     const instance = await store.insertInstance({ roomId: room.id, tag: newInstanceTag() });
@@ -407,27 +422,6 @@ function hitPatch(room: RoomRow, hitAt: number | null, now: number): RoomPatch {
   };
 }
 
-/**
- * A new hit time (or none) starts the next rally: march times that waited for
- * it become the leaders' march times, and leaders who joined or came back
- * during the last one are in. Those sitting out stay out. Called after the
- * room is updated: should it fail, the leaders stay "next" under the new hit
- * (the coordinator's next tap picks them up) instead of entering the rally
- * that still runs under the old one. Pages see both on the last ping.
- */
-async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]): Promise<void> {
-  await Promise.all(
-    leaders
-      .filter((l) => l.nextMarchSeconds !== null || l.status === "next")
-      .map((l) =>
-        store.updateLeader(l.id, {
-          ...(l.nextMarchSeconds !== null ? { marchSeconds: l.nextMarchSeconds, nextMarchSeconds: null } : {}),
-          ...(l.status === "next" ? { status: "active" as const } : {}),
-        }),
-      ),
-  );
-}
-
 /** An instance that used coordinator rights is marked as such in the coordinator's list (once). */
 async function markCoordinator(store: RallyStore, instance: InstanceRow | null): Promise<void> {
   if (instance && !instance.coordinator) await store.updateInstance(instance.id, { coordinator: true }).catch(() => undefined);
@@ -513,6 +507,8 @@ export async function coordinate(
       case "settings": {
         const settings = parseSettings(op);
         if (!settings.ok || !canSwitchMode(room.mode, settings.value.mode)) return { ok: false, error: "invalid" };
+        // Start = hit − timer − march: a new timer under a running rally would move every start at once.
+        if (settings.value.rallyWaitSeconds !== room.rallyWaitSeconds && rallyRunning(room.hitAt, now)) return { ok: false, error: "running" };
         await store.updateRoom(room.id, settings.value);
         return done();
       }

@@ -21,7 +21,7 @@ on:
         description: What to run
         type: choice
         required: true
-        default: seed
+        default: translate-dry-run
         options:
           - seed
           - sync-ui

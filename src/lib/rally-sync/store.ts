@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { INSTANCE_LIST_LIMIT, ROOM_LIST_LIMIT } from "./capacity";
 import { readConfig, writeConfig } from "@/lib/config/app-config";
 import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -153,7 +154,7 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
       return data ? mapRoomRow(data) : null;
     },
     async listRooms() {
-      const { data, error } = await admin.from("rally_sync_rooms").select(ROOM_COLUMNS).order("created_at", { ascending: false }).limit(20);
+      const { data, error } = await admin.from("rally_sync_rooms").select(ROOM_COLUMNS).order("created_at", { ascending: false }).limit(ROOM_LIST_LIMIT);
       if (error) fail("Listing rooms", error);
       return (data ?? []).map(mapRoomRow);
     },
@@ -238,7 +239,7 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
       if (error) fail("Removing a leader", error);
     },
     async instances(roomId) {
-      const { data, error } = await admin.from("rally_sync_instances").select(INSTANCE_COLUMNS).eq("room_id", roomId).order("created_at").limit(100);
+      const { data, error } = await admin.from("rally_sync_instances").select(INSTANCE_COLUMNS).eq("room_id", roomId).order("created_at").limit(INSTANCE_LIST_LIMIT);
       if (error) fail("Reading instances", error);
       return (data ?? []).map(mapInstanceRow);
     },

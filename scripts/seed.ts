@@ -219,25 +219,29 @@ async function main() {
     ),
   );
 
-  await upsertMissing(
-    "alliances",
-    "id",
-    seed.alliances.map((a) => ({
-      id: a.id,
-      tag: a.tag,
-      name: a.name,
-      color: a.color,
-      leader: a.leader,
-      power: a.power,
-      members: a.members,
-      max_members: a.maxMembers,
-      description: a.description,
-      requirements: a.requirements,
-      languages: a.languages,
-      discord_url: a.discordUrl,
-      sort_order: a.sortOrder,
-      published: a.published,
-    })),
+  // The alliance list is the owner's (synced from MightPulse): seeded into an
+  // empty table only, so an alliance the owner removed stays removed.
+  await seedEditorTables(["alliances"], () =>
+    upsertMissing(
+      "alliances",
+      "id",
+      seed.alliances.map((a) => ({
+        id: a.id,
+        tag: a.tag,
+        name: a.name,
+        color: a.color,
+        leader: a.leader,
+        power: a.power,
+        members: a.members,
+        max_members: a.maxMembers,
+        description: a.description,
+        requirements: a.requirements,
+        languages: a.languages,
+        discord_url: a.discordUrl,
+        sort_order: a.sortOrder,
+        published: a.published,
+      })),
+    ),
   );
 
   await upsertMissing(
@@ -269,26 +273,14 @@ async function main() {
     })),
   );
 
-  // KvK battle plan. Only one plan may be active; if the council already has
-  // one, the placeholder goes in as inactive so it never replaces the real plan.
-  // The plan and its rules/coordinators/formations are seeded as ONE unit: once
-  // the plan row exists, its child rows are never re-added (the council deletes
-  // and replaces them freely).
-  const plan = seed.kvkPlan;
-  const { data: planRows, error: planError } = await supabase
-    .from("kvk_plans")
-    .select("id, active");
-  if (planError) throw new Error(`kvk_plans: ${planError.message}`);
-  const planExists = (planRows ?? []).some((row) => row.id === plan.id);
-  const otherActive = (planRows ?? []).some(
-    (row) => row.id !== plan.id && row.active,
-  );
-
-  if (planExists && !overwrite) {
-    summary.push(
-      "kvk_plans: placeholder plan already present — leaving the plan and its rows alone",
-    );
-  } else {
+  // KvK battle plan, with its rally-leader page and commander checklist: one
+  // placeholder unit (the plan, its rules, coordinators and formations, both
+  // briefs and their rows) seeded into an empty database only, like the editor
+  // tables, so a plan the council deleted stays deleted, and never active: the
+  // default passwords never open a page by themselves. The council activates
+  // it under Admin → Battle plans with passwords of its own.
+  await seedEditorTables(["kvk_plans", "kvk_leader_briefs", "kvk_checklist_briefs"], async () => {
+    const plan = seed.kvkPlan;
     await upsertMissing("kvk_plans", "id", [
       {
         id: plan.id,
@@ -301,7 +293,7 @@ async function main() {
         min_hero_stars: plan.minHeroStars,
         min_skill_level: plan.minSkillLevel,
         password: plan.password,
-        active: otherActive ? false : plan.active,
+        active: false,
         published: plan.published,
       },
     ]);
@@ -446,20 +438,14 @@ async function main() {
         published: r.published,
       })),
     );
-  }
+  });
 
   console.log(summary.join("\n"));
   console.log(
     "\nDone. Next: `npm run translate` to fill in the other languages, then refresh the site cache (see SETUP.md).",
   );
   console.log(
-    'KvK: the placeholder battle plan uses the password from KVK_SEED_PASSWORD (default "1241") — change it in the kvk_plans table.',
-  );
-  console.log(
-    'KvK: its rally-leader page uses KVK_SEED_LEADER_PASSWORD (default "1241-leaders") — change it under Admin → Battle plans → Rally leaders.',
-  );
-  console.log(
-    'KvK: its commander checklist uses KVK_SEED_CHECKLIST_PASSWORD (default "1241-commander") — change it under Admin → Battle plans → Commander checklist.',
+    "KvK: the placeholder battle plan (seeded into an empty database only) is inactive. Activate it under Admin → Battle plans and give it, its rally-leader page and its commander checklist passwords of your own (until then they carry KVK_SEED_PASSWORD, KVK_SEED_LEADER_PASSWORD and KVK_SEED_CHECKLIST_PASSWORD, defaults 1241, 1241-leaders and 1241-commander).",
   );
 }
 

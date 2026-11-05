@@ -28,7 +28,7 @@ describe("sanitizeRichText", () => {
   });
 
   it("keeps only our own images, with their size", () => {
-    const clean = sanitizeRichText(`<p><img src="${OURS}" alt="ours"><img src="https://i.imgur.com/x.png" alt="theirs"><img src="/items/x.webp" alt="site"><img src="//evil.example/x.png"></p>`);
+    const clean = sanitizeRichText(`<p><img src="${OURS}" alt="ours"><img src="https://i.imgur.com/x.png" alt="theirs"><img src="/items/x.webp" alt="site"><img src="//evil.example/x.png"><img src="/\\evil.example/y.png"></p>`);
     expect(clean).toContain('width="1179"');
     expect(clean).toContain('height="2556"');
     expect(clean).toContain('src="/items/x.webp"');

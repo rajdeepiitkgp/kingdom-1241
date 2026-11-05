@@ -11,7 +11,7 @@ import { isSupabaseAdminConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/s
 import { identityFromUser, type Identity } from "./identity";
 import { isOwnerIdentity } from "./owner";
 import { adminPath, loginPath } from "./paths";
-import { hasRole, higherRole, parseRole, type Role } from "./roles";
+import { hasRole, higherRole, parseRole, type Role, storedRole } from "./roles";
 
 /**
  * Server-side session handling for the admin area.
@@ -107,15 +107,15 @@ export async function syncProfile(user: User, options: { signedIn?: boolean } = 
     return { id: user.id, role: owner ? "admin" : "member", isOwner: owner, gameName: null, allianceTag: null, ...identity };
   }
 
-  let role = parseRole(existing?.role);
+  // The owner's elevation is configured, never stored (storedRole).
   const granted = await grantedRole(admin, identity);
-  if (granted) role = higherRole(role, granted);
-  if (owner) role = "admin";
+  const stored = storedRole(existing?.role, granted, owner);
+  const role: Role = owner ? "admin" : stored;
 
   const { error } = await admin.from("profiles").upsert(
     {
       id: user.id,
-      role,
+      role: stored,
       display_name: identity.displayName,
       discord_id: identity.discordId,
       discord_username: identity.discordUsername,
@@ -126,7 +126,7 @@ export async function syncProfile(user: User, options: { signedIn?: boolean } = 
     { onConflict: "id" },
   );
   if (error) log.error("Could not save profile", { userId: user.id, error: error.message });
-  if (!existing || parseRole(existing.role) !== role) log.info("Profile role set", { userId: user.id, role });
+  if (!existing || parseRole(existing.role) !== stored) log.info("Profile role set", { userId: user.id, role: stored });
 
   return {
     id: user.id,
