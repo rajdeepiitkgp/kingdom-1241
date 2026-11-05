@@ -128,6 +128,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | KVK-07 | Wrong passwords lock out one address for a while and only alert for the plan; nobody is ever locked out by other players' guesses. | Unit: tests/lib/kvk/throttle.test.ts |
 | KVK-08 | A battle's plan stays active while its feedback form is open: the editor refuses to activate another plan or deactivate this one until the form is closed, and a form opens for the active plan only. | Unit: tests/lib/admin/kvk-forms.test.ts |
 | KVK-09 | The battle-plan intro's `{{when}}`, `{{date}}`, `{{time}}` and `{{utc}}` tokens come from the battle time: UTC in the server's HTML, the visitor's zone and words once the page is live. | Unit: tests/lib/kvk/battle-tokens.test.ts |
+| KVK-10 | A table with centred header cells in a battle-page text (the battlefield map) is drawn as a diagram: narrow and centred on a wide screen, the width of the text on a phone, its cells centred; at the largest text size it scrolls sideways inside its box instead of being cut, and the page never scrolls sideways. | Browser |
 
 ### Rally Sync
 

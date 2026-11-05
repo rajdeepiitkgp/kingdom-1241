@@ -344,6 +344,11 @@ body {
   .prose-game tbody td { @apply border-t border-line px-3 py-2 align-top; }
   .prose-game tbody tr:nth-child(even) td { background-color: color-mix(in oklab, var(--card-soft) 60%, transparent); }
   .prose-game .table-wrap { @apply overflow-x-auto; }
+  /* A table whose header cells are centred (`|:-:|` in Markdown) is a diagram, not a list (the battle plan's map of
+     the battlefield): it stays narrow and centred, and its cells centre vertically. Wider than the screen (the largest
+     text size on a phone), it scrolls inside its wrapper like any table. */
+  .prose-game table:has(> thead th[align="center"]) { @apply mx-auto max-w-lg; }
+  .prose-game table:has(> thead th[align="center"]) :is(th, td) { @apply align-middle; }
 
   /* Guided tours (GuidedTour.tsx): the highlighted element shows through a ring; the spread shadow dims everything else. */
   .tour-spot {

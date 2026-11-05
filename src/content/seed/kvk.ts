@@ -56,6 +56,16 @@ We will be trying different strategies and different heroes to prepare for the r
 
 Make the formations below, but only with heroes whose Top Expedition Skill (the top-right skill with the flag icon) is at level 5. If you don't have the hero at 4 stars, don't make that formation. Save each formation as a Troop Ratio.
 
+**The battlefield** (placeholder map: in a KvK, the agreement with the other kingdom says which half is whose)
+
+| 🟡 Enemy | | 🌗 | | 🔵 Us |
+|:-:|:-:|:-:|:-:|:-:|
+| | | 🌗 North turret | | |
+| | 🟡 | | 🔵 | |
+| 🟡 West turret | | 🏰 Castle | | 🔵 East turret |
+| | 🟡 | | 🔵 | |
+| | | 🌗 South turret | | |
+
 > Kingdom council: this is placeholder text. Edit the plan in Admin → KvK (title, date, this introduction, the coordinators and the formations).`,
   minHeroStars: 4,
   minSkillLevel: 5,

@@ -81,3 +81,32 @@ test("KVK-05 the feedback page says so when there is no form", async ({ page }) 
   await page.goto(at("en", "/kvk/feedback"));
   await expect(page.getByText(t("retro.none"))).toBeVisible();
 });
+
+test("KVK-10 the battlefield map is a narrow, centred table whose cells centre, and never wider than the screen", async ({ page }) => {
+  await page.goto(at("en", "/kvk"));
+  await unlock(page, SEED_PASSWORDS.plan);
+  // A table with centred header cells (`|:-:|` in the editor) is drawn as a diagram.
+  const map = page.locator('[data-tour="kvk-header"] table:has(th[align="center"])').first();
+  await expect(map).toBeVisible();
+  const wrap = map.locator("xpath=..");
+  const boxes = async () => {
+    const [table, outer] = await Promise.all([map.boundingBox(), wrap.boundingBox()]);
+    if (!table || !outer) throw new Error("the map is not drawn");
+    return { table, outer, left: table.x - outer.x, right: outer.x + outer.width - (table.x + table.width) };
+  };
+  const normal = await boxes();
+  expect(normal.table.width, "the map stays inside the text column").toBeLessThanOrEqual(normal.outer.width + 1);
+  expect(Math.abs(normal.left - normal.right), "the map sits in the middle").toBeLessThan(2);
+  // On a wide screen the map is narrower than the text, with space on both sides; on a phone it takes the width.
+  if (normal.outer.width > 640) expect(normal.left).toBeGreaterThan(20);
+  await expect(map.locator("td").first()).toHaveCSS("vertical-align", "middle");
+  await expectHealthyPage(page, "en");
+  // At the largest text size the five columns can outgrow a phone: the map then scrolls inside its wrapper and the page stays put.
+  await page.evaluate(() => localStorage.setItem("kd1241_text_scale", "xl"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-text-scale", "xl");
+  await expect(map).toBeVisible();
+  const large = await boxes();
+  expect(large.table.width).toBeLessThanOrEqual(await wrap.evaluate((el) => el.scrollWidth + 1));
+  await expectHealthyPage(page, "en");
+});
