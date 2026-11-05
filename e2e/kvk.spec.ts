@@ -100,6 +100,8 @@ test("KVK-10 the battlefield map is a narrow, centred table whose cells centre, 
   // On a wide screen the map is narrower than the text, with space on both sides; on a phone it takes the width.
   if (normal.outer.width > 640) expect(normal.left).toBeGreaterThan(20);
   await expect(map.locator("td").first()).toHaveCSS("vertical-align", "middle");
+  // The header row centres like the body: its middle cell (the shared turrets' symbol) sits over the middle column.
+  await expect(map.locator("th").nth(2)).toHaveCSS("text-align", "center");
   await expectHealthyPage(page, "en");
   // At the largest text size the five columns can outgrow a phone: the map then scrolls inside its wrapper and the page stays put.
   await page.evaluate(() => localStorage.setItem("kd1241_text_scale", "xl"));

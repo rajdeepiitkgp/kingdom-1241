@@ -349,6 +349,9 @@ body {
      text size on a phone), it scrolls inside its wrapper like any table. */
   .prose-game table:has(> thead th[align="center"]) { @apply mx-auto max-w-lg; }
   .prose-game table:has(> thead th[align="center"]) :is(th, td) { @apply align-middle; }
+  /* A centred column keeps its header centred too: the `text-start` of every header cell above would win over the
+     `align` attribute the editor's `|:-:|` writes (body cells have no such rule and follow the attribute by themselves). */
+  .prose-game thead th[align="center"] { @apply text-center; }
 
   /* Guided tours (GuidedTour.tsx): the highlighted element shows through a ring; the spread shadow dims everything else. */
   .tour-spot {
