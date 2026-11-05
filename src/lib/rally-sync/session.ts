@@ -5,7 +5,7 @@ import { CACHE_TAGS } from "@/lib/data/cache-tags";
 import { createLogger } from "@/lib/log";
 import { instanceIdFromCookie, isValidRoomToken, roomCookieName } from "./access";
 import { type Capacity, DEFAULT_CAPACITY, parseCapacity } from "./capacity";
-import { isRoomOpen, type LeaderView, normalizeRoomCode, type RoomState, type RoomView } from "./room";
+import { isRoomOpen, type LeaderView, nextRallyPatch, normalizeRoomCode, rallyRunning, type RoomState, type RoomView } from "./room";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomRow } from "./store";
 
 /**
@@ -111,12 +111,17 @@ async function shownCapacity(): Promise<Capacity> {
 /** The room as its page sees it; counts as somebody (this instance) looking at it. */
 export async function roomState(store: RallyStore, room: RoomRow, instance: InstanceRow | null): Promise<RoomState> {
   const now = Date.now();
-  const [leaders, capacity] = await Promise.all([
+  const [read, capacity] = await Promise.all([
     store.leaders(room.id),
     shownCapacity(),
     store.touchRoom(room.id, now),
     instance ? store.touchInstance(instance.id, now) : undefined,
   ]);
+  // A rally that has landed (or none) holds nobody back: leaders in from the next rally and march times waiting
+  // for it fold in here too (nextRallyPatch), not only when the coordinator sets the next hit time.
+  const waiting = rallyRunning(room.hitAt, now) ? [] : read.filter((l) => nextRallyPatch(l) !== null);
+  if (waiting.length > 0) await startNextRally(store, waiting);
+  const leaders = waiting.length > 0 ? read.map((l) => ({ ...l, ...nextRallyPatch(l) })) : read;
   const seen = Date.parse(room.lastSeenAt) < now - 60_000 ? new Date(now).toISOString() : room.lastSeenAt;
   return {
     room: { ...roomView(room), lastSeenAt: seen },
@@ -125,4 +130,21 @@ export async function roomState(store: RallyStore, room: RoomRow, instance: Inst
     me: instance ? { tag: instance.tag, name: instance.name } : null,
     serverNow: Date.now(),
   };
+}
+
+/**
+ * A new hit time (or none) starts the next rally: march times that waited for
+ * it become the leaders' march times, and leaders who joined or came back
+ * during the last one are in. Those sitting out stay out. Called after the
+ * room is updated: should it fail, the leaders stay "next" under the new hit
+ * (the next read or tap picks them up) instead of entering the rally that
+ * still runs under the old one. Pages see both on the last ping.
+ */
+export async function startNextRally(store: RallyStore, leaders: readonly LeaderRow[]): Promise<void> {
+  await Promise.all(
+    leaders.flatMap((l) => {
+      const patch = nextRallyPatch(l);
+      return patch ? [store.updateLeader(l.id, patch)] : [];
+    }),
+  );
 }

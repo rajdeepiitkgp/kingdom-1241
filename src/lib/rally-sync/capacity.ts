@@ -65,6 +65,21 @@ export const CAPACITY_BOUNDS: Record<RoomMode, Record<CapacityField, readonly [n
   counter: { rooms: [1, 2], leaders: [2, 15], browsers: [2, 20] },
 };
 
+/**
+ * New browsers one address may bring into one room per ACTIVE_BROWSER_MINUTES
+ * (a successful unlock by a browser without the room's cookie is a new
+ * browser). Generous, because players behind one carrier address share it,
+ * yet it stops a script with a leaked password from filling a room, and
+ * through it the shared budget, on its own: past it the address waits the
+ * same window. Shaped like the wrong-password rules (kvk/throttle.ts).
+ */
+export const JOIN_POLICY = { window: ACTIVE_BROWSER_MS, maxFailures: 30, firstLock: ACTIVE_BROWSER_MS, maxLock: ACTIVE_BROWSER_MS };
+
+/** Rows the store reads for the admin's room list: every room that may be open, plus closed ones not yet pruned. */
+export const ROOM_LIST_LIMIT = 60;
+/** Rows for a room's "In the room" list: every browser the largest room may hold, plus ones that left. */
+export const INSTANCE_LIST_LIMIT = Math.max(...CAPACITY_MODES.map((mode) => CAPACITY_BOUNDS[mode].browsers[1])) + 40;
+
 const FIELDS: readonly CapacityField[] = ["rooms", "leaders", "browsers"];
 
 function clamp(mode: RoomMode, field: CapacityField, value: number): number {

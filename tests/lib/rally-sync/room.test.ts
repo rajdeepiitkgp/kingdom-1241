@@ -6,6 +6,7 @@ import {
   joinStatus,
   leaderEdit,
   nextRallyMarch,
+  nextRallyPatch,
   rallyRunning,
   resyncMarches,
   statusAfter,
@@ -239,5 +240,19 @@ describe("instances (every browser in a room)", () => {
     expect(parseInstanceName("   ")).toEqual({ ok: true, value: null });
     expect(parseInstanceName(undefined)).toEqual({ ok: true, value: null });
     expect(parseInstanceName("x".repeat(31))).toEqual({ ok: false });
+  });
+});
+
+describe("nextRallyPatch (starting the next rally, also once the hit has passed)", () => {
+  it("brings a leader in from the next rally and lets a waiting march take over", () => {
+    expect(nextRallyPatch({ status: "next", nextMarchSeconds: null })).toEqual({ status: "active" });
+    expect(nextRallyPatch({ status: "active", nextMarchSeconds: 42 })).toEqual({ marchSeconds: 42, nextMarchSeconds: null });
+    expect(nextRallyPatch({ status: "next", nextMarchSeconds: 42 })).toEqual({ marchSeconds: 42, nextMarchSeconds: null, status: "active" });
+  });
+
+  it("changes nothing for a leader who waits for nothing, and never brings back one sitting out", () => {
+    expect(nextRallyPatch({ status: "active", nextMarchSeconds: null })).toBeNull();
+    expect(nextRallyPatch({ status: "inactive", nextMarchSeconds: null })).toBeNull();
+    expect(nextRallyPatch({ status: "inactive", nextMarchSeconds: 30 })).toEqual({ marchSeconds: 30, nextMarchSeconds: null });
   });
 });

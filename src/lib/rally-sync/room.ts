@@ -218,6 +218,21 @@ export function rallyRunning(hitAt: string | null, now: number): boolean {
   return hitAt !== null && Date.parse(hitAt) > now;
 }
 
+/**
+ * What starting the next rally changes on a leader: a march time that waited
+ * for it takes over, a leader in from the next rally is in; null when nothing
+ * waits. Applied by every hit op, and by a room read once the hit has passed
+ * (session.ts), so a coordinator who calls minutes in the chat without a new
+ * hit time leaves nobody waiting.
+ */
+export function nextRallyPatch(leader: { status: LeaderStatus; nextMarchSeconds: number | null }): { marchSeconds?: number; nextMarchSeconds?: null; status?: "active" } | null {
+  if (leader.nextMarchSeconds === null && leader.status !== "next") return null;
+  return {
+    ...(leader.nextMarchSeconds !== null ? { marchSeconds: leader.nextMarchSeconds, nextMarchSeconds: null } : {}),
+    ...(leader.status === "next" ? { status: "active" as const } : {}),
+  };
+}
+
 /** The march time the next hit time is worked out with: the one waiting for the next rally, if any. */
 export function nextRallyMarch(leader: Pick<LeaderView, "marchSeconds" | "nextMarchSeconds">): number {
   return leader.nextMarchSeconds ?? leader.marchSeconds;
