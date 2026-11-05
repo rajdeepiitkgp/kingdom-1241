@@ -16,7 +16,8 @@ import { supabaseUrl } from "@/lib/supabase/env";
  */
 function allowedImage(src: string | undefined): boolean {
   if (!src) return false;
-  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  // Our own path. `//host/…` and `/\host/…` both resolve to another host in a browser.
+  if (/^\/(?![/\\])/.test(src)) return true;
   return imagePathFromUrl(src, supabaseUrl()) !== null;
 }
 

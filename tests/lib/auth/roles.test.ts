@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEditContent, canManageUsers, hasRole, higherRole, parseRole } from "@/lib/auth/roles";
+import { canEditContent, canManageUsers, hasRole, higherRole, parseRole, storedRole } from "@/lib/auth/roles";
 
 describe("roles", () => {
   it("parses known roles and falls back otherwise", () => {
@@ -65,5 +65,21 @@ describe("grantsFor", () => {
     ];
     expect(grantsFor(grants, { discordUsername: "cleo", email: "cleo@x.y" }).map((g) => g.id)).toEqual(["1", "2"]);
     expect(grantsFor(grants, { discordUsername: null, email: null })).toEqual([]);
+  });
+});
+
+describe("storedRole (what a sign-in writes to the profile)", () => {
+  it("keeps a role set by hand and lets a pre-authorisation only raise it", () => {
+    expect(storedRole("admin", null, false)).toBe("admin");
+    expect(storedRole("member", "moderator", false)).toBe("moderator");
+    expect(storedRole("admin", "moderator", false)).toBe("admin");
+    expect(storedRole(undefined, null, false)).toBe("member");
+  });
+
+  it("never stores the owner's elevation, and heals a row that holds it", () => {
+    // The owner is an administrator by configuration; the row says member (or the grant).
+    expect(storedRole(undefined, null, true)).toBe("member");
+    expect(storedRole("admin", null, true)).toBe("member");
+    expect(storedRole("admin", "moderator", true)).toBe("moderator");
   });
 });

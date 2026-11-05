@@ -27,6 +27,19 @@ export function hasRole(role: Role, required: Role): boolean {
   return RANK[role] >= RANK[required];
 }
 
+/**
+ * The role written to a profile at sign-in: a pre-authorisation can only raise
+ * the stored role, never lower one an admin set by hand, and the configured
+ * owner's row never holds the owner's own elevation (an owner is an
+ * administrator by configuration, `isOwner`; a row that said "admin" because
+ * the account was once an owner in a local setup would otherwise stay a
+ * password-only administrator in production).
+ */
+export function storedRole(existing: unknown, granted: Role | null, owner: boolean): Role {
+  const base: Role = owner ? "member" : parseRole(existing);
+  return granted ? higherRole(base, granted) : base;
+}
+
 export function higherRole(a: Role, b: Role): Role {
   return RANK[a] >= RANK[b] ? a : b;
 }
