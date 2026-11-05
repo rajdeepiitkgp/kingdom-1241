@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -96,9 +96,16 @@ describe("rally sync capacity", () => {
     expect(sameCapacity(DEFAULT_CAPACITY, changed({ counter: { rooms: 2 } }))).toBe(false);
   });
 
-  it("are the same numbers the database enforces (migration 0016)", () => {
-    const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/0016_owner_settings.sql"), "utf8");
-    const literal = (name: string) => JSON.parse(new RegExp(`${name} constant jsonb := '([^']+)'`).exec(sql)?.[1] ?? "null");
+  it("are the same numbers the database enforces (the newest migration that defines the limits)", () => {
+    const dir = resolve(process.cwd(), "supabase/migrations");
+    const sql = readFileSync(resolve(dir, "0016_owner_settings.sql"), "utf8");
+    const newest = readdirSync(dir)
+      .filter((file) => file.endsWith(".sql"))
+      .sort()
+      .map((file) => readFileSync(resolve(dir, file), "utf8"))
+      .filter((text) => text.includes("function public.rally_sync_capacity"))
+      .at(-1) ?? "";
+    const literal = (name: string) => JSON.parse(new RegExp(`${name} constant jsonb := '([^']+)'`).exec(newest)?.[1] ?? "null");
     expect(literal("defaults")).toEqual(DEFAULT_CAPACITY);
     expect(literal("bounds")).toEqual(JSON.parse(JSON.stringify(CAPACITY_BOUNDS)));
     expect(sql.match(new RegExp(`interval '${ACTIVE_BROWSER_MINUTES} minutes'`, "g"))).toHaveLength(2);
