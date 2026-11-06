@@ -24,6 +24,10 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     ja: "次の城戦またはKvKに向けて準備する編成、コーディネーター、指示。パスワード保護 — R4/R5に聞いてね。",
     "zh-TW": "下一場王城爭奪戰或 KvK 需準備的編隊、協調員與說明。受密碼保護——請向你的 R4/R5 索取。",
   },
+  "home.transfersOpen": {
+    en: "Transfers open",
+    ja: "移民受付中",
+  },
   "kvk.coordinators": {
     en: "Coordinators",
     ja: "コーディネーター",
@@ -66,6 +70,7 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     tr: "Transferler",
     it: "Trasferimenti",
     fr: "Transferts",
+    ja: "王国移民",
   },
   "prep.group.best": {
     en: "Use today",
@@ -153,9 +158,20 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     en: "Coordinator",
     "zh-TW": "協調員",
   },
+  "sync.coord.minuteHint": {
+    en: "The slowest leader starts at :00 of the first minute at least the buffer {buffer} away, the others after them by the difference in march, so all land together.",
+    ja: "最も遅い集結リーダーが、少なくとも{buffer}先の最初の:00に開始し、他のリーダーは行軍時間の差の分だけ後に開始するので、全員が同時に着弾します。",
+  },
   "sync.coord.title": {
     en: "Coordinator",
     "zh-TW": "協調員",
+  },
+  "sync.copyMinute": {
+    en: "Copy start order (any minute)",
+    tr: "Başlangıç sırasını kopyala (herhangi bir dakika)",
+    it: "Copia l'ordine di partenza (qualsiasi minuto)",
+    fr: "Copier l'ordre de départ (n'importe quelle minute)",
+    "zh-TW": "複製出發順序（任何分鐘）",
   },
   "sync.counter.orWhen": {
     en: "or when {name}'s shows {time}",
@@ -347,6 +363,14 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     ja: "敵の着弾の合間に、こちらの補充が届くべき時刻です。「{{ui:sync.copyChat}}」で着弾と到着の時刻を同盟チャット用にコピーできます。",
     "zh-TW": "我方補充應在敵方命中之間抵達的時間。「{{ui:sync.copyChat}}」會複製命中與抵達時間，方便貼到聯盟聊天。",
   },
+  "tour.home.alliances.body": {
+    en: "The alliances of Kingdom 1241, strongest first. Open one for its own page: what it asks of new members, its languages, its Discord and how it plays the events. Next to the title: whether transfers into 1241 are open.",
+    ja: "王国1241の同盟を強い順に掲載しています。各同盟のページでは、新規メンバーへの条件、使用言語、Discord、イベントへの取り組み方をご確認いただけます。タイトルの横には、1241への移民受付中かどうかを表示しています。",
+  },
+  "tour.home.giftCodes.body": {
+    en: "Gift codes that work right now, newest first; new ones appear by themselves within the hour. {{ui:common.copy}} puts a code on your clipboard. Then, in the game, open your profile, Settings and Gift Code, and paste it.",
+    it: "Codici regalo validi in questo momento, dal più recente al più vecchio; i nuovi compaiono da soli entro un'ora. {{ui:common.copy}} copia un codice negli appunti. Poi, nel gioco, apri il tuo profilo, Impostazioni e Codice regalo, e incollalo.",
+  },
   "tour.home.prep.title": {
     en: "KvK prep days",
     ja: "KvK準備日",
@@ -471,6 +495,55 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
   "tour.sync.wake.body": {
     en: "Keeps your screen from going dark while the room is open. Tap it to switch this off.",
     fr: "Empêche ton écran de s'éteindre tant que le salon est ouvert. Appuie dessus pour désactiver cette option.",
+  },
+  "transfers.closed": {
+    en: "Closed",
+    it: "Chiusi",
+    fr: "Fermés",
+    ja: "受付終了",
+  },
+  "transfers.contactTitle": {
+    en: "Ask about a transfer",
+    ja: "移民について質問する",
+    "zh-TW": "詢問轉移事宜",
+  },
+  "transfers.joinDiscord": {
+    en: "Join the transfer Discord",
+    ja: "移民用Discordに参加する",
+    "zh-TW": "加入轉移 Discord",
+  },
+  "transfers.kingdoms": {
+    en: "Transfer group",
+    ja: "移民グループ",
+    "zh-TW": "轉移分組",
+  },
+  "transfers.open": {
+    en: "Open",
+    tr: "Açık",
+    it: "Aperti",
+    fr: "Ouverts",
+    ja: "受付中",
+    "zh-TW": "開放中",
+  },
+  "transfers.powerCap": {
+    en: "Max. Transfer Power",
+    ja: "移民戦力の上限",
+  },
+  "transfers.statusClosed": {
+    en: "Transfers into 1241 are closed right now.",
+    ja: "現在、1241王国への移民は受け付けておりません。",
+  },
+  "transfers.statusOpen": {
+    en: "Transfers into 1241 are open.",
+    ja: "1241王国への移民を受け付けています。",
+  },
+  "transfers.title": {
+    en: "Transfers",
+    ja: "王国移民",
+  },
+  "transfers.window": {
+    en: "Transfer window",
+    ja: "移民期間",
   },
 };
 
