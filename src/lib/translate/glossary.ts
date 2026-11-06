@@ -283,7 +283,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
   {
     term: "Transfer",
-    translations: { de: "Transfer", pl: "Transfer", ko: "이전", ar: "الانتقال", fr: "Transfert", it: "Trasferimento", tr: "Transfer", ja: "移転", "zh-TW": "遷移" },
+    translations: { de: "Transfer", pl: "Transfer", ko: "이전", ar: "الانتقال", fr: "Transfert", it: "Trasferimento", tr: "Transfer", ja: "移民", "zh-TW": "轉移" },
     note: "Moving a player to another kingdom.",
   },
   {
