@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { locale as rootLocale } from "next/root-params";
+import { Analytics } from "@vercel/analytics/next";
 import "@fontsource-variable/nunito";
 import "@fontsource-variable/noto-sans-kr";
 import "@fontsource-variable/noto-sans-arabic";
@@ -111,6 +112,7 @@ export default async function RootLayout({
             adminHref={`/${currentLocale}/admin`}
           />
         <BottomNav locale={currentLocale} dict={dict} />
+        <Analytics />
       </body>
     </html>
   );
