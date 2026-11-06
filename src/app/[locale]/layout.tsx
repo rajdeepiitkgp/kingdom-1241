@@ -14,6 +14,7 @@ import { getLanguages, getSettings } from "@/lib/data";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getLanguageInfo } from "@/lib/i18n/languages";
 import { pick } from "@/lib/i18n/localized";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export async function generateStaticParams() {
   const languages = await getLanguages();
@@ -111,6 +112,7 @@ export default async function RootLayout({
             adminHref={`/${currentLocale}/admin`}
           />
         <BottomNav locale={currentLocale} dict={dict} />
+        <SpeedInsights />
       </body>
     </html>
   );
