@@ -68,6 +68,7 @@ export const NOT_BACKED_UP: readonly string[] = [
   "rally_sync_rooms", // Rally Sync rooms live at most a day
   "rally_sync_leaders", // their leaders, deleted with the room
   "rally_sync_instances", // the browsers in a room, deleted with it
+  "rally_sync_messages", // the room chat, deleted with the room
 ];
 
 export type Row = Record<string, unknown>;

@@ -396,3 +396,64 @@ test("RS-20 the first tap on a room moves nothing: the sound hint floats above t
   expect(after.y).toBeCloseTo(before.y, 0);
   expect(after.x).toBeCloseTo(before.x, 0);
 });
+
+test("RS-21 the room chat reaches every browser in the room, names its sender, pins for everyone and clears for everyone", async ({ page, otherDevice }) => {
+  test.slow(); // two devices and polling rounds (the offline build has no Realtime): three times the budget
+  const code = freshRoom("R");
+  await openRoom(page, code, { coordinator: true });
+  const watcher = await otherDevice();
+  await openRoom(watcher, code);
+  // The watcher gives its browser a name, so its messages carry it.
+  await watcher.getByRole("button", { name: t("sync.watching.set") }).click();
+  await watcher.getByLabel(t("sync.watching.label")).fill("E2E Watcher");
+  await watcher.getByRole("button", { name: t("sync.save"), exact: true }).click();
+  await expect(watcher.getByText(tPattern("sync.watching"))).toContainText("E2E Watcher");
+
+  // The floating button opens the chat (a window or a sheet); the coordinator writes.
+  const launcher = (p: Page) => p.locator('[data-tour="sync-chat"]');
+  const chat = (p: Page) => p.getByRole("dialog", { name: t("sync.chat.title") });
+  await launcher(page).click();
+  await expect(chat(page)).toBeVisible();
+  await chat(page).getByPlaceholder(t("sync.chat.placeholder")).fill("Hold for a re-sync");
+  await chat(page).getByRole("button", { name: t("sync.chat.send"), exact: true }).click();
+  await expect(chat(page)).toContainText("Hold for a re-sync");
+  await expect(chat(page)).toContainText(t("sync.you"));
+  await expect(chat(page)).toContainText(t("sync.coord.title"));
+  // The watcher's button counts it as new until the chat is opened, then shows it under the coordinator's mark.
+  await expect(launcher(watcher)).toContainText("1", { timeout: 15_000 });
+  await launcher(watcher).click();
+  await expect(chat(watcher)).toContainText("Hold for a re-sync");
+  await expect(chat(watcher)).toContainText(t("sync.coord.title"));
+
+  // The watcher answers (Enter sends); the coordinator sees it under the watcher's name, without a reload.
+  await chat(watcher).getByPlaceholder(t("sync.chat.placeholder")).fill("Ready here");
+  await chat(watcher).getByPlaceholder(t("sync.chat.placeholder")).press("Enter");
+  await expect(chat(watcher)).toContainText("Ready here");
+  await expect(chat(page)).toContainText("Ready here", { timeout: 15_000 });
+  await expect(chat(page)).toContainText("E2E Watcher");
+
+  // The coordinator pins a message: it sits on top of the chat and under the status line on every page, until unpinned.
+  await chat(page).getByRole("button", { name: t("sync.chat.pin"), exact: true }).first().click();
+  const pinnedLine = (p: Page) => p.locator('[data-tour="sync-pinned-line"]');
+  await expect(chat(page).locator('[data-tour="sync-pinned"]')).toContainText("Hold for a re-sync");
+  await expect(pinnedLine(watcher)).toContainText("Hold for a re-sync", { timeout: 15_000 });
+  await expect(chat(watcher).locator('[data-tour="sync-pinned"]')).toContainText("Hold for a re-sync");
+  await chat(page).locator('[data-tour="sync-pinned"]').getByRole("button", { name: t("sync.chat.unpin"), exact: true }).click();
+  await expect(chat(page).locator('[data-tour="sync-pinned"]')).toHaveCount(0);
+  await expect(pinnedLine(watcher)).toHaveCount(0, { timeout: 15_000 });
+
+  // Clear needs two taps and empties every page.
+  await chat(page).getByRole("button", { name: t("sync.chat.clear"), exact: true }).click();
+  await expect(chat(page)).toContainText("Hold for a re-sync");
+  await chat(page).getByRole("button", { name: t("sync.chat.clearConfirm"), exact: true }).click();
+  await expect(chat(page)).toContainText(t("sync.chat.empty"));
+  await expect(chat(watcher)).toContainText(t("sync.chat.empty"), { timeout: 15_000 });
+
+  // Closing brings the button back, with nothing new on it.
+  await chat(watcher).getByRole("button", { name: t("sync.chat.close"), exact: true }).click();
+  await expect(chat(watcher)).toHaveCount(0);
+  await expect(launcher(watcher)).toBeVisible();
+  await expect(launcher(watcher)).not.toContainText(/\d/);
+  await expectHealthyPage(page, "en");
+  await expectHealthyPage(watcher, "en");
+});

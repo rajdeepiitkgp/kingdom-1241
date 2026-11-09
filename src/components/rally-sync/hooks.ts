@@ -7,6 +7,7 @@ import { bestOffset, CLOCK_SAMPLES, type ClockSample, clockSample } from "@/lib/
 import { type DeviceData, parseDevice, readDeviceRaw, subscribeDevice } from "@/lib/rally-sync/device";
 import { connectRoomChannel, type LinkStatus } from "@/lib/rally-sync/realtime";
 import { HEARTBEAT_MS, type RoomState } from "@/lib/rally-sync/room";
+import { applyChatFetch, type ChatState, lastMessageId, type MessageView } from "@/lib/rally-sync/room-chat";
 
 /** This browser's Rally Sync memory (see device.ts); empty on the server and during hydration. */
 export function useDevice(): DeviceData {
@@ -55,12 +56,16 @@ export interface RoomSync {
   /** Device time of the last successful update (ms), null before the first. */
   updatedAt: number | null;
   refresh: () => void;
+  /** Counts the Realtime "chat" pings (the chat panel fetches new messages when it changes). */
+  chatVersion: number;
 }
 
 /** Without Realtime (local review) pages poll often; with it, only as a fallback while the link is down. */
 const POLL_LIVE_FALLBACK_MS = 30_000;
 const POLL_NO_REALTIME_MS = 5_000;
 const PING_GAP_MS = 1_500;
+/** A burst of chat pings (several messages at once) becomes one fetch. */
+const CHAT_PING_GAP_MS = 800;
 
 /**
  * The room's state on this page: refetched after every Realtime ping (spread
@@ -80,6 +85,8 @@ export function useRoomSync(code: string, initial: RoomState, realtime: { url: s
   const stale = useRef(false);
   const pingTimer = useRef(0);
   const lastPingFetch = useRef(0);
+  const [chatVersion, setChatVersion] = useState(0);
+  const chatTimer = useRef(0);
 
   const refresh = useCallback(() => {
     if (document.visibilityState === "hidden") {
@@ -130,6 +137,7 @@ export function useRoomSync(code: string, initial: RoomState, realtime: { url: s
       window.removeEventListener("online", refresh);
       window.clearInterval(heartbeat);
       window.clearTimeout(pingTimer.current);
+      window.clearTimeout(chatTimer.current);
     };
   }, [refresh]);
 
@@ -145,6 +153,15 @@ export function useRoomSync(code: string, initial: RoomState, realtime: { url: s
       // moment, and only the server's answer can close the room on this page.
       // At most one ping-driven fetch per PING_GAP_MS, so a flood of fake pings can't turn into a flood of requests.
       onPing: (event) => {
+        // A chat ping concerns the messages alone (their own route); a burst of them is one fetch.
+        if (event === "chat") {
+          if (chatTimer.current) return;
+          chatTimer.current = window.setTimeout(() => {
+            chatTimer.current = 0;
+            setChatVersion((v) => v + 1);
+          }, CHAT_PING_GAP_MS);
+          return;
+        }
         if (pingTimer.current) return;
         const wait = Math.max(event === "closed" ? 0 : 150 + Math.random() * 750, lastPingFetch.current + PING_GAP_MS - Date.now());
         pingTimer.current = window.setTimeout(() => {
@@ -163,7 +180,97 @@ export function useRoomSync(code: string, initial: RoomState, realtime: { url: s
     return () => window.clearInterval(id);
   }, [link, ending, realtime, refresh]);
 
-  return { state, link, offsetMs, ending, updatedAt, refresh };
+  return { state, link, offsetMs, ending, updatedAt, refresh, chatVersion };
+}
+
+export type ChatStatus = "loading" | "ready" | "unavailable";
+
+export interface RoomChatSync {
+  messages: MessageView[];
+  /** The coordinator's pinned message, if any. */
+  pinned: MessageView | null;
+  /** "unavailable" when the room has no chat (a deploy ahead of its migration, or a database problem on the first load). */
+  status: ChatStatus;
+  /** The newest message id at the first load: what was there already doesn't count as new. */
+  loadedAtId: number;
+  refresh: () => void;
+}
+
+/**
+ * The room chat on this page: fetched on load, after every Realtime "chat"
+ * ping (`version`), when the tab comes back and by polling while the link is
+ * down, each time only the messages after the last one it has. What the
+ * room no longer holds (a cleared chat) is dropped (applyChatFetch).
+ */
+export function useRoomChat(code: string, version: number, link: LinkStatus, realtime: boolean): RoomChatSync {
+  const [messages, setMessages] = useState<MessageView[]>([]);
+  const [pinned, setPinned] = useState<MessageView | null>(null);
+  const [status, setStatus] = useState<ChatStatus>("loading");
+  const [loadedAtId, setLoadedAtId] = useState(0);
+  const latest = useRef<MessageView[]>([]);
+  const loadedOnce = useRef(false);
+  const busy = useRef(false);
+  const again = useRef(false);
+
+  const refresh = useCallback(() => {
+    if (document.visibilityState === "hidden") return; // fetched again when the tab comes back
+    if (busy.current) {
+      again.current = true;
+      return;
+    }
+    busy.current = true;
+    void (async () => {
+      do {
+        again.current = false;
+        try {
+          const response = await fetch(`/api/rally-sync/${code}/chat?after=${lastMessageId(latest.current)}`, { cache: "no-store" });
+          if (response.ok) {
+            const next = (await response.json()) as ChatState;
+            latest.current = applyChatFetch(latest.current, next);
+            setMessages(latest.current);
+            setPinned((current) => (current?.id === next.pinned?.id && current?.body === next.pinned?.body ? current : next.pinned));
+            setStatus("ready");
+            if (!loadedOnce.current) {
+              loadedOnce.current = true;
+              setLoadedAtId(lastMessageId(latest.current));
+            }
+          } else if (response.status === 503) {
+            // No chat on this room (yet): the panel stays away. Once it worked, a passing problem keeps what we have.
+            setStatus((current) => (current === "ready" ? current : "unavailable"));
+          }
+          // 403, 404, 410: the room's own sync ends the page.
+        } catch {
+          // Offline for a moment: keep showing what we have.
+        }
+      } while (again.current);
+      busy.current = false;
+    })();
+  }, [code]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh, version]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", refresh);
+    };
+  }, [refresh]);
+
+  // Polling only while there is no live link (always, in a local review without Realtime).
+  useEffect(() => {
+    if (link === "live") return;
+    const id = window.setInterval(refresh, realtime ? POLL_LIVE_FALLBACK_MS : POLL_NO_REALTIME_MS);
+    return () => window.clearInterval(id);
+  }, [link, realtime, refresh]);
+
+  return { messages, pinned, status, loadedAtId, refresh };
 }
 
 /**

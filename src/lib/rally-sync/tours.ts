@@ -7,7 +7,8 @@ import type { RoomMode } from "./room";
  * The guided tour of a room, one per mode, opened from the "?" in the status
  * line. Coordinator steps point at the coordinator's panel, so leaders and
  * watchers never see them; steps for things a page doesn't show right now
- * (the copy button before a hit time is set) are left out the same way.
+ * (the copy button before a hit time is set) are left out the same way. The
+ * room chat is the last step of every mode.
  */
 
 const status = uiStep("sync-status", "sync.status");
@@ -17,11 +18,12 @@ const wake = uiStep("sync-wake", "sync.wake");
 const me = uiStep("sync-me", "sync.me", "sync.me.title");
 const coordinator = uiStep("sync-coordinator", "sync.coordinator");
 const more = uiStep("sync-more", "sync.more", "sync.coord.more");
+const chat = uiStep("sync-chat", "sync.chat", "sync.chat.title");
 
 export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
   rally: {
     id: "sync-rally",
-    version: 2,
+    version: 3,
     steps: [
       status,
       clock,
@@ -36,11 +38,12 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
       uiStep("sync-hit", "sync.hit"),
       uiStep("sync-copy", "sync.copy", "sync.copyChat"),
       more,
+      chat,
     ],
   },
   garrison: {
     id: "sync-garrison",
-    version: 1,
+    version: 2,
     steps: [
       status,
       clock,
@@ -53,11 +56,12 @@ export const RALLY_SYNC_TOURS: Record<RoomMode, Tour<UiKey>> = {
       uiStep("gar-enemies", "gar.enemies"),
       uiStep("gar-edit", "gar.edit"),
       more,
+      chat,
     ],
   },
   counter: {
     id: "sync-counter",
-    version: 1,
-    steps: [status, clock, wake, uiStep("counter-focus", "counter.focus"), me, uiStep("counter-order", "counter.order"), coordinator, uiStep("counter-copy", "counter.copy", "sync.copyChat"), more],
+    version: 2,
+    steps: [status, clock, wake, uiStep("counter-focus", "counter.focus"), me, uiStep("counter-order", "counter.order"), coordinator, uiStep("counter-copy", "counter.copy", "sync.copyChat"), more, chat],
   },
 };

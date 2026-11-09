@@ -59,6 +59,24 @@ export interface InstanceRow {
   lastSeenAt: string;
 }
 
+/** One chat message of a room (migration 0025): kept as written, deleted with the room. */
+export interface MessageRow {
+  id: number;
+  roomId: string;
+  /** The browser that sent it; null once that browser was removed. */
+  instanceId: string | null;
+  /** How the sender was called when it was sent (own name, else its leaders' names); null for a watcher (shown by its tag). */
+  author: string | null;
+  tag: string;
+  coordinator: boolean;
+  body: string;
+  /** The coordinator pinned it (one per room): it stays on top of the chat and under the room's status line. */
+  pinned: boolean;
+  createdAt: string;
+}
+
+export type NewMessage = Pick<MessageRow, "roomId" | "instanceId" | "author" | "tag" | "coordinator" | "body">;
+
 export type NewRoom = Pick<
   RoomRow,
   "code" | "title" | "passwordHash" | "coordinatorHash" | "channelKey" | "mode" | "rallyWaitSeconds" | "bufferSeconds" | "counterOffsetSeconds" | "createdBy" | "createdByName"
@@ -112,6 +130,15 @@ export interface RallyStore {
   touchInstance(id: string, now: number): Promise<void>;
   /** Removes instances of the room: the given ones, or with `except` every other one. Returns how many. */
   deleteInstances(roomId: string, which: { ids: readonly string[] } | { except: string | null }): Promise<number>;
+  /** The room's messages after `afterId` (0 for all it keeps), oldest first, at most `limit`. */
+  messages(roomId: string, afterId: number, limit: number): Promise<MessageRow[]>;
+  insertMessage(message: NewMessage): Promise<MessageRow>;
+  /** The room's pinned message, if any. */
+  pinnedMessage(roomId: string): Promise<MessageRow | null>;
+  /** Pins one message of the room (unpinning the one before), or with null unpins; false when the message isn't the room's. */
+  pinMessage(roomId: string, messageId: number | null): Promise<boolean>;
+  /** The coordinator clears the chat: every message of the room. Returns how many. */
+  deleteMessages(roomId: string): Promise<number>;
   /** Deletes rooms that are closed at `now`; returns how many. */
   deleteClosedRooms(now: number): Promise<number>;
   /** Browsers per room that had it on screen since `since` (ms), for the owner's "open now". */

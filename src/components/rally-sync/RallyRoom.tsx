@@ -23,6 +23,7 @@ import {
   rallyRunning,
   type RoomState,
 } from "@/lib/rally-sync/room";
+import { chimeQuiet, lastMessageId, lastOtherMessageId, unreadCount } from "@/lib/rally-sync/room-chat";
 import { CuePlayer } from "@/lib/rally-sync/sound";
 import { clampGameOffset, formatSeconds, isTooLate, MAX_GAME_OFFSET_SECONDS, soundCues, withStartTimes } from "@/lib/rally-sync/timing";
 import { RALLY_SYNC_TOURS } from "@/lib/rally-sync/tours";
@@ -31,10 +32,11 @@ import { tourLabels, useGuidedTour } from "../tour/GuidedTour";
 import { CoordinatorPanel } from "./CoordinatorPanel";
 import { CounterFocus, CounterSheet } from "./Counter";
 import { GarrisonBoard } from "./Garrison";
-import { useCorrectedSecond, useDevice, useRoomSync, useRunner, useWakeLock } from "./hooks";
+import { useCorrectedSecond, useDevice, useRoomChat, useRoomSync, useRunner, useWakeLock } from "./hooks";
 import { type Clock, FocusBlock, isUrgent, LeaderRow, NextMarch, shown, type TimedLeaderView } from "./LeaderCards";
 import { ErrorLine, LeaderForm } from "./LeaderForm";
 import { LeaderList } from "./LeaderList";
+import { PinnedLine, RoomChat } from "./RoomChat";
 
 const noSubscribe = () => () => {};
 
@@ -45,7 +47,10 @@ const noSubscribe = () => () => {};
  * leaders as quiet rows below. Everything time-related
  * is computed from stored timestamps on every tick of the corrected clock, so
  * a tab coming back from the background is right at once. This device's role
- * (leader of a row, coordinator) comes from its localStorage tokens.
+ * (leader of a row, coordinator) comes from its localStorage tokens. The room
+ * chat floats in the corner in every mode, like a messenger: a button that
+ * counts the new messages, a window or sheet when opened, a soft pop for a
+ * new message when sound is on (quiet around this device's countdown cues).
  */
 export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomState; realtime: { url: string; key: string } | null; dict: Dictionary; locale: string }) {
   const code = initial.room.code;
@@ -128,6 +133,34 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
 
   useWakeLock(device.wakeLock);
 
+  // The room chat: a floating button that counts what is new, a window or sheet when opened.
+  const chat = useRoomChat(code, sync.chatVersion, sync.link, realtime !== null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatSeen, setChatSeen] = useState<number | null>(null);
+  const unread = chatOpen ? 0 : unreadCount(chat.messages, chatSeen ?? chat.loadedAtId);
+  const toggleChat = useCallback(
+    (open: boolean) => {
+      setChatSeen(lastMessageId(chat.messages));
+      setChatOpen(open);
+    },
+    [chat.messages],
+  );
+  // A soft pop for a message from someone else, once the chat has loaded (what was there already is silent), unless a
+  // countdown cue of this device is near: a pop in the last minute before a start could be taken for the beeps.
+  const othersLatest = lastOtherMessageId(chat.messages);
+  const quiet = now !== null && chimeQuiet(cues, now);
+  const popped = useRef<number | null>(null);
+  useEffect(() => {
+    if (chat.status !== "ready") return;
+    if (popped.current === null) {
+      popped.current = othersLatest;
+      return;
+    }
+    if (othersLatest <= popped.current) return;
+    popped.current = othersLatest;
+    if (device.sound && !quiet) player.current?.pop();
+  }, [chat.status, othersLatest, device.sound, quiet]);
+
   if (sync.ending === "closed") {
     return (
       <div className="card mx-auto max-w-md px-5 py-8 text-center">
@@ -156,6 +189,11 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       dict={dict}
     />
   );
+  const chatPanel = <RoomChat code={code} chat={chat} open={chatOpen} onToggle={toggleChat} canWrite={sync.state.me !== null} coordinatorToken={coordinatorToken} unread={unread} dict={dict} />;
+  // The coordinator's pinned message, under the status line in every mode; a tap opens the chat.
+  const pinnedLine = <PinnedLine pinned={chat.pinned} dict={dict} onOpen={() => toggleChat(true)} />;
+  // How the coordinator's list (and the chat) names this browser, with a way to set a name: for anyone without a leader entry.
+  const browserName = !myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />;
   const coordinatorPanel = coordinatorToken && (
     <CoordinatorPanel
       room={room}
@@ -172,13 +210,17 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     />
   );
 
-  // A garrison room: no leaders and no list of who is in, only the coordinator's marking and each player's own refills.
+  // A garrison room: no leaders and no list of who is in, only the coordinator's marking and each player's own refills
+  // (and the name this browser writes in the chat under).
   if (garrison) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         {statusBar}
+        {pinnedLine}
         {coordinatorPanel}
+        {browserName}
         <GarrisonBoard plan={plan} now={now} clock={clock} dict={dict} />
+        {chatPanel}
       </div>
     );
   }
@@ -196,7 +238,6 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
       onChanged={sync.refresh}
     />
   );
-  const browserName = !myLeader && sync.state.me && <BrowserName code={code} me={sync.state.me} leaderName={null} dict={dict} onChanged={sync.refresh} />;
 
   // A counter-rally room: the leader's own place in the order, big, then the whole order. No hit time, countdown or sound.
   if (counter) {
@@ -204,6 +245,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         {statusBar}
+        {pinnedLine}
         {myStep && <CounterFocus step={myStep} dict={dict} />}
         {myEntry}
         {browserName}
@@ -219,6 +261,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
           dict={dict}
           onChanged={sync.refresh}
         />
+        {chatPanel}
       </div>
     );
   }
@@ -229,6 +272,7 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {statusBar}
+      {pinnedLine}
 
       {/* Pinned under the site header (h-16 + border) in the last minute, wherever the page is scrolled. */}
       <div className={clsx(urgent && "sticky top-17 z-30")} data-tour="sync-focus">
@@ -259,6 +303,8 @@ export function RallyRoom({ initial, realtime, dict, locale }: { initial: RoomSt
           row={(leader, onEdit) => <LeaderRow leader={leader} now={now} room={room} quiet={!coordinatorToken} dict={dict} onEdit={onEdit} />}
         />
       </div>
+
+      {chatPanel}
     </div>
   );
 }
@@ -413,7 +459,6 @@ function StatusBar({
           >
             <Clock3 className="size-4" aria-hidden />
           </button>
-          {room.mode !== "counter" && (
           <button
             type="button"
             className={iconButton}
@@ -425,7 +470,6 @@ function StatusBar({
           >
             {sound ? <Volume2 className="size-4" aria-hidden /> : <VolumeX className="size-4" aria-hidden />}
           </button>
-          )}
           {canWakeLock && (
             <button
               type="button"
@@ -443,12 +487,13 @@ function StatusBar({
         </div>
       </div>
       {tour.nudge && <div className="mt-2">{tour.nudge}</div>}
-      {sound && !soundReady && room.mode !== "counter" && (
+      {sound && !soundReady && (
         // A toast above the bottom bar, never a line in this card: the hint leaves 100 ms after the first tap, and a line
         // leaving the card shifted every control below it under the player's finger (a quick second tap hit the wrong one).
+        // It keeps clear of the chat's floating button in the end corner.
         <p
           role="status"
-          className="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 mx-auto w-fit max-w-[calc(100%-2rem)] rounded-full bg-gold-soft px-4 py-2 text-center text-xs font-bold text-gold-ink shadow-md lg:bottom-4 print:hidden"
+          className="pointer-events-none fixed inset-s-4 inset-e-20 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 mx-auto w-fit max-w-full rounded-full bg-gold-soft px-4 py-2 text-center text-xs font-bold text-gold-ink shadow-md lg:bottom-4 print:hidden"
         >
           {dict["sync.sound.tap"]}
         </p>
