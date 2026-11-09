@@ -1,4 +1,3 @@
-| SITE-14 | A sync of the interface strings writes only the rows whose text or hash differs from the database, so an unchanged string fires no translation webhook. | Unit: tests/lib/i18n/sync-ui.test.ts |
 # Quality assurance
 
 How Kingdom 1241's site is tested, what each test promises, and what still needs a person with a phone. The specs below are the contract: every rule has an ID, and each browser test's title starts with the ID it checks. `tests/architecture/qa-coverage.test.ts` fails when a `Browser` or `Live` spec has no test, when a test names an ID this page doesn't list, when a `Unit` spec points at a test file that doesn't exist, or when a public page is missing from the browser suite.
@@ -90,6 +89,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | SITE-11 | A link in a language the site knows but doesn't show opens the same page in the visitor's language. | Unit: tests/lib/i18n/negotiate.test.ts |
 | SITE-12 | A theme, text-size or language change made while a new page is still fading in happens at once and leaves no error in the console (a new crossfade would cut React's short, and React reports that as an error). | Browser |
 | SITE-13 | Visitor counting (Vercel Web Analytics and Speed Insights) is drawn on Vercel only, so a local build and the test server load no script and send nothing; the browsers of signed-in council members and browsers that opted out send nothing, so the council's own visits and the live check's devices never count. | Unit: tests/lib/analytics.test.ts |
+| SITE-14 | A sync of the interface strings writes only the rows whose text or hash differs from the database, so an unchanged string fires no translation webhook. | Unit: tests/lib/i18n/sync-ui.test.ts |
 
 ### Guided tours
 
