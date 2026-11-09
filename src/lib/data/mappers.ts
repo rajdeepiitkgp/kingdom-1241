@@ -2,7 +2,7 @@ import { discordInvite } from "@/lib/admin/site-forms";
 import type { Localized } from "@/lib/i18n/localized";
 import { EVENT_CATEGORIES } from "@/lib/events/options";
 import { readStoredAnalysis } from "@/lib/retro/analysis";
-import { isRatingKey, isTextKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/questions";
+import { isRatingKey, isTextKey, parseConfig, RATING_MAX, RATING_MIN, type RatingKey, TEXT_KEYS, type TextKey } from "@/lib/retro/config";
 import { hasTransferTerms, parseTransferTerms } from "@/lib/transfers/terms";
 import type {
   Alliance,

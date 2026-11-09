@@ -1,6 +1,6 @@
 import type { Localized } from "@/lib/i18n/localized";
 import type { RetroAnalysis } from "@/lib/retro/analysis";
-import type { RatingKey, RetroConfig, TextKey } from "@/lib/retro/questions";
+import type { RatingKey, RetroConfig, TextKey } from "@/lib/retro/config";
 import type { TransferTerms } from "@/lib/transfers/terms";
 
 /**

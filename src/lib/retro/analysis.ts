@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { RetroResponse } from "@/lib/data/types";
 import { clipText } from "./form";
-import { type RatingKey, type RetroConfig, shownRatings, shownTexts, TEXT_KEYS, type TextKey } from "./questions";
+import { type RatingKey, type RetroConfig, shownRatingKeys, shownTextKeys, TEXT_KEYS, type TextKey } from "./config";
 
 /**
  * The AI step of the retrospective (pure, unit-tested): what is sent to the
@@ -193,8 +193,8 @@ export interface AnalysisInput {
 
 /** The user turn of the summary request. Newest responses first so a budget cut drops the oldest texts. */
 export function analysisPrompt(responses: readonly TextSource[], config: RetroConfig, context: AnalysisContext, maxChars = ANALYSIS_INPUT_MAX_CHARS): AnalysisInput {
-  const ratingKeys = shownRatings(config).map((q) => q.key);
-  const textKeys = shownTexts(config).map((t) => t.key);
+  const ratingKeys = shownRatingKeys(config);
+  const textKeys = shownTextKeys(config);
   const header = [
     `Battle: ${context.title} (${context.eventType === "kvk" ? "KvK" : "internal castle battle"}${context.battleAt ? `, ${context.battleAt.slice(0, 10)}` : ""}).`,
     `Rating questions (0–5): ${ratingKeys.map((key) => `${key} = ${context.ratingLabels[key] ?? key}`).join("; ")}.`,

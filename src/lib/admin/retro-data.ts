@@ -2,7 +2,7 @@ import { checkAccess } from "@/lib/auth/server";
 import { mapRetroBattle, mapRetroResponse, mapRetrospective } from "@/lib/data/mappers";
 import type { RetroBattle, RetroResponse, Retrospective } from "@/lib/data/types";
 import { createLogger } from "@/lib/log";
-import { MAX_RESPONSES_LIMIT } from "@/lib/retro/questions";
+import { MAX_RESPONSES_LIMIT } from "@/lib/retro/config";
 import { pruneAt } from "@/lib/retro/retention";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUuid } from "./forms";
