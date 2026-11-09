@@ -17,6 +17,9 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getLanguageInfo } from "@/lib/i18n/languages";
 import { pick } from "@/lib/i18n/localized";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["admin", "footer", "home", "kvk", "lang", "nav", "textSize", "theme"];
+
 export async function generateStaticParams() {
   const languages = await getLanguages();
   return languages.filter((l) => l.enabled).map((l) => ({ locale: l.code }));
@@ -73,7 +76,7 @@ export default async function RootLayout({
   const language = languages.find((l) => l.code === currentLocale && l.enabled);
   if (!language) notFound();
 
-  const dict = await getDictionary(currentLocale);
+  const dict = await getDictionary(currentLocale, PAGE_STRINGS);
   const info = getLanguageInfo(currentLocale);
   const kingdomName = pick(settings.kingdomName, currentLocale);
 

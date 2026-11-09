@@ -2416,7 +2416,7 @@ export const UI_STRINGS = {
     ar: "نسختان من الترتيب: العدّ التنازلي الذي يراقبه كل قائد، أو الثواني التي تُعدّ بعد الحشد السابق.",
   },
 
-  // Guided tours: Home and the KvK pages (steps in src/lib/tour/home.ts and src/lib/kvk/tours.ts)
+  // Guided tours: Home and the KvK pages (steps in src/lib/tour/home.ts and src/lib/kvk/tours/)
   "tour.site.nav.title": { en: "Find your way", de: "Orientierung", ko: "길 찾기", pl: "Gdzie co jest", ar: "اعثر على طريقك" },
   "tour.site.nav.body": {
     en: "Events, rules, guides, the KvK pages and tools such as {{ui:kvk.menu.rallySync}}. On a phone this menu sits at the bottom of the screen.",

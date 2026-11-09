@@ -16,6 +16,9 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["common", "events", "guides", "time"];
+
 export async function generateStaticParams() {
   const guides = await getGuides();
   return guides.map((g) => ({ slug: g.slug }));
@@ -38,7 +41,7 @@ export default function GuidePage(props: PageProps<"/[locale]/guides/[slug]">) {
 
 async function GuideArticle({ params }: Pick<PageProps<"/[locale]/guides/[slug]">, "params">) {
   const [{ slug }, locale] = await Promise.all([params, rootLocale()]);
-  const [dict, guide, events, sections, alliances] = await Promise.all([getDictionary(locale), getGuideBySlug(slug), getEvents(), getGuideSections(), getAlliances()]);
+  const [dict, guide, events, sections, alliances] = await Promise.all([getDictionary(locale, PAGE_STRINGS), getGuideBySlug(slug), getEvents(), getGuideSections(), getAlliances()]);
   if (!guide || !guide.published) notFound();
 
   const relatedEvents = events.filter((e) => e.guideSlug === guide.slug);

@@ -12,8 +12,11 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
 import { formatTransferWindow } from "@/lib/transfers/terms";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["alliance", "common", "home", "transfers"];
+
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = await getDictionary(await rootLocale());
+  const dict = await getDictionary(await rootLocale(), PAGE_STRINGS);
   return { title: dict["transfers.title"] };
 }
 
@@ -28,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function TransfersPage() {
   const locale = await rootLocale();
-  const [dict, settings] = await Promise.all([getDictionary(locale), getSettings()]);
+  const [dict, settings] = await Promise.all([getDictionary(locale, PAGE_STRINGS), getSettings()]);
   const open = settings.transfersOpen;
   const terms = settings.transferTerms;
   const info = open ? pick(settings.transferInfo, locale) : "";

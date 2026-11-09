@@ -7,12 +7,15 @@ import type { Dictionary } from "@/lib/i18n/dictionary";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /** Room codes are random, so none exist at build time; the placeholder only lets the build check the route (it shows "no such room"). */
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["common", "kvk", "sync", "tour.*", "tour.counter", "tour.gar", "tour.sync"];
+
 export function generateStaticParams() {
   return [{ code: "_" }];
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = await getDictionary(await rootLocale());
+  const dict = await getDictionary(await rootLocale(), PAGE_STRINGS);
   return { title: dict["sync.title"] };
 }
 
@@ -23,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function RallyRoomPage({ params }: PageProps<"/[locale]/tools/rally-sync/[code]">) {
   const locale = await rootLocale();
-  const dict = await getDictionary(locale);
+  const dict = await getDictionary(locale, PAGE_STRINGS);
 
   return (
     <Suspense fallback={<RoomGateSkeleton />}>

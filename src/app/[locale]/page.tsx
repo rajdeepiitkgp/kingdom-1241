@@ -18,11 +18,14 @@ import { pick } from "@/lib/i18n/localized";
 import { localePath } from "@/lib/i18n/paths";
 import { HOME_TOUR } from "@/lib/tour/home";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["alliance", "common", "events", "home", "kvk", "nav", "prep", "time", "tour.*", "tour.home", "tour.site", "transfers"];
+
 export default async function HomePage() {
   const locale = await rootLocale();
   const [settings, dict, announcements, events, alliances, giftCodes] = await Promise.all([
     getSettings(),
-    getDictionary(locale),
+    getDictionary(locale, PAGE_STRINGS),
     getAnnouncements(),
     getEvents(),
     getAlliances(),
