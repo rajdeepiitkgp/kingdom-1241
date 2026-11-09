@@ -30,7 +30,7 @@ async function AdminGate({ locale, children }: { locale: string; children: React
   if (!canEditContent(user.role)) {
     return (
       <div className="card mx-auto max-w-md p-6" dir="ltr">
-        <NoAccess locale={locale} user={user} path={current} />
+        <NoAccess locale={locale} user={user} />
       </div>
     );
   }

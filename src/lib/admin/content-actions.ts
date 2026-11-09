@@ -7,7 +7,7 @@ import { prepareRichText } from "@/components/content/RichText";
 import { adminPath } from "@/lib/auth/paths";
 import { checkAccess } from "@/lib/auth/server";
 import { missingTable, usedImageBytes } from "@/lib/content/image-store";
-import { budgetProblem, IMAGE_BUCKET, IMAGE_MAX_BYTES, IMAGE_MIME, imagePath, imageProblem, imageUrl, isImageKind, sniffImage, stripJpegMetadata } from "@/lib/content/images";
+import { budgetProblem, IMAGE_BUCKET, IMAGE_MAX_BYTES, IMAGE_MIME, type ImageKind, imagePath, imageProblem, imageUrl, isImageKind, sniffImage, stripJpegMetadata } from "@/lib/content/images";
 import { getEnabledLocales } from "@/lib/data";
 import { CACHE_TAGS, type CacheTag, routesForTag } from "@/lib/data/cache-tags";
 import { markdownToHtml } from "@/lib/html";
@@ -15,14 +15,15 @@ import { isLocaleCode } from "@/lib/i18n/languages";
 import type { Localized } from "@/lib/i18n/localized";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured, supabaseUrl } from "@/lib/supabase/env";
+import { isTranslationConfigured } from "@/lib/translate/provider";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
-import { BODY_MAX, type ContentOrderTable, isContentOrderTable, parseAnnouncementForm, SUMMARY_MAX, TITLE_MAX } from "./content-forms";
+import { BODY_MAX, bodyImageProblem, type ContentOrderTable, isContentOrderTable, parseAnnouncementForm, SUMMARY_MAX, TITLE_MAX } from "./content-forms";
 import { bodyColumns, NO_DATABASE } from "./content-write";
 import { localeField, localizedUpdate, textField, uuidField } from "./forms";
 import { isMoveDirection, moveInList } from "./kvk-forms";
-import { ALLIANCE_DESCRIPTION_MAX, ALLIANCE_REQUIREMENTS_MAX, EVENT_NAME_MAX, EVENT_SUMMARY_MAX, TRANSFER_INFO_MAX } from "./site-forms";
+import { ALLIANCE_DESCRIPTION_MAX, ALLIANCE_REQUIREMENTS_MAX, EVENT_NAME_MAX, EVENT_SUMMARY_MAX, noImagesProblem, TRANSFER_CONTACT_MAX, TRANSFER_INFO_MAX } from "./site-forms";
 import { pendingColumns, withLanguage } from "./translation";
 
 /**
@@ -199,19 +200,29 @@ type Row = Record<string, unknown>;
 
 /** The content tables whose translations are corrected here, with what each column takes and where its editor is. */
 /**
- * The texts corrected per language: their columns (with the longest text),
- * cache tag and editor. Rows are found by uuid, or for `site_settings` by one
- * of the listed keys.
+ * The texts corrected per language: their columns (with the longest text, or
+ * per key in `keyLimits`), the image rule of the English form (`images`: a
+ * kind with its count, "none" for Markdown the prune doesn't look at), cache tag
+ * and editor. Rows are found by uuid, or for `site_settings` by one of the
+ * listed keys.
  */
 const CONTENT_TRANSLATIONS: Record<
   string,
-  { columns: Record<string, number>; tag: CacheTag; path: (row: Row) => string; keys?: readonly string[]; markdownKeys?: readonly string[] }
+  {
+    columns: Record<string, number>;
+    keyLimits?: Record<string, number>;
+    images?: ImageKind | "none";
+    tag: CacheTag;
+    path: (row: Row) => string;
+    keys?: readonly string[];
+    markdownKeys?: readonly string[];
+  }
 > = {
-  announcements: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.announcements, path: (row) => `/announcements/${row.id}` },
+  announcements: { columns: { title: TITLE_MAX, body: BODY_MAX }, images: "announcement", tag: CACHE_TAGS.announcements, path: (row) => `/announcements/${row.id}` },
   rule_topics: { columns: { title: TITLE_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/topics/${row.id}` },
-  rules: { columns: { title: TITLE_MAX, body: BODY_MAX }, tag: CACHE_TAGS.rules, path: (row) => `/rules/${row.id}` },
-  guides: { columns: { title: TITLE_MAX, summary: SUMMARY_MAX, body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.id}` },
-  guide_sections: { columns: { body: BODY_MAX }, tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.guide_id}/alliances/${row.id}` },
+  rules: { columns: { title: TITLE_MAX, body: BODY_MAX }, images: "rule", tag: CACHE_TAGS.rules, path: (row) => `/rules/${row.id}` },
+  guides: { columns: { title: TITLE_MAX, summary: SUMMARY_MAX, body: BODY_MAX }, images: "guide", tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.id}` },
+  guide_sections: { columns: { body: BODY_MAX }, images: "guide", tag: CACHE_TAGS.guides, path: (row) => `/guides/${row.guide_id}/alliances/${row.id}` },
   events: { columns: { name: EVENT_NAME_MAX, summary: EVENT_SUMMARY_MAX }, tag: CACHE_TAGS.events, path: (row) => `/events/${row.id}` },
   alliances: {
     columns: { description: ALLIANCE_DESCRIPTION_MAX, requirements: ALLIANCE_REQUIREMENTS_MAX },
@@ -220,6 +231,8 @@ const CONTENT_TRANSLATIONS: Record<
   },
   site_settings: {
     columns: { value: TRANSFER_INFO_MAX },
+    keyLimits: { transfer_contact: TRANSFER_CONTACT_MAX },
+    images: "none",
     tag: CACHE_TAGS.settings,
     path: () => "/transfers",
     keys: ["transfer_info", "transfer_contact"],
@@ -243,13 +256,17 @@ export async function saveContentTranslation(_previous: ActionState, formData: F
   if (lang === "en" || !isLocaleCode(lang)) return { status: "error", message: "English is edited in English mode." };
   if (!(await getEnabledLocales()).includes(lang)) return { status: "error", message: "That language is not enabled." };
   // Whitespace inside Markdown matters (line breaks): only the ends are trimmed.
-  const value = textField(formData, "value").replace(/\r\n?/g, "\n").slice(0, config.columns[column]);
+  const value = textField(formData, "value").replace(/\r\n?/g, "\n").slice(0, config.keyLimits?.[id] ?? config.columns[column]);
+  // The same image rules as the English form: a count per kind and only our own store, or none at all.
+  const imageProblem = value && config.images ? (config.images === "none" ? noImagesProblem(value) : bodyImageProblem(value, config.images, supabaseUrl())) : null;
+  if (imageProblem) return { status: "error", message: imageProblem };
 
   const admin = createAdminClient();
   const idColumn = config.keys ? "key" : "id";
   const { data: row } = await admin.from(table).select("*").eq(idColumn, id).maybeSingle();
   if (!row) return { status: "error", message: "This text no longer exists." };
-  if (pendingColumns(table, row).includes(column)) {
+  // Without a provider nothing is running, and a hand-written translation is the only way this language gets its text.
+  if (isTranslationConfigured() && pendingColumns(table, row).includes(column)) {
     return { status: "error", message: "The machine translation of this text is still running; try again in a moment." };
   }
 

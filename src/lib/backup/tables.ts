@@ -25,6 +25,8 @@ export interface BackupTable {
   table: string;
   primaryKey: string;
   restore: RestoreMode;
+  /** Columns set on every restored row: a battle plan comes back inactive (only one may be active, and an older copy must never replace the live one). */
+  restoreWith?: Record<string, unknown>;
 }
 
 export const BACKUP_TABLES: readonly BackupTable[] = [
@@ -43,7 +45,7 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   // Which images the editor uploaded (the files themselves stay in Storage, outside this backup).
   { table: "content_images", primaryKey: "path", restore: "upsert" },
   { table: "heroes", primaryKey: "id", restore: "upsert" },
-  { table: "kvk_plans", primaryKey: "id", restore: "upsert" },
+  { table: "kvk_plans", primaryKey: "id", restore: "upsert", restoreWith: { active: false } },
   { table: "kvk_rules", primaryKey: "id", restore: "upsert" },
   { table: "kvk_coordinators", primaryKey: "id", restore: "upsert" },
   { table: "kvk_formations", primaryKey: "id", restore: "upsert" },
@@ -129,6 +131,11 @@ export function chunk<T>(rows: readonly T[], size: number): T[][] {
 
 export function withoutColumns(rows: readonly Row[], columns: readonly string[]): Row[] {
   return rows.map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => !columns.includes(key))));
+}
+
+/** The rows as a restore writes them: the table's fixed columns (`restoreWith`) laid over each row. */
+export function restoreRows(table: BackupTable, rows: readonly Row[]): Row[] {
+  return table.restoreWith ? rows.map((row) => ({ ...row, ...table.restoreWith })) : [...rows];
 }
 
 export interface GrantRow {

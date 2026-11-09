@@ -2,9 +2,7 @@ import { signInWithDiscord, signOut } from "@/lib/auth/actions";
 import { devLoginEnabled } from "@/lib/auth/dev-login";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import type { CurrentUser } from "@/lib/auth/server";
-import { getAlliances } from "@/lib/data";
 import { DevLoginForm } from "./DevLoginForm";
-import { ProfileForm } from "./ProfileForm";
 
 const ERRORS: Record<string, string> = {
   oauth: "Discord sign-in didn't complete. Please try again.",
@@ -31,7 +29,7 @@ export function LoginCard({
         </p>
       )}
       {user ? (
-        <NoAccess locale={locale} user={user} path={`/${locale}/admin/login`} />
+        <NoAccess locale={locale} user={user} />
       ) : (
         <>
           <p className="text-sm font-semibold text-ink-muted">
@@ -52,20 +50,16 @@ export function LoginCard({
   );
 }
 
-/** Signed in, but the account has no role yet. */
-export async function NoAccess({ locale, user, path }: { locale: string; user: CurrentUser; path: string }) {
-  const alliances = await getAlliances();
+/**
+ * Signed in, but the account has no role yet. No profile form here: only
+ * editors may save one (saveProfile), so a member would fill it in for nothing.
+ */
+export function NoAccess({ locale, user }: { locale: string; user: CurrentUser }) {
   return (
     <div>
       <p className="font-bold text-ink">
         Signed in as {user.displayName} <span className="chip ms-1">{ROLE_LABELS[user.role]}</span>
       </p>
-      <div className="mt-4 rounded-2xl bg-card-soft p-3">
-        <p className="mb-2 text-sm font-semibold text-ink-muted">
-          Set your in-game name so the council recognises you in the user list.
-        </p>
-        <ProfileForm gameName={user.gameName} allianceTag={user.allianceTag} alliances={alliances} path={path} />
-      </div>
       <p className="mt-4 text-sm font-semibold text-ink-muted">
         This account has no admin access yet. Ask an administrator to pre-authorise
         {user.discordUsername ? (

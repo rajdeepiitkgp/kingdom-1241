@@ -13,10 +13,12 @@ import type { Logger } from "@/lib/log";
 import { battleMinutes } from "@/lib/kvk/battle-window";
 import { latestPetsOffset } from "@/lib/kvk/leaders";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isTranslationConfigured } from "@/lib/translate/provider";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import { nextSortOrder as nextSortOrderIn } from "./content-write";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
+import { lockedPageImageProblem } from "./content-forms";
 import { introSourceUnchanged, localeField, localizedUpdate, shownIntroSource, textField, uuidField } from "./forms";
 import {
   isMoveDirection,
@@ -689,13 +691,17 @@ export async function saveTranslation(_previous: ActionState, formData: FormData
   if (lang === "en" || !isLocaleCode(lang)) return { status: "error", message: "English is edited in English mode." };
   if (!(await getEnabledLocales()).includes(lang)) return { status: "error", message: "That language is not enabled." };
   const value = textField(formData, "value").slice(0, TEXT_LIMITS[column] ?? 400);
+  // The same rule as the English form: the battle pages are locked, the image store isn't.
+  const imageProblem = column === "intro" ? lockedPageImageProblem(value) : null;
+  if (imageProblem) return { status: "error", message: imageProblem };
 
   const admin = createAdminClient();
   // Only a row of the plan named by the form: the id alone would reach any plan's text.
   const planColumn = table === "kvk_plans" ? "id" : "plan_id";
   const { data: row } = await admin.from(table).select("*").eq("id", id).eq(planColumn, planId).maybeSingle();
   if (!row) return { status: "error", message: "This row no longer exists." };
-  if (pendingColumns(table, row).includes(column)) {
+  // Without a provider nothing is running, and a hand-written translation is the only way this language gets its text.
+  if (isTranslationConfigured() && pendingColumns(table, row).includes(column)) {
     return { status: "error", message: "The machine translation of this text is still running; try again in a moment." };
   }
 

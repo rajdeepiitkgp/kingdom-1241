@@ -11,6 +11,7 @@ import {
   NOT_BACKED_UP,
   parseBackupFile,
   restoreOrder,
+  restoreRows,
   summarize,
   withoutColumns,
 } from "@/lib/backup/tables";
@@ -91,6 +92,13 @@ describe("backup file", () => {
     expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
     expect(chunk([], 2)).toEqual([]);
     expect(withoutColumns([{ id: 1, actor_id: "a", action: "x" }], ["id", "actor_id"])).toEqual([{ action: "x" }]);
+  });
+
+  it("restore battle plans inactive, other tables as they were", () => {
+    const plans = BACKUP_TABLES.find((t) => t.table === "kvk_plans")!;
+    expect(restoreRows(plans, [{ id: "p1", active: true }, { id: "p2", active: false }])).toEqual([{ id: "p1", active: false }, { id: "p2", active: false }]);
+    const guides = BACKUP_TABLES.find((t) => t.table === "guides")!;
+    expect(restoreRows(guides, [{ id: "g1", published: true }])).toEqual([{ id: "g1", published: true }]);
   });
 });
 

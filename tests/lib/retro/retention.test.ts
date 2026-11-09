@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dueRetrospectives } from "@/lib/retro/prune";
-import { isDue, isOpenNow, pruneAt } from "@/lib/retro/retention";
+import { isDue, isOpenNow, openAfterRetentionProblem, pruneAt } from "@/lib/retro/retention";
 
 describe("retention", () => {
   const battle = { battleAt: "2026-10-01T14:00:00Z", createdAt: "2026-09-20T00:00:00Z", retentionDays: 30 };
@@ -10,6 +10,11 @@ describe("retention", () => {
     expect(pruneAt({ ...battle, battleAt: null }).toISOString()).toBe("2026-10-20T00:00:00.000Z");
     expect(isDue(battle, new Date("2026-10-31T13:59:00Z"))).toBe(false);
     expect(isDue(battle, new Date("2026-10-31T14:00:00Z"))).toBe(true);
+  });
+
+  it("refuses to open a form whose answers are already due", () => {
+    expect(openAfterRetentionProblem(battle, new Date("2026-10-31T13:59:00Z"))).toBeNull();
+    expect(openAfterRetentionProblem(battle, new Date("2026-11-01T00:00:00Z"))).toMatch(/30 days from the battle/);
   });
 
   it("knows when a form accepts answers", () => {

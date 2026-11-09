@@ -147,6 +147,10 @@ describe("image names and addresses", () => {
     expect(imageUrls(markdown)).toEqual([ours, "https://i.imgur.com/x.png", "https://evil.example/y.jpg"]);
     expect(foreignImages(markdown, BASE)).toEqual(["https://i.imgur.com/x.png", "https://evil.example/y.jpg"]);
     expect(referencedImagePaths([markdown, `<img src="${ours}">`, "nothing"])).toEqual(new Set([`content/${ID}-800x600.webp`]));
+    // Reference-style images (`![alt][name]`, `![name][]`, `![name]`, with `[name]: address` anywhere) count like the others; an undefined name is just text.
+    const referenced = `![A][pic]\n\n![logo][]\n\nSee ![Pic] here, not ![missing][gone] or ![B](https://i.imgur.com/b.png).\n\n[PIC]: https://i.imgur.com/ref.png "t"\n[logo]: <${ours}>`;
+    expect(imageUrls(referenced)).toEqual(["https://i.imgur.com/ref.png", ours, "https://i.imgur.com/ref.png", "https://i.imgur.com/b.png"]);
+    expect(foreignImages(referenced, BASE)).toEqual(["https://i.imgur.com/ref.png", "https://i.imgur.com/ref.png", "https://i.imgur.com/b.png"]);
   });
 
   it("knows the kinds of text", () => {

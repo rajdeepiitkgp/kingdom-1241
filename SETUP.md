@@ -401,7 +401,7 @@ npm run backup -- --restore kingdom-1241-2026-10-26T041722Z.json.enc --yes  # wr
 npm run backup -- --restore <file> --yes --tables guides,rules              # only some tables
 ```
 
-A restore writes rows by primary key and never deletes, so content added after the backup stays and a wrongly edited row goes back to its backed-up state. Into a fresh project (§ 11) everything is restored except the accounts themselves: Supabase Auth users are not content, they are recreated when people sign in, and the backed-up administrators and moderators become pre-authorisations so each gets their role back at their first sign-in. The audit log is appended only into an empty table. Afterwards run Maintenance → `revalidate` (or wait five minutes) so the pages show the restored rows.
+A restore writes rows by primary key and never deletes, so content added after the backup stays and a wrongly edited row goes back to its backed-up state. Into a fresh project (§ 11) everything is restored except the accounts themselves: Supabase Auth users are not content, they are recreated when people sign in, and the backed-up administrators and moderators become pre-authorisations so each gets their role back at their first sign-in. Battle plans come back inactive, because only one may be active and an older copy must never replace the live one: activate the right plan in the admin afterwards. The audit log is appended only into an empty table. Afterwards run Maintenance → `revalidate` (or wait five minutes) so the pages show the restored rows.
 
 `npm run backup -- --decrypt <file>` writes a readable JSON copy next to the file. It contains the battle-plan password; delete it when done.
 

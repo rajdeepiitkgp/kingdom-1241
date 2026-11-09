@@ -126,7 +126,21 @@ export async function syncProfile(user: User, options: { signedIn?: boolean } = 
     { onConflict: "id" },
   );
   if (error) log.error("Could not save profile", { userId: user.id, error: error.message });
-  if (!existing || parseRole(existing.role) !== stored) log.info("Profile role set", { userId: user.id, role: stored });
+  const before = existing ? parseRole(existing.role) : null;
+  if (before !== stored) log.info("Profile role set", { userId: user.id, role: stored });
+  // A pre-authorisation that changes a role is an event for the audit log, like a role set by hand on the users page
+  // (written here rather than through systemAudit, because audit.ts imports this module).
+  if (!error && granted && stored === granted && stored !== before) {
+    const { error: auditError } = await admin.from("audit_log").insert({
+      actor_id: null,
+      actor_name: "Site",
+      action: "role.granted",
+      table_name: "profiles",
+      row_id: user.id,
+      details: { role: stored, from: before, matched: identity.discordUsername ? "discord_username" : "email" },
+    });
+    if (auditError) log.error("Could not write the audit entry", { action: "role.granted", error: auditError.message });
+  }
 
   return {
     id: user.id,
