@@ -13,7 +13,8 @@ import {
   type PackLine,
   type PackRating,
 } from "@/lib/tools/pack-value";
-import { NumberField, parseNumber } from "./NumberField";
+import { parseLocalizedNumber } from "@/lib/tools/number-input";
+import { NumberField } from "./NumberField";
 
 interface LineState {
   key: number;
@@ -73,12 +74,12 @@ export function PackValueCalculator({ dict, locale }: { dict: Dictionary; locale
     const packLines: PackLine[] = lines.map((l) => ({
       itemId: l.itemId,
       name: l.name,
-      quantity: parseNumber(l.quantity),
-      gems: parseNumber(l.gems, true),
+      quantity: parseLocalizedNumber(l.quantity, locale),
+      gems: parseLocalizedNumber(l.gems, locale, true),
       basicResource: l.basicResource,
     }));
-    return calculatePackValue(packLines, parseNumber(price, true), parseNumber(gemsPerUnit, true), excludeResources);
-  }, [lines, price, gemsPerUnit, excludeResources]);
+    return calculatePackValue(packLines, parseLocalizedNumber(price, locale, true), parseLocalizedNumber(gemsPerUnit, locale, true), excludeResources);
+  }, [lines, price, gemsPerUnit, excludeResources, locale]);
 
   function addItem(itemId: string) {
     if (!itemId) return;

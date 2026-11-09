@@ -58,9 +58,3 @@ export function NumberField({
   );
 }
 
-/** Parse "1,500,000" / "1 500 000" / "1.5" into a number (0 when empty/invalid). */
-export function parseNumber(value: string, decimals = false): number {
-  const cleaned = decimals ? value.replace(/[^\d.,-]/g, "").replace(/,(?=\d{1,2}$)/, ".").replace(/,/g, "") : value.replace(/[^\d-]/g, "");
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : 0;
-}

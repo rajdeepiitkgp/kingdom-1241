@@ -18,5 +18,7 @@ export function safeNextPath(value: string | null | undefined, fallback: string)
   if (!value) return fallback;
   if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return fallback;
   if (/[\s\r\n]/.test(value)) return fallback;
+  // The login page itself is never a destination: it would send a signed-in person round in a circle.
+  if (/^\/[^/?#]+\/admin\/login(?:[/?#]|$)/.test(value)) return fallback;
   return value;
 }

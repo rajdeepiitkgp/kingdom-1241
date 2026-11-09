@@ -16,5 +16,9 @@ describe("admin paths", () => {
     expect(safeNextPath("/\\evil.example", "/en/admin")).toBe("/en/admin");
     expect(safeNextPath("/en/admin\r\nSet-Cookie: x", "/en/admin")).toBe("/en/admin");
     expect(safeNextPath(null, "/en/admin")).toBe("/en/admin");
+    // Never back to the login page: a `next` of the login page would loop.
+    expect(safeNextPath("/en/admin/login", "/en/admin")).toBe("/en/admin");
+    expect(safeNextPath("/de/admin/login?next=%2Fde%2Fadmin", "/de/admin")).toBe("/de/admin");
+    expect(safeNextPath("/en/admin/logins", "/en/admin")).toBe("/en/admin/logins");
   });
 });
