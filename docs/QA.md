@@ -66,7 +66,7 @@ When a feature changes, change its specs first, then the code. A test that fails
 
 Found by the browser suite and not fixed yet. Each has a decision pending; the tests wait it out so they stay green.
 
-- **A tap in the first moment after a page appears can be lost in Safari's engine.** On the locked battle pages, Rally Sync's Open room and other forms, a tap on the button before the page's scripts have taken over sends nothing: the page stays as it was, the password still in the field, no message. A second tap works. Chrome sends it anyway (as a plain form post). Seen in Playwright's WebKit, which iPhones share; to confirm on a real iPhone on a slow connection. Tests wait for the page with `hydrated()` before tapping.
+- **A tap in the first moment after a page appears can be lost in Safari's engine.** On the locked battle pages, Rally Sync's Open room and other forms, a tap on the button before the page's scripts have taken over sends nothing: the page stays as it was, the password still in the field, no message. A second tap works. Chrome sends it anyway (as a plain form post). Seen in Playwright's WebKit, which iPhones share; to confirm on a real iPhone on a slow connection. Tests wait for the page with `hydrated()` before tapping. A second cause, found Nov 2026 and fixed, affected every browser: a page whose content streams in (the prep board, the KvK gates, a room) was revealed inside a 200 ms view transition, and a tap during one is dropped; the template's boundary now has `update="none"`, so only route changes crossfade (TOUR-02 checks).
 
 ## Specs
 
@@ -97,7 +97,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | ID | What must hold | Checked by |
 | --- | --- | --- |
 | TOUR-01 | Every public page's "?" opens its tour, every step has a title and a text, Next leads to Done, and closing gives the keyboard back to the "?". A locked battle page's tour gains steps once the page is open. | Browser |
-| TOUR-02 | Escape closes a tour and the page stays as it was. | Browser |
+| TOUR-02 | Escape closes a tour and the page stays as it was; a first load runs no view transition, so the "?" tapped as soon as a streamed page appears is not lost. | Browser |
 | TOUR-03 | "New here?" shows until that tour is opened or hidden on the device, stays gone after a reload, and is still shown for other pages' tours. | Browser |
 | TOUR-04 | Tours read right to left in Arabic, also right after switching language. | Browser |
 | TOUR-05 | Every tour step points at a marker that exists on its page, and button names in steps use the page's own words. | Unit: tests/architecture/tour-targets.test.ts |
