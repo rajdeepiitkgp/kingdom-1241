@@ -32,6 +32,13 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Builds compile from scratch. On 6 Nov 2026 Vercel restored the previous
+    // build's .next/cache and Turbopack's file-system cache served the old
+    // stylesheet for a changed globals.css: a green deploy with stale CSS. A
+    // build takes somewhat longer; no deploy can ship old CSS or JS again.
+    turbopackFileSystemCacheForBuild: false,
+  },
   cacheLife: {
     // Editable site content (announcements, events, rules, guides, ...).
     // Every change expires its tag at once (the editors, the translation
