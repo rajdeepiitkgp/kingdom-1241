@@ -163,7 +163,8 @@ async function withFreshSession(request: NextRequest, reqId: string, pathname: s
 
 export const config = {
   matcher: [
-    // Everything except Next internals, API + auth routes, metadata files and static assets.
-    "/((?!api|auth|_next/static|_next/image|favicon\\.ico|robots\\.txt|icon\\.|apple-icon\\.|.*\\.[a-zA-Z0-9]+$).*)",
+    // Everything except Next internals, the API and auth routes (whole segments: /authors is a page), metadata files
+    // and static assets, told by their extension: a dot elsewhere in an address (a slug, an id) still goes through.
+    "/((?!(?:api|auth)(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|icon\\.|apple-icon\\.|.*\\.(?:png|jpe?g|gif|webp|svg|ico|css|js|mjs|map|txt|xml|json|woff2?|ttf|otf|webmanifest|mp4|webm|pdf)$).*)",
   ],
 };

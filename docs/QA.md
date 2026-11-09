@@ -80,7 +80,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | SITE-02 | An unknown address shows the not-found page in the visitor's language, with the menu and a way home, and answers 404. | Browser |
 | SITE-03 | An address without a language (`/kvk/prep`) opens the page in a language. | Browser |
 | SITE-04 | The menu reaches every section, from the header on a laptop and from the bottom bar on a phone; KvK opens a list of its pages; the current section is marked; the logo leads home. | Browser |
-| SITE-05 | The language switcher opens the same page in the chosen language, and the choice is remembered for addresses without a language. | Browser |
+| SITE-05 | The language switcher opens the same page in the chosen language, with its query and anchor, and the choice is remembered for addresses without a language. | Browser |
 | SITE-06 | Dark mode stays on across pages, a language switch and a reload. | Browser |
 | SITE-07 | The largest text size (125 %) stays on across pages, and every page still fits a phone in German, the longest language. | Browser |
 | SITE-08 | Search engines are asked to stay away (robots meta and `robots.txt`). | Browser |
@@ -159,6 +159,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | ID | What must hold | Checked by |
 | --- | --- | --- |
 | TOOLS-01 | The rally refill and pack value calculators answer as the numbers change. | Browser |
+| TOOLS-02 | Numbers are read as the visitor's language writes them: `2.500` and `2,5` in German, `2,500` and `2.5` in English, Arabic digits too. | Unit: tests/lib/tools/number-input.test.ts |
 
 ### Live site
 

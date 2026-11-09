@@ -6,9 +6,12 @@ import { KINGSHOT_GIFT_CODES_PAGE, KINGSHOT_SITE, OFFICIAL_REDEEM_PAGE } from "@
 import type { GiftCodeView } from "@/lib/gift-codes/view";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { useNow } from "../time/useNow";
+import { useClipboardAvailable } from "../ui/useClipboardAvailable";
 
 export function GiftCodes({ codes, dict, locale }: { codes: GiftCodeView[]; dict: Dictionary; locale: string }) {
   const [copied, setCopied] = useState<string | null>(null);
+  // The Copy button shows only where the clipboard can be written (plain-http pages and some in-app browsers have none).
+  const clipboard = useClipboardAvailable();
 
   useEffect(() => {
     if (!copied) return;
@@ -65,16 +68,18 @@ export function GiftCodes({ codes, dict, locale }: { codes: GiftCodeView[]; dict
                     : dict["home.noExpiry"]}
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-gold btn-sm justify-self-end"
-                onClick={() => copy(code.code)}
-                aria-label={copied === code.code ? dict["common.copied"] : dict["common.copy"]}
-                title={dict["common.copy"]}
-              >
-                {copied === code.code ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-                <span className="hidden sm:inline">{copied === code.code ? dict["common.copied"] : dict["common.copy"]}</span>
-              </button>
+              {clipboard && (
+                <button
+                  type="button"
+                  className="btn-gold btn-sm justify-self-end"
+                  onClick={() => copy(code.code)}
+                  aria-label={copied === code.code ? dict["common.copied"] : dict["common.copy"]}
+                  title={dict["common.copy"]}
+                >
+                  {copied === code.code ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+                  <span className="hidden sm:inline">{copied === code.code ? dict["common.copied"] : dict["common.copy"]}</span>
+                </button>
+              )}
             </li>
           ))}
         </ul>

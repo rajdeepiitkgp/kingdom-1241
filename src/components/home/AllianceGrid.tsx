@@ -59,8 +59,8 @@ export function AllianceGrid({ alliances, dict, locale }: { alliances: Alliance[
                       "grid size-8 shrink-0 place-items-center rounded-full text-xs font-black",
                       RANK_STYLES[index] ?? "bg-card-soft text-ink-muted",
                     )}
-                    aria-label={`${dict["alliance.rank"]} ${index + 1}`}
                   >
+                    <span className="sr-only">{dict["alliance.rank"]} </span>
                     {index + 1}
                   </span>
                 </div>

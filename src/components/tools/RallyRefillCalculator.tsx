@@ -5,8 +5,9 @@ import clsx from "clsx";
 import { AlertTriangle, Swords } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionary";
+import { parseLocalizedNumber } from "@/lib/tools/number-input";
 import { calculateRefill, REFILL_PRESETS, TROOP_TYPES, type TroopType } from "@/lib/tools/rally-refill";
-import { NumberField, parseNumber } from "./NumberField";
+import { NumberField } from "./NumberField";
 
 const TROOP_ICONS: Record<TroopType, string> = { infantry: "🛡️", cavalry: "🐎", archers: "🏹" };
 
@@ -26,19 +27,19 @@ export function RallyRefillCalculator({ dict, locale }: { dict: Dictionary; loca
   const result = useMemo(
     () =>
       calculateRefill({
-        capacity: parseNumber(capacity),
+        capacity: parseLocalizedNumber(capacity, locale),
         current: {
-          infantry: parseNumber(current.infantry),
-          cavalry: parseNumber(current.cavalry),
-          archers: parseNumber(current.archers),
+          infantry: parseLocalizedNumber(current.infantry, locale),
+          cavalry: parseLocalizedNumber(current.cavalry, locale),
+          archers: parseLocalizedNumber(current.archers, locale),
         },
         target: {
-          infantry: parseNumber(target.infantry, true),
-          cavalry: parseNumber(target.cavalry, true),
-          archers: parseNumber(target.archers, true),
+          infantry: parseLocalizedNumber(target.infantry, locale, true),
+          cavalry: parseLocalizedNumber(target.cavalry, locale, true),
+          archers: parseLocalizedNumber(target.archers, locale, true),
         },
       }),
-    [capacity, current, target],
+    [capacity, current, target, locale],
   );
 
   function applyPreset(key: string) {

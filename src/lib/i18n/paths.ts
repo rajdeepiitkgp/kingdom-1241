@@ -13,6 +13,11 @@ export function switchLocaleInPath(pathname: string, newLocale: string): string 
   return `/${segments.join("/")}`;
 }
 
+/** The same page in another language, query and anchor kept (`/en/rules?topic=kvk#castle` → `/de/rules?topic=kvk#castle`). */
+export function switchLocaleInUrl(location: { pathname: string; search: string; hash: string }, newLocale: string): string {
+  return `${switchLocaleInPath(location.pathname, newLocale)}${location.search}${location.hash}`;
+}
+
 /** The path without its locale prefix (`/en/guides/kvk` → `/guides/kvk`). */
 export function stripLocale(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);

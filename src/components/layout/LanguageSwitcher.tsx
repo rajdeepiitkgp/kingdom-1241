@@ -4,7 +4,7 @@ import { Languages } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LOCALE_COOKIE, type SiteLanguage } from "@/lib/i18n/languages";
-import { switchLocaleInPath } from "@/lib/i18n/paths";
+import { switchLocaleInUrl } from "@/lib/i18n/paths";
 import { withNavigationTransition } from "@/lib/view-transition";
 
 function rememberLocale(locale: string) {
@@ -57,8 +57,8 @@ export function LanguageSwitcher({
           const next = event.target.value;
           rememberLocale(next);
           // Read the URL in the handler (not during render) so this component
-          // never blocks prerendering of routes with dynamic params.
-          withNavigationTransition(() => router.push(switchLocaleInPath(window.location.pathname, next)));
+          // never blocks prerendering of routes with dynamic params. The query and anchor go along.
+          withNavigationTransition(() => router.push(switchLocaleInUrl(window.location, next)));
         }}
         className="absolute inset-0 size-full cursor-pointer opacity-0"
         aria-label={label}

@@ -40,13 +40,15 @@ test("SITE-04 the menu reaches every section", async ({ page }) => {
 });
 
 test("SITE-05 the language switcher opens the same page in another language", async ({ page }) => {
-  await page.goto(at("en", "/kvk/prep"));
+  // A query and an anchor (as in a shared link) go along with the switch.
+  const extra = "?from=chat#top";
+  await page.goto(at("en", "/kvk/prep") + extra);
   await hydrated(page.getByRole("combobox", { name: t("lang.label") }));
   await page.getByRole("combobox", { name: t("lang.label") }).selectOption("de");
-  await expect(page).toHaveURL(at("de", "/kvk/prep"));
+  await expect(page).toHaveURL(at("de", "/kvk/prep") + extra);
   await expect(page.getByRole("heading", { level: 1, name: t("prep.title", "de") })).toBeVisible();
   await page.getByRole("combobox", { name: t("lang.label", "de") }).selectOption("ar");
-  await expect(page).toHaveURL(at("ar", "/kvk/prep"));
+  await expect(page).toHaveURL(at("ar", "/kvk/prep") + extra);
   await expectHealthyPage(page, "ar");
   // The choice is remembered: an address without a language opens in Arabic.
   await page.goto("/tools");
