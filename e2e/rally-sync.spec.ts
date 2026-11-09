@@ -377,3 +377,22 @@ test("RS-18 a leader in from the next rally is in once the hit has passed, witho
   await expect(page.locator('[data-tour="sync-leaders"] li', { hasText: "E2E Late" })).not.toContainText(t("sync.row.nextRally"));
   await expectHealthyPage(page, "en");
 });
+
+test("RS-20 the first tap on a room moves nothing: the sound hint floats above the page and leaves without a shift", async ({ page }) => {
+  await openRoom(page, freshRoom("R"), { coordinator: true });
+  const hint = page.getByText(t("sync.sound.tap"), { exact: true });
+  await expect(hint).toBeVisible();
+  const more = page.locator('[data-tour="sync-more"]');
+  // Where the button sits on the page (not in the viewport: the tap may scroll it into view).
+  const place = () => more.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return { x: box.left + window.scrollX, y: box.top + window.scrollY };
+  });
+  const before = await place();
+  // The first tap on the page unlocks sound and the hint goes 100 ms later; the fold opens below the button, so the button stays put.
+  await more.click();
+  await expect(hint).toHaveCount(0);
+  const after = await place();
+  expect(after.y).toBeCloseTo(before.y, 0);
+  expect(after.x).toBeCloseTo(before.x, 0);
+});

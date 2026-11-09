@@ -443,7 +443,16 @@ function StatusBar({
         </div>
       </div>
       {tour.nudge && <div className="mt-2">{tour.nudge}</div>}
-      {sound && !soundReady && room.mode !== "counter" && <p className="mt-2 text-xs font-bold text-gold-ink">{dict["sync.sound.tap"]}</p>}
+      {sound && !soundReady && room.mode !== "counter" && (
+        // A toast above the bottom bar, never a line in this card: the hint leaves 100 ms after the first tap, and a line
+        // leaving the card shifted every control below it under the player's finger (a quick second tap hit the wrong one).
+        <p
+          role="status"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 mx-auto w-fit max-w-[calc(100%-2rem)] rounded-full bg-gold-soft px-4 py-2 text-center text-xs font-bold text-gold-ink shadow-md lg:bottom-4 print:hidden"
+        >
+          {dict["sync.sound.tap"]}
+        </p>
+      )}
       {clockOpen && <ClockPanel now={now} clock={clock} offsetMs={offsetMs} dict={dict} />}
       {tour.overlay}
     </section>

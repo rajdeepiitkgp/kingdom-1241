@@ -153,6 +153,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | RS-17 | The rally timer can't change while a rally runs (every start is hit − timer − march, so it would move them all); the buffer can. | Browser |
 | RS-18 | A leader in from the next rally, or a march time waiting for it, is in once the hit has passed, with or without a new hit time. | Browser |
 | RS-19 | New browsers from one address in one room are budgeted (30 per 10 minutes, then the address waits 10 minutes), so a leaked password can't fill a room by script; the store lists every browser the largest room may hold. | Unit: tests/lib/rally-sync/capacity.test.ts |
+| RS-20 | The "Tap anywhere to allow sound" hint floats above the bottom bar and leaves after the first tap without moving anything on the page (a line leaving the status card shifted every control below it under a quick second tap). | Browser |
 
 ### Tools
 
