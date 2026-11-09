@@ -1,3 +1,4 @@
+| SITE-14 | A sync of the interface strings writes only the rows whose text or hash differs from the database, so an unchanged string fires no translation webhook. | Unit: tests/lib/i18n/sync-ui.test.ts |
 # Quality assurance
 
 How Kingdom 1241's site is tested, what each test promises, and what still needs a person with a phone. The specs below are the contract: every rule has an ID, and each browser test's title starts with the ID it checks. `tests/architecture/qa-coverage.test.ts` fails when a `Browser` or `Live` spec has no test, when a test names an ID this page doesn't list, when a `Unit` spec points at a test file that doesn't exist, or when a public page is missing from the browser suite.
