@@ -58,6 +58,10 @@ describe("parseEventForm", () => {
     expect(!late.ok && late.errors.alsoAfterDays).toMatch(/less than 7 days/);
     const overlap = parseEventForm(form({ ...EVENT, alsoAfterDays: "2" }), guides);
     expect(!overlap.ok && overlap.errors.alsoAfterDays).toMatch(/before the first one ends/);
+    // A round longer than its repeat would overlap the next one.
+    const tooLong = parseEventForm(form({ ...EVENT, durationValue: "8" }), guides);
+    expect(!tooLong.ok && tooLong.errors.durationValue).toMatch(/longer than the time until the next \(every 7 days\)/);
+    expect(parseEventForm(form({ ...EVENT, durationValue: "7" }), guides).ok).toBe(true);
   });
 
   it("explains missing and unknown values field by field", () => {

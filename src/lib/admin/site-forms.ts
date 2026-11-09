@@ -68,6 +68,10 @@ export function parseEventForm(fd: FormData, options: { guideSlugs: readonly str
   const repeatRaw = textField(fd, "repeatEveryDays");
   const repeatEveryDays = repeatRaw ? intField(fd, "repeatEveryDays", 1, 365) : null;
   if (repeatRaw && repeatEveryDays === null) errors.repeatEveryDays = "Every 1 to 365 days, or empty for a one-time event.";
+  // One round ends before the next begins, or two would run at once (and the page only looks one round back).
+  else if (repeatEveryDays !== null && durationMinutes !== null && durationMinutes * MINUTE > repeatEveryDays * DAY && !errors.durationValue) {
+    errors.durationValue = `One round can't last longer than the time until the next (every ${repeatEveryDays} days): shorten it or repeat less often.`;
+  }
   const alsoRaw = textField(fd, "alsoAfterDays");
   const alsoAfterDays = alsoRaw ? intField(fd, "alsoAfterDays", 1, 364) : null;
   if (alsoRaw && alsoAfterDays === null) errors.alsoAfterDays = "A whole number of days, or empty for one day per round.";
@@ -259,12 +263,23 @@ function parseTerms(fd: FormData, errors: FieldErrors): TransferTerms {
   };
 }
 
+/**
+ * Why a text that takes no images has one, or null. Nothing keeps an image of
+ * the transfer texts from the daily prune, which looks in the content tables
+ * only, so none go in.
+ */
+export function noImagesProblem(text: string): string | null {
+  return imageUrls(text).length > 0 ? "Images can't go in this text; link to a guide or an announcement instead." : null;
+}
+
 /** One of the two texts (Markdown, optional): whitespace inside matters (line breaks), only the ends are trimmed. */
 function transferText(fd: FormData, name: string, max: number, errors: FieldErrors): string {
   const text = textField(fd, name).replace(/\r\n?/g, "\n");
   if (text.length > max) errors[name] = `Keep it under ${max} characters.`;
-  // Nothing keeps an image of these texts from the prune (it looks in the content tables), so none go in.
-  else if (imageUrls(text).length > 0) errors[name] = "Images can't go in this text; link to a guide or an announcement instead.";
+  else {
+    const images = noImagesProblem(text);
+    if (images) errors[name] = images;
+  }
   return text;
 }
 

@@ -251,10 +251,32 @@ export function referencedImagePaths(texts: Iterable<string>): Set<string> {
 
 const MARKDOWN_IMAGE = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
 const HTML_IMAGE = /<img\b[^>]*?\bsrc\s*=\s*["']?([^"'\s>]+)/gi;
+/** `[name]: address` on a line of its own: the target of reference-style images. */
+const REFERENCE_DEFINITION = /^[ \t]{0,3}\[([^\]]+)\]:[ \t]*<?([^\s>]+)>?/gm;
+/** `![alt][name]`, `![name][]` or `![name]` (not followed by an address in brackets). */
+const REFERENCE_IMAGE = /!\[([^\]]*)\](?:\[([^\]]*)\])?(?!\()/g;
 
-/** The address of every image in a Markdown text (its own syntax and any HTML image in it). */
+/** Reference labels match case-insensitively with their spaces collapsed. */
+function referenceLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * The address of every image in a Markdown text: its own syntax, reference-style
+ * images (`![alt][name]` with `[name]: address` elsewhere in the text, which the
+ * page renders like any other) and any HTML image in it.
+ */
 export function imageUrls(markdown: string): string[] {
-  return [...markdown.matchAll(MARKDOWN_IMAGE), ...markdown.matchAll(HTML_IMAGE)].map((match) => match[1]);
+  const definitions = new Map<string, string>();
+  for (const match of markdown.matchAll(REFERENCE_DEFINITION)) definitions.set(referenceLabel(match[1]), match[2]);
+  const urls: Array<{ at: number; url: string }> = [];
+  for (const match of markdown.matchAll(MARKDOWN_IMAGE)) urls.push({ at: match.index, url: match[1] });
+  for (const match of markdown.matchAll(HTML_IMAGE)) urls.push({ at: match.index, url: match[1] });
+  for (const match of markdown.matchAll(REFERENCE_IMAGE)) {
+    const url = definitions.get(referenceLabel(match[2] || match[1]));
+    if (url) urls.push({ at: match.index, url });
+  }
+  return urls.sort((a, b) => a.at - b.at).map((entry) => entry.url);
 }
 
 /** Images from anywhere but our own storage: the page wouldn't show them, so the form refuses them. */

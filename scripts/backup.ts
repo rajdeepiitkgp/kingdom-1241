@@ -91,7 +91,7 @@ async function restore(path: string) {
     import("@/lib/backup/crypto"),
     import("@/lib/backup/tables"),
   ]);
-  const { BACKUP_TABLES, chunk, grantsFromBackup, grantsFromProfiles, missingGrants, parseBackupFile, restoreOrder, summarize, withoutColumns } = tablesModule;
+  const { BACKUP_TABLES, chunk, grantsFromBackup, grantsFromProfiles, missingGrants, parseBackupFile, restoreOrder, restoreRows, summarize, withoutColumns } = tablesModule;
   const secret = passphrase(isBackupPassphrase);
   const file = parseBackupFile(JSON.parse(decryptBackup(readFileSync(resolve(process.cwd(), path)), secret)));
   const target = new URL(supabaseUrl() ?? "http://unknown").host;
@@ -115,7 +115,7 @@ async function restore(path: string) {
     if (t.restore === "upsert") {
       let written = 0;
       let failed: string | null = null;
-      for (const part of chunk(rows, 500)) {
+      for (const part of chunk(restoreRows(t, rows), 500)) {
         const { error } = await supabase.from(t.table).upsert(part, { onConflict: t.primaryKey });
         if (error) {
           failed = error.message;
@@ -129,7 +129,7 @@ async function restore(path: string) {
         throw new Error(`${t.table}: ${failed} (after ${written} rows)`);
       } else {
         if (t.table === "profiles") profilesRestored = true;
-        console.log(`${t.table}: ${written} rows written`);
+        console.log(`${t.table}: ${written} rows written${t.restoreWith ? `, each with ${JSON.stringify(t.restoreWith)} (one battle plan may be active: activate the right one in the admin)` : ""}`);
       }
     } else if (t.restore === "insert-missing") {
       const { data: existing, error } = await supabase.from(t.table).select("discord_username, email");

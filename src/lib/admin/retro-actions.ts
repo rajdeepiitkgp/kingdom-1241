@@ -16,6 +16,7 @@ import { translateAndAnalyse, translateResponses } from "@/lib/retro/analyse";
 import type { AnalysisContext } from "@/lib/retro/analysis";
 import { RATING_QUESTIONS, TEXT_PROMPTS } from "@/lib/retro/questions";
 import { parseResultsView, resultsQuery } from "@/lib/retro/results-view";
+import { openAfterRetentionProblem } from "@/lib/retro/retention";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
@@ -52,14 +53,20 @@ export async function saveRetrospective(_previous: ActionState, formData: FormDa
 
   const admin = createAdminClient();
   const [{ data: plan }, { data: existing, error: readError }] = await Promise.all([
-    admin.from("kvk_plans").select("id, slug, active").eq("id", planId).maybeSingle(),
-    admin.from("kvk_retrospectives").select("id, title, intro, intro_source, open").eq("plan_id", planId).maybeSingle(),
+    admin.from("kvk_plans").select("id, slug, active, battle_at").eq("id", planId).maybeSingle(),
+    admin.from("kvk_retrospectives").select("id, title, intro, intro_source, open, created_at").eq("plan_id", planId).maybeSingle(),
   ]);
   if (!plan) return PLAN_GONE;
   if (readError) return failed(log, "Reading the retrospective", readError);
   // Players unlock the feedback page with the active plan's password (and the plan stays active while the form is open).
   const openProblem = feedbackOpenProblem(input.open && !existing?.open, Boolean(plan.active));
   if (openProblem) return invalid({ open: openProblem });
+  // Answers are deleted `retention_days` after the battle: a form opened after that would lose them at the next clean-up.
+  if (input.open && !existing?.open) {
+    const retention = { battleAt: (plan.battle_at as string | null) ?? null, createdAt: (existing?.created_at as string | undefined) ?? new Date().toISOString(), retentionDays: input.retentionDays };
+    const late = openAfterRetentionProblem(retention, new Date());
+    if (late) return invalid({ open: late });
+  }
 
   // A changed English text drops the other languages; the pipeline refills them (as for the plan intro).
   const intro =
