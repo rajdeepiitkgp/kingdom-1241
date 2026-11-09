@@ -64,7 +64,7 @@ jobs:
       # Dependabot's runs report too.
       - name: Unit test report
         if: ${{ !cancelled() && hashFiles('reports/junit/unit.xml') != '' }}
-        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        uses: mikepenz/action-junit-report@a16be3a69023e9bd7e748ede768b3282ea7b30ce # v6.7.1
         with:
           report_paths: reports/junit/unit.xml
           check_name: Unit tests
@@ -72,7 +72,7 @@ jobs:
 
       - name: Browser test report
         if: ${{ !cancelled() && hashFiles('reports/junit/e2e.xml') != '' }}
-        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        uses: mikepenz/action-junit-report@a16be3a69023e9bd7e748ede768b3282ea7b30ce # v6.7.1
         with:
           report_paths: reports/junit/e2e.xml
           check_name: Browser tests (laptop and Android)
@@ -126,7 +126,7 @@ jobs:
 
       - name: Browser test report
         if: ${{ !cancelled() && hashFiles('reports/junit/e2e.xml') != '' }}
-        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        uses: mikepenz/action-junit-report@a16be3a69023e9bd7e748ede768b3282ea7b30ce # v6.7.1
         with:
           report_paths: reports/junit/e2e.xml
           check_name: Browser tests (iPhone)
