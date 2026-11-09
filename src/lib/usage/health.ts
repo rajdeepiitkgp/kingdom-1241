@@ -38,6 +38,9 @@ export const LINKS = {
   supabaseUsage: "https://supabase.com/dashboard/org/_/usage",
   supabaseBilling: "https://supabase.com/dashboard/org/_/billing",
   vercelUsage: "https://vercel.com/dashboard/usage",
+  // Vercel's "pick the project" links, as its docs use them: they open the project's own page.
+  vercelAnalytics: "https://vercel.com/d?to=%2F%5Bteam%5D%2F%5Bproject%5D%2Fanalytics",
+  vercelSpeedInsights: "https://vercel.com/d?to=%2F%5Bteam%5D%2F%5Bproject%5D%2Fspeed-insights",
   anthropicUsage: "https://platform.claude.com/usage",
 } as const;
 

@@ -27,7 +27,7 @@ The tests read their words from the same seed files the pages are built from (`t
 
 ### The live check
 
-The daily run behaves like a visitor and changes nothing: it never types a password, opens a room or sends a form, so it never trips the wrong-password alarms. It answers Next's link prefetches itself with an empty reply. Without that, every link in view would make Vercel rebuild that page in that language for nobody, spending ISR writes. When it fails, GitHub e-mails the owner. Run it by hand from Actions → E2E live → Run workflow, or locally with `E2E_BASE_URL=https://kingdom-1241.vercel.app npm run e2e`.
+The daily run behaves like a visitor and changes nothing: it never types a password, opens a room or sends a form, so it never trips the wrong-password alarms. It answers Next's link prefetches itself with an empty reply. Without that, every link in view would make Vercel rebuild that page in that language for nobody, spending ISR writes. It also opts its browsers out of the visitor count (Vercel's `va-disable` flag, set before any page loads), so the daily run never shows up as three visitors. When it fails, GitHub e-mails the owner. Run it by hand from Actions → E2E live → Run workflow, or locally with `E2E_BASE_URL=https://kingdom-1241.vercel.app npm run e2e`.
 
 ## Running it
 
@@ -88,6 +88,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | SITE-10 | The admin area asks to sign in when nobody is signed in: the login page, never the error page. | Browser |
 | SITE-11 | A link in a language the site knows but doesn't show opens the same page in the visitor's language. | Unit: tests/lib/i18n/negotiate.test.ts |
 | SITE-12 | A theme, text-size or language change made while a new page is still fading in happens at once and leaves no error in the console (a new crossfade would cut React's short, and React reports that as an error). | Browser |
+| SITE-13 | Visitor counting (Vercel Web Analytics and Speed Insights) is drawn on Vercel only, so a local build and the test server load no script and send nothing; the browsers of signed-in council members and browsers that opted out send nothing, so the council's own visits and the live check's devices never count. | Unit: tests/lib/analytics.test.ts |
 
 ### Guided tours
 
@@ -153,6 +154,7 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | RS-17 | The rally timer can't change while a rally runs (every start is hit − timer − march, so it would move them all); the buffer can. | Browser |
 | RS-18 | A leader in from the next rally, or a march time waiting for it, is in once the hit has passed, with or without a new hit time. | Browser |
 | RS-19 | New browsers from one address in one room are budgeted (30 per 10 minutes, then the address waits 10 minutes), so a leaked password can't fill a room by script; the store lists every browser the largest room may hold. | Unit: tests/lib/rally-sync/capacity.test.ts |
+| RS-20 | The "Tap anywhere to allow sound" hint floats above the bottom bar and leaves after the first tap without moving anything on the page (a line leaving the status card shifted every control below it under a quick second tap). | Browser |
 
 ### Tools
 

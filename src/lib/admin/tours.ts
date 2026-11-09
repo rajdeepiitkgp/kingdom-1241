@@ -696,7 +696,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "settings-usage-elsewhere",
         "Measured elsewhere",
-        "What only Vercel, Supabase and Anthropic know (CPU, data transfer, egress, the AI bill), with a link to each. Worth a look once a week, and whenever they e-mail you.",
+        "What only Vercel, Supabase and Anthropic know (CPU, data transfer, egress, the AI bill), with a link to each, and Vercel's count of visitors and page views per day, with how fast the pages felt to them. Worth a look once a week, and whenever they e-mail you.",
       ),
       step(
         "settings-owner",
