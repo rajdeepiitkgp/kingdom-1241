@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   BookOpen,
   CalendarDays,
+  CalendarRange,
   ChevronDown,
   Gift,
   LayoutDashboard,
@@ -27,6 +28,7 @@ import { activeAdminPath, type AdminNavGroup, type AdminNavIcon } from "@/lib/ad
 const ICONS: Record<AdminNavIcon, typeof Menu> = {
   overview: LayoutDashboard,
   plans: Swords,
+  prep: CalendarRange,
   feedback: MessageSquareText,
   rallySync: Timer,
   announcements: Megaphone,

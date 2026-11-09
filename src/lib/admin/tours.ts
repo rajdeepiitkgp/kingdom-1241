@@ -14,6 +14,7 @@ export type AdminPage =
   | "overview"
   | "plans"
   | "plan"
+  | "prep"
   | "leaders"
   | "checklist"
   | "feedback"
@@ -241,6 +242,22 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step("checklist-rules", "Orders and guidelines", "Do / Don't / Info lines: the commander's orders, and the general guidelines for everyone who coordinates."),
       step("plan-view", "Check the page", "Opens /kvk/checklist in a new tab; it asks for the checklist password."),
+    ],
+  },
+  prep: {
+    id: "admin-prep",
+    version: 1,
+    steps: [
+      step(
+        null,
+        "What this page is for",
+        "The game scores Truegold, Tempered Truegold and construction speedups, and Truegold Dust and research speedups, on Days 1, 2 and 5 alike. The king's minister buffs decide which day the kingdom uses: set that here, per round. Players see all three days ticked; with the battle plan unlocked they see the days chosen here.",
+      ),
+      step("prep-round", "The rounds", "The current round and the next one, each with its dates. A round you haven't saved follows the template: construction on Day 1, research on Day 2. The training buff is Day 4 by the game, so it isn't asked."),
+      step("prep-construction", "Construction buff", "The day the king gives the construction minister buff: Day 1 (Monday), Day 2 (Tuesday) or Day 5 (Friday). Truegold, Tempered Truegold and construction speedups get their ✅ there; the other two days become 🆗."),
+      step("prep-research", "Research buff", "The same for research: Truegold Dust and research speedups follow it, and so does the War Academy tip. Both buffs may fall on the same day."),
+      step("prep-save", "Save", "Takes effect at once for everyone who has the battle plan open; nobody needs to reload more than once. Every change is listed under Recent changes on the Overview."),
+      step(null, "Good practice", "Set the next round as soon as the council has decided, and change the current round the moment a switch is agreed, since players read the day's plan in the morning. Say it in Discord too: the page shows the days, not the reason."),
     ],
   },
   feedback: {
@@ -784,6 +801,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (parts.length === 0) return "overview";
   if (section === "kvk") return parts.length === 1 ? "plans" : parts.length === 2 ? "plan" : parts.length === 3 && (sub === "leaders" || sub === "checklist") ? sub : null;
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
+  if (parts.length === 1 && section === "prep") return "prep";
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (section === "announcements") return parts.length === 1 ? "announcements" : parts.length === 2 ? "announcement" : null;
   if (section === "events") return parts.length === 1 ? "events" : parts.length === 2 ? "event" : null;
