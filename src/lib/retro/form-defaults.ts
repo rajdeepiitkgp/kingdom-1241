@@ -1,5 +1,5 @@
 import { type NumberSchema, numberDefaults, parseNumbers } from "@/lib/config/numbers";
-import { DEFAULT_MAX_RESPONSES, DEFAULT_RETENTION_DAYS, MAX_RESPONSES_LIMIT, RETENTION_RANGE } from "./questions";
+import { DEFAULT_MAX_RESPONSES, DEFAULT_RETENTION_DAYS, MAX_RESPONSES_LIMIT, RETENTION_RANGE } from "./config";
 
 /**
  * What a new battle feedback form starts with (pure; the owner's setting,

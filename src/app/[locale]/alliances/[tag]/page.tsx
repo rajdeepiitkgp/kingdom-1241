@@ -18,6 +18,9 @@ import { ALLIANCE_TOUR } from "@/lib/tour/alliance";
 
 type Props = PageProps<"/[locale]/alliances/[tag]">;
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["alliance", "common", "home", "nav", "tour.*", "tour.alliance"];
+
 export async function generateStaticParams() {
   const alliances = await getAlliances();
   return alliances.map((alliance) => ({ tag: alliance.tag }));
@@ -44,7 +47,7 @@ export default function AlliancePage(props: Props) {
  */
 async function AllianceArticle({ params }: Pick<Props, "params">) {
   const [{ tag: segment }, locale] = await Promise.all([params, rootLocale()]);
-  const [dict, alliances, guides, sections] = await Promise.all([getDictionary(locale), getAlliances(), getGuides(), getGuideSections()]);
+  const [dict, alliances, guides, sections] = await Promise.all([getDictionary(locale, PAGE_STRINGS), getAlliances(), getGuides(), getGuideSections()]);
   const tag = tagFromSegment(segment);
   const index = alliances.findIndex((a) => a.tag === tag);
   if (index < 0) notFound();

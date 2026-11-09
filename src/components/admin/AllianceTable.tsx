@@ -1,4 +1,4 @@
-import type { RatingKey } from "@/lib/retro/questions";
+import type { RatingKey } from "@/lib/retro/config";
 import { type AllianceSummary, formatAverage } from "@/lib/retro/summary";
 
 /** Average of every shown rating per home alliance (feedback results and their print view). */

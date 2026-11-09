@@ -4,7 +4,7 @@
  */
 
 import { isLocaleCode } from "@/lib/i18n/languages";
-import { GAME_NAME_MAX, isTextKey, RATING_MAX, RATING_MIN, type RatingKey, type RetroConfig, TEXT_MAX, type TextKey, TEXT_KEYS } from "./questions";
+import { GAME_NAME_MAX, isTextKey, RATING_MAX, RATING_MIN, type RatingKey, type RetroConfig, TEXT_MAX, type TextKey, TEXT_KEYS } from "./config";
 
 export type RetroErrorCode = "required" | "invalid" | "tooLong";
 export type RetroErrors = Record<string, RetroErrorCode>;

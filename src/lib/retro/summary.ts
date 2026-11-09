@@ -1,4 +1,4 @@
-import { RATING_MAX, RATING_MIN, type RatingKey } from "./questions";
+import { RATING_MAX, RATING_MIN, type RatingKey } from "./config";
 
 /** Numbers for the admin results page (pure, unit-tested). */
 

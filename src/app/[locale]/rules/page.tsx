@@ -8,14 +8,17 @@ import type { RuleTopic } from "@/lib/data/types";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { pick } from "@/lib/i18n/localized";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["rules"];
+
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = await getDictionary(await rootLocale());
+  const dict = await getDictionary(await rootLocale(), PAGE_STRINGS);
   return { title: dict["rules.title"] };
 }
 
 export default async function RulesPage() {
   const locale = await rootLocale();
-  const [dict, topics] = await Promise.all([getDictionary(locale), getRuleTopics()]);
+  const [dict, topics] = await Promise.all([getDictionary(locale, PAGE_STRINGS), getRuleTopics()]);
 
   return (
     <div>

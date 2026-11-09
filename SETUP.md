@@ -80,7 +80,7 @@ Without any env vars the site still runs with the bundled English seed content (
 
 | Command | What it does |
 | --- | --- |
-| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change), with the reviewed translations of `src/content/seed/ui-reviewed.ts`. `-- --overwrite` replaces every seed row, dropping translations. |
+| `npm run db:seed` | Inserts seed rows that don't exist yet (never touches rows you edited). `-- --sync-ui` also updates the interface strings from the code (after a wording change), with the reviewed translations of `src/content/seed/ui-reviewed.ts`; only the rows that differ from the database are written, so an unchanged string costs nothing. `-- --overwrite` replaces every seed row, dropping translations. |
 | `npm run translate` | Translates everything missing or outdated. `-- --table guides`, `-- --locale de`, `-- --force`, `-- --dry-run`. |
 | `npm run ui:review` | Read-only export of the live interface strings for the translation review (public key only; § 2). |
 | `npm run content:review` / `npm run content:fixes` | Read-only export of the admin-written content for the translation review, and applying its fixes (`-- --file <file>` previews, `--apply` writes; § 2). |
@@ -463,6 +463,7 @@ Vercel → your project → **Logs**. In production every server log line is JSO
 ## Troubleshooting
 
 - **Pages show the seed content, not my edits.** Check the Vercel env vars (`NEXT_PUBLIC_SUPABASE_URL` / `…PUBLISHABLE_KEY`) and redeploy; the data layer falls back to the bundled seed when Supabase is unreachable (look for `"Failed to load from Supabase"` in the logs).
+- **A deploy went green, but a style or script change isn't live.** Builds compile from scratch (`turbopackFileSystemCacheForBuild: false` in `next.config.ts`, after a restored build cache served an old stylesheet on 6 Nov 2026), so the deployment itself is fresh: it is the browser's or the CDN's copy. Hard-reload, or open the deployment's own URL from Vercel → Deployments.
 - **The KvK page says "No battle plan has been published yet".** Either no row in `kvk_plans` has `active = true` and `published = true`, or `SUPABASE_SECRET_KEY` is missing in Vercel (the logs say which).
 - **Translations don't appear.** Logs: scope `translate`. Common causes: webhook SQL still has placeholders, secret mismatch (401), no provider key (`ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) or `TRANSLATION_PROVIDER=off`, provider quota or a retired model (the row keeps its old `source_hash`, so the next `npm run translate` finishes it).
 - **A language shows English text.** The row has no translation for it yet (fallback is intentional). Run `npm run translate`.

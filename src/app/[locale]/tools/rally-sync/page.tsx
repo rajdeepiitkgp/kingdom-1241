@@ -6,8 +6,11 @@ import { CreateRoomLink, RecentRooms } from "@/components/rally-sync/RecentRooms
 import { PageHeader } from "@/components/ui/SectionTitle";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
+/** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
+const PAGE_STRINGS = ["common", "kvk", "sync"];
+
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = await getDictionary(await rootLocale());
+  const dict = await getDictionary(await rootLocale(), PAGE_STRINGS);
   return { title: dict["sync.title"] };
 }
 
@@ -18,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function RallySyncPage() {
   const locale = await rootLocale();
-  const dict = await getDictionary(locale);
+  const dict = await getDictionary(locale, PAGE_STRINGS);
 
   return (
     <div>

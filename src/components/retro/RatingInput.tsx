@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Star } from "lucide-react";
 import { useState } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
-import { RATING_MAX, RATING_MIN } from "@/lib/retro/questions";
+import { RATING_MAX, RATING_MIN } from "@/lib/retro/config";
 
 /**
  * One rating question: a radio group from 0 (a small "0" pill) to 5 stars.

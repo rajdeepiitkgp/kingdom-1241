@@ -33,6 +33,7 @@ async function main() {
     { sourceHash },
     { kvkChecklistBriefId, kvkLeaderBriefId },
     { readAll },
+    { uiRowsToWrite },
   ] = await Promise.all([
     import("@/content/seed"),
     import("@/lib/data/mappers"),
@@ -40,6 +41,7 @@ async function main() {
     import("@/lib/translate/hash"),
     import("@/content/seed/kvk"),
     import("@/lib/supabase/read-all"),
+    import("@/lib/i18n/sync-ui"),
   ]);
 
   const supabase = createAdminClient();
@@ -117,14 +119,13 @@ async function main() {
     source_hash: sourceHash({ text: s.text.en ?? "" }),
   }));
   if (syncUi) {
-    const existingUi = await readAll<{ key: string; text: unknown }>((from, to) => supabase.from("ui_strings").select("key, text").order("key").range(from, to)).catch((error: Error) => {
+    // Only rows that differ are written: each write fires the translation webhook (src/lib/i18n/sync-ui.ts).
+    const existingUi = await readAll<{ key: string; text: unknown; source_hash: unknown }>((from, to) => supabase.from("ui_strings").select("key, text, source_hash").order("key").range(from, to)).catch((error: Error) => {
       throw new Error(`ui_strings: ${error.message}`);
     });
-    const byKey = new Map(existingUi.map((r) => [String(r.key), (r.text ?? {}) as Record<string, string>]));
-    uiRows = uiRows.map((row) => {
-      const existing = byKey.get(row.key);
-      return existing && existing.en === row.text.en ? { ...row, text: { ...existing, ...row.text } } : row;
-    });
+    const plan = uiRowsToWrite(uiRows, existingUi);
+    uiRows = plan.write;
+    if (plan.unchanged > 0) summary.push(`ui_strings: ${plan.unchanged} row(s) unchanged, left alone`);
   }
   await upsertMissing("ui_strings", "key", uiRows, syncUi);
 

@@ -53,8 +53,8 @@ src/
   lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
   lib/vercel/             which old Vercel deployments to delete (pure; the script is scripts/prune-deployments.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
-  lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
-tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components and docs/QA.md in step with the tests
+  lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours/ with one file per page, lib/tour/home.ts)
+tests/                    unit tests, same tree as src/ (tests/lib/kvk/access.test.ts ↔ src/lib/kvk/access.ts); tests/architecture keeps server-only code out of Client Components, every page's slice of the interface strings complete and docs/QA.md in step with the tests
 e2e/                      browser tests (Playwright) against an offline build: every page in every language on three devices, tours, the locked pages, Rally Sync between two devices; e2e/live is the daily read-only look at the live site. The specs they check are in docs/QA.md
 public/heroes/            128px hero portraits (from kingshotdata.com)
 public/items/             128px game icons for the KvK prep page (kingshotdata.com, kingshot.net, kingshotwiki.com, g2384/Kingshot-Data)
