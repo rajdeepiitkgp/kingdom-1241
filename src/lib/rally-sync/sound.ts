@@ -6,7 +6,7 @@ import type { SoundCue } from "./timing";
  * and speedups (browser, Web Audio; no sound files). Cues are booked ahead on the audio clock rather than fired by timers,
  * so a laptop tab in the background (where timers run late) still beeps on the
  * second. Browsers allow sound only after a tap on the page: `unlock()` runs in
- * that tap.
+ * that tap. `pop()` is the one sound played at once, for a chat message.
  */
 
 /** Cues further ahead than this are booked on a later sync (the page syncs at least once a minute even in the background). */
@@ -57,6 +57,24 @@ export class CuePlayer {
     this.booked.clear();
   }
 
+  /**
+   * The chat's pop right now (a new message), when sound has been unlocked; silent otherwise. Three fast rising
+   * marimba-like notes (the owner's pick of five candidates, Nov 2026): bright enough to notice in a busy room,
+   * nothing like the countdown's chime, ticks or GO.
+   */
+  pop(): void {
+    const context = this.context;
+    if (!context || context.state !== "running") return;
+    try {
+      const at = context.currentTime + 0.01;
+      plink(context, at, 880, 0.22, 0.12);
+      plink(context, at + 0.08, 1175, 0.22, 0.12);
+      plink(context, at + 0.16, 1568, 0.3, 0.14);
+    } catch {
+      // Audio failed mid-way: the page stays quiet.
+    }
+  }
+
   private play(context: AudioContext, cue: SoundCue, at: number): OscillatorNode[] {
     switch (cue.kind) {
       case "chime":
@@ -68,6 +86,12 @@ export class CuePlayer {
         return [tone(context, at, 1175, 0.8, 0.32, "square"), tone(context, at, 587, 0.8, 0.2)];
     }
   }
+}
+
+/** A marimba-like note: the fundamental plus a quieter overtone two octaves up, both dying fast. */
+function plink(context: AudioContext, at: number, frequency: number, duration: number, volume: number): void {
+  tone(context, at, frequency, duration, volume);
+  tone(context, at, frequency * 4, duration * 0.45, volume * 0.25, "triangle");
 }
 
 function tone(context: AudioContext, at: number, frequency: number, duration: number, volume: number, type: OscillatorType = "sine"): OscillatorNode {

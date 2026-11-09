@@ -9,13 +9,13 @@ import { parseGarrison } from "./garrison";
 import { memoryStore } from "./memory-store";
 import { pruneClosedRooms } from "./prune";
 import { parseHistory, parseLeaderStatus } from "./room";
-import { type InstanceRow, type LeaderPatch, type LeaderRow, RallyStoreError, type RallyStore, type RoomPatch, type RoomRow, type StoreProblem } from "./store-types";
+import { type InstanceRow, type LeaderPatch, type LeaderRow, type MessageRow, RallyStoreError, type RallyStore, type RoomPatch, type RoomRow, type StoreProblem } from "./store-types";
 
 export * from "./store-types";
 
 /**
  * Storage of Rally Sync rooms (server only): tables rally_sync_rooms,
- * rally_sync_leaders and rally_sync_instances through the service role, or an in-memory store for
+ * rally_sync_leaders, rally_sync_instances and rally_sync_messages through the service role, or an in-memory store for
  * local review without a database (RALLY_SYNC_STORE=memory, never on Vercel).
  * The database enforces the limits and broadcasts the Realtime pings
  * (migration 0012); the actions check the limits first for a friendly reply.
@@ -34,6 +34,7 @@ export function rallyStore(): RallyStore | null {
 const ROOM_COLUMNS = "*";
 const LEADER_COLUMNS = "*";
 const INSTANCE_COLUMNS = "id, room_id, tag, name, coordinator, created_at, last_seen_at";
+const MESSAGE_COLUMNS = "id, room_id, instance_id, author, tag, coordinator, body, pinned, created_at";
 /** Instance ids come from cookies and forms: only well-formed ones reach a query. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -93,6 +94,20 @@ export function mapInstanceRow(row: Row): InstanceRow {
     coordinator: row.coordinator === true,
     createdAt: text(row.created_at),
     lastSeenAt: text(row.last_seen_at),
+  };
+}
+
+export function mapMessageRow(row: Row): MessageRow {
+  return {
+    id: Number(row.id) || 0,
+    roomId: text(row.room_id),
+    instanceId: optionalText(row.instance_id),
+    author: optionalText(row.author),
+    tag: text(row.tag),
+    coordinator: row.coordinator === true,
+    body: text(row.body),
+    pinned: row.pinned === true,
+    createdAt: text(row.created_at),
   };
 }
 
@@ -277,6 +292,38 @@ function supabaseStore(admin: SupabaseClient): RallyStore {
       }
       const { data, error } = await query.select("id");
       if (error) fail("Removing instances", error);
+      return data?.length ?? 0;
+    },
+    async messages(roomId, afterId, limit) {
+      const { data, error } = await admin.from("rally_sync_messages").select(MESSAGE_COLUMNS).eq("room_id", roomId).gt("id", afterId).order("id").limit(limit);
+      if (error) fail("Reading messages", error);
+      return (data ?? []).map(mapMessageRow);
+    },
+    async insertMessage(message) {
+      const { data, error } = await admin
+        .from("rally_sync_messages")
+        .insert({ room_id: message.roomId, instance_id: message.instanceId, author: message.author, tag: message.tag, coordinator: message.coordinator, body: message.body })
+        .select(MESSAGE_COLUMNS)
+        .single();
+      if (error) fail("Sending a message", error);
+      return mapMessageRow(data);
+    },
+    async pinnedMessage(roomId) {
+      const { data, error } = await admin.from("rally_sync_messages").select(MESSAGE_COLUMNS).eq("room_id", roomId).eq("pinned", true).limit(1).maybeSingle();
+      if (error) fail("Reading the pinned message", error);
+      return data ? mapMessageRow(data) : null;
+    },
+    async pinMessage(roomId, messageId) {
+      const { error: unpin } = await admin.from("rally_sync_messages").update({ pinned: false }).eq("room_id", roomId).eq("pinned", true);
+      if (unpin) fail("Unpinning a message", unpin);
+      if (messageId === null) return true;
+      const { data, error } = await admin.from("rally_sync_messages").update({ pinned: true }).eq("room_id", roomId).eq("id", messageId).select("id");
+      if (error) fail("Pinning a message", error);
+      return (data?.length ?? 0) > 0;
+    },
+    async deleteMessages(roomId) {
+      const { data, error } = await admin.from("rally_sync_messages").delete().eq("room_id", roomId).select("id");
+      if (error) fail("Clearing the chat", error);
       return data?.length ?? 0;
     },
     async deleteClosedRooms(now) {

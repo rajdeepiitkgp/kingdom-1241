@@ -60,6 +60,7 @@ import {
   sortInstances,
   statusAfter,
 } from "./room";
+import { CHAT_POLICY, messageAuthor, parseMessageBody, parseMessageId } from "./room-chat";
 import { findOpenRoom, roomAccess, roomCapacity, startNextRally } from "./session";
 import { type InstanceRow, type LeaderRow, type RallyStore, rallyStore, RallyStoreError, type RoomPatch, type RoomRow } from "./store";
 import { clampGameOffset, earliestHit, MAX_MARCH_SECONDS, MAX_RALLY_WAIT_SECONDS, minuteStartHit, parseUtcClock, toGameTime } from "./timing";
@@ -130,6 +131,10 @@ export type CoordinatorOp =
   /** The current invite key; with `password`, also whether that (a device's saved copy) is still the room's password. */
   | { type: "invite"; password?: string }
   | { type: "destroy" }
+  /** Clears the room chat (every message). */
+  | { type: "chatClear" }
+  /** Pins one chat message (the one before is unpinned) or, without an id, unpins. */
+  | { type: "chatPin"; messageId?: number }
   | GarrisonOp;
 
 /**
@@ -173,6 +178,8 @@ const roomScope = (roomId: string, address: string) => `sync:ip:${roomId}:${addr
 const codeScope = (address: string) => `sync:code:${address}`;
 /** Successful unlocks by browsers without the cookie: new browsers one address brings into a room. */
 const joinScope = (roomId: string, address: string) => `sync:join:${roomId}:${address}`;
+/** Chat messages per browser (instance) in a room: CHAT_POLICY. */
+const chatScope = (roomId: string, instanceId: string) => `sync:chat:${roomId}:${instanceId}`;
 
 // ---------------------------------------------------------------------------
 // Unlocking (password form, invite link)
@@ -476,6 +483,41 @@ export async function renameMe(code: string, name: unknown): Promise<SyncResult>
 }
 
 /**
+ * A chat message from this browser, named after it as the coordinator's list
+ * names it (own name, leaders' names, else its tag). `token` is this device's
+ * coordinator token, if it has one, so the message carries the coordinator mark.
+ * A cookie from before instances existed can read the chat but not write to
+ * it (nothing to name the sender by); open the room again to be in it.
+ */
+export async function sendMessage(code: string, body: unknown, token?: unknown): Promise<SyncResult<{ id: number }>> {
+  const { log } = await context();
+  const text = parseMessageBody(body);
+  if (!text) return { ok: false, error: "invalid" };
+  const opened = await openUnlocked(code);
+  if ("error" in opened) return { ok: false, error: opened.error };
+  const { store, room, instance } = opened;
+  if (!instance) return { ok: false, error: "unavailable" };
+  try {
+    // So many a minute per browser (CHAT_POLICY), then it waits a minute: a stuck key or a script can't flood the room.
+    if (store.kind === "supabase") {
+      const budget = await takeTry(chatScope(room.id, instance.id), Date.now(), CHAT_POLICY);
+      if (!budget.allowed) return { ok: false, error: "throttled", retryAt: budget.retryAt };
+    }
+    const coordinator = instance.coordinator || (typeof token === "string" && token !== "" && tokenMatches(token, room.coordinatorHash));
+    if (coordinator) await markCoordinator(store, instance);
+    const leaders = await store.leaders(room.id);
+    const { author, tag } = messageAuthor(instance, leaders.filter((l) => l.instanceId === instance.id).map((l) => l.name));
+    const row = await store.insertMessage({ roomId: room.id, instanceId: instance.id, author, tag, coordinator, body: text });
+    log.info("Chat message sent", { room: room.code, chars: text.length, coordinator });
+    return { ok: true, id: row.id };
+  } catch (error) {
+    // Before migration 0025 there is no chat yet.
+    if (error instanceof RallyStoreError && error.problem === "not_migrated") return { ok: false, error: "unavailable" };
+    return storeError(error, log, "Sending a message");
+  }
+}
+
+/**
  * One coordinator change. `gameOffsetSeconds` is the coordinator's game-clock
  * adjustment: typed times are game times as they are, while Re-sync and the
  * "already passed" check count from the coordinator's game "now".
@@ -598,6 +640,16 @@ export async function coordinate(
         await store.deleteRoom(room.id);
         (await cookies()).delete(roomCookieName(room.code));
         return done();
+      }
+      case "chatClear": {
+        const removed = await store.deleteMessages(room.id);
+        return done({ removed });
+      }
+      case "chatPin": {
+        const messageId = op.messageId === undefined || op.messageId === null ? null : parseMessageId(op.messageId);
+        if (op.messageId !== undefined && op.messageId !== null && messageId === null) return { ok: false, error: "invalid" };
+        if (!(await store.pinMessage(room.id, messageId))) return { ok: false, error: "missing" };
+        return done({ pinned: messageId !== null });
       }
       default: {
         if (!GARRISON_OPS.has(op.type) || room.mode !== "garrison") return { ok: false, error: "invalid" };

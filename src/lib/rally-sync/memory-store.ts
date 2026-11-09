@@ -5,7 +5,8 @@ import { hashPassword, hashToken } from "./access";
 import { EMPTY_GARRISON, type GarrisonState } from "./garrison";
 import { ACTIVE_BROWSER_MS, BROWSER_BUDGET, parseCapacity } from "./capacity";
 import { DEFAULT_SETTINGS, isRoomOpen, type RoomMode } from "./room";
-import { type InstanceRow, type LeaderRow, RallyStoreError, type RallyStore, type RoomRow } from "./store-types";
+import { CHAT_KEEP } from "./room-chat";
+import { type InstanceRow, type LeaderRow, type MessageRow, RallyStoreError, type RallyStore, type RoomRow } from "./store-types";
 
 /**
  * Rally Sync without a database, for reviewing the pages locally
@@ -41,6 +42,9 @@ interface Memory {
   rooms: Map<string, RoomRow>;
   leaders: Map<string, LeaderRow>;
   instances: Map<string, InstanceRow>;
+  /** The rooms' chat messages, numbered by `nextMessageId` like the database's identity column. */
+  messages: Map<number, MessageRow>;
+  nextMessageId: number;
   /** The owner's limits as saved on the settings page (app_config in the database). */
   capacity: unknown;
   /** When each demo room was last deleted (its pages should see "closed" for a while, not a fresh room). */
@@ -51,8 +55,10 @@ interface Memory {
 const holder = globalThis as typeof globalThis & { __rallySyncMemory?: Memory };
 
 function memory(): Memory {
-  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), capacity: null, demoGoneAt: {} };
+  holder.__rallySyncMemory ??= { rooms: new Map(), leaders: new Map(), instances: new Map(), messages: new Map(), nextMessageId: 1, capacity: null, demoGoneAt: {} };
   holder.__rallySyncMemory.instances ??= new Map(); // a process that started before instances existed
+  holder.__rallySyncMemory.messages ??= new Map(); // … or before the chat
+  holder.__rallySyncMemory.nextMessageId ??= 1;
   if (typeof holder.__rallySyncMemory.demoGoneAt !== "object") holder.__rallySyncMemory.demoGoneAt = {};
   return holder.__rallySyncMemory;
 }
@@ -177,6 +183,7 @@ export function memoryStore(): RallyStore {
       m.rooms.delete(id);
       for (const [leaderId, leader] of m.leaders) if (leader.roomId === id) m.leaders.delete(leaderId);
       for (const [instanceId, instance] of m.instances) if (instance.roomId === id) m.instances.delete(instanceId);
+      for (const [messageId, message] of m.messages) if (message.roomId === id) m.messages.delete(messageId);
     },
     async insertLeader(leader) {
       const now = Date.now();
@@ -230,8 +237,45 @@ export function memoryStore(): RallyStore {
       for (const instance of doomed) {
         m.instances.delete(instance.id);
         for (const leader of m.leaders.values()) if (leader.instanceId === instance.id) m.leaders.set(leader.id, { ...leader, instanceId: null });
+        for (const message of m.messages.values()) if (message.instanceId === instance.id) m.messages.set(message.id, { ...message, instanceId: null });
       }
       return doomed.length;
+    },
+    async messages(roomId, afterId, limit) {
+      return [...m.messages.values()]
+        .filter((message) => message.roomId === roomId && message.id > afterId)
+        .sort((a, b) => a.id - b.id)
+        .slice(0, limit);
+    },
+    async insertMessage(message) {
+      const room = m.rooms.get(message.roomId);
+      if (!room || !isRoomOpen(room, Date.now())) throw new RallyStoreError("room_closed", "rally_sync_room_closed");
+      const row: MessageRow = { ...message, pinned: false, id: m.nextMessageId++, createdAt: iso() };
+      m.messages.set(row.id, row);
+      // The room keeps its last CHAT_KEEP messages (the database trims in steps of 20; here one at a time is just as good), a pinned one too.
+      const kept = [...m.messages.values()].filter((o) => o.roomId === message.roomId).sort((a, b) => b.id - a.id);
+      for (const old of kept.slice(CHAT_KEEP)) if (!old.pinned) m.messages.delete(old.id);
+      return row;
+    },
+    async pinnedMessage(roomId) {
+      return [...m.messages.values()].find((message) => message.roomId === roomId && message.pinned) ?? null;
+    },
+    async pinMessage(roomId, messageId) {
+      for (const message of m.messages.values()) if (message.roomId === roomId && message.pinned) m.messages.set(message.id, { ...message, pinned: false });
+      if (messageId === null) return true;
+      const target = m.messages.get(messageId);
+      if (!target || target.roomId !== roomId) return false;
+      m.messages.set(target.id, { ...target, pinned: true });
+      return true;
+    },
+    async deleteMessages(roomId) {
+      let count = 0;
+      for (const [id, message] of m.messages) {
+        if (message.roomId !== roomId) continue;
+        m.messages.delete(id);
+        count++;
+      }
+      return count;
     },
     async deleteClosedRooms(now) {
       const closed = [...m.rooms.values()].filter((r) => !isRoomOpen(r, now));

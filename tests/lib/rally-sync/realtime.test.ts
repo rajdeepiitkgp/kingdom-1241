@@ -23,6 +23,8 @@ describe("rally sync realtime frames", () => {
     // A heartbeat reply has another ref and topic.
     expect(readFrame(frame({ topic: "phoenix", event: "phx_reply", ref: "2", payload: { status: "ok" } }), topic, "1")).toEqual({ kind: "other" });
     expect(readFrame(frame({ topic: "realtime:rally:abc", event: "broadcast", payload: { event: "changed", payload: {} } }), topic, "1")).toEqual({ kind: "ping", event: "changed" });
+    // The chat's own ping (migration 0025): pages then fetch the new messages, not the room.
+    expect(readFrame(frame({ topic: "realtime:rally:abc", event: "broadcast", payload: { event: "chat", payload: { at: 1 } } }), topic, "1")).toEqual({ kind: "ping", event: "chat" });
     expect(readFrame(frame({ topic: "realtime:rally:other", event: "broadcast", payload: { event: "changed" } }), topic, "1")).toEqual({ kind: "other" });
     expect(readFrame(frame({ topic: "realtime:rally:abc", event: "phx_error", payload: {} }), topic, "1")).toEqual({ kind: "channel_closed" });
     expect(readFrame("garbage", topic, "1")).toEqual({ kind: "other" });

@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_CAPACITY } from "@/lib/rally-sync/capacity";
 import { memoryStore } from "@/lib/rally-sync/memory-store";
+import { CHAT_KEEP } from "@/lib/rally-sync/room-chat";
 import type { RoomMode } from "@/lib/rally-sync/room";
 import { closedCutoffs } from "@/lib/rally-sync/prune";
 import type { NewRoom } from "@/lib/rally-sync/store-types";
@@ -125,6 +126,56 @@ describe("rally sync limits (in-memory store, same rules as the database trigger
     const fresh = await store.roomById(created.id);
     expect(fresh?.title).toBe("first");
     expect(await store.updateRoomIf(created.id, fresh?.updatedAt ?? "", { title: "second" })).toBe(true);
+  });
+
+  it("keeps a room's last messages in order, forgets a removed browser on them and deletes them with the room", async () => {
+    const store = memoryStore();
+    const created = await store.insertRoom(room("AAAAAA"));
+    const other = await store.insertRoom(room("BBBBBB"));
+    const browser = await store.insertInstance({ roomId: created.id, tag: "K7M4" });
+    const send = (roomId: string, body: string, instanceId: string | null = browser.id) => store.insertMessage({ roomId, instanceId, author: null, tag: "K7M4", coordinator: false, body });
+    const first = await send(created.id, "first");
+    await send(other.id, "elsewhere", null);
+    const second = await send(created.id, "second");
+    expect(second.id).toBeGreaterThan(first.id);
+    expect((await store.messages(created.id, 0, 50)).map((m) => m.body)).toEqual(["first", "second"]);
+    expect((await store.messages(created.id, first.id, 50)).map((m) => m.body)).toEqual(["second"]);
+    expect((await store.messages(created.id, 0, 1)).map((m) => m.body)).toEqual(["first"]);
+
+    // The room keeps its last CHAT_KEEP messages: of CHAT_KEEP + 5 sent, the first five are gone.
+    for (let i = 0; i < CHAT_KEEP + 3; i++) await send(created.id, `more ${i}`);
+    const kept = await store.messages(created.id, 0, CHAT_KEEP + 10);
+    expect(kept).toHaveLength(CHAT_KEEP);
+    expect(kept[0].body).toBe("more 3");
+    expect(kept[kept.length - 1].body).toBe(`more ${CHAT_KEEP + 2}`);
+
+    // One pinned message per room; a pinned message survives the trim; unpinning and a pin on another room's message.
+    const oldest = (await store.messages(created.id, 0, 1))[0];
+    expect(await store.pinMessage(created.id, oldest.id)).toBe(true);
+    expect((await store.pinnedMessage(created.id))?.id).toBe(oldest.id);
+    for (let i = 0; i < 25; i++) await send(created.id, `after pin ${i}`);
+    expect((await store.pinnedMessage(created.id))?.id).toBe(oldest.id);
+    expect(await store.messages(created.id, 0, CHAT_KEEP + 10)).toHaveLength(CHAT_KEEP + 1);
+    const newest = (await store.messages(created.id, 0, 200)).at(-1)!;
+    expect(await store.pinMessage(created.id, newest.id)).toBe(true);
+    expect((await store.messages(created.id, 0, 200)).filter((m) => m.pinned).map((m) => m.id)).toEqual([newest.id]);
+    expect(await store.pinMessage(other.id, newest.id)).toBe(false);
+    expect(await store.pinMessage(created.id, null)).toBe(true);
+    expect(await store.pinnedMessage(created.id)).toBeNull();
+
+    // A removed browser's messages stay, without the browser.
+    await store.deleteInstances(created.id, { ids: [browser.id] });
+    expect((await store.messages(created.id, 0, 1))[0].instanceId).toBeNull();
+
+    // Clearing and closing (the once-pinned message survived the trims, so one more than CHAT_KEEP).
+    expect(await store.deleteMessages(created.id)).toBe(CHAT_KEEP + 1);
+    expect(await store.messages(created.id, 0, 50)).toEqual([]);
+    expect((await store.messages(other.id, 0, 50)).map((m) => m.body)).toEqual(["elsewhere"]);
+    await store.deleteRoom(other.id);
+    expect(await store.messages(other.id, 0, 50)).toEqual([]);
+    // No message in a closed room.
+    await store.deleteRoom(created.id);
+    await expect(send(created.id, "late", null)).rejects.toMatchObject({ problem: "room_closed" });
   });
 
   it("has a demo garrison room with placeholder enemy leaders", async () => {
