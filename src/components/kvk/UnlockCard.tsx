@@ -2,6 +2,7 @@
 
 import { KeyRound, LockKeyhole } from "lucide-react";
 import { useActionState } from "react";
+import type { UiKey } from "@/content/seed/ui-strings";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { KvkArea } from "@/lib/kvk/access";
 import { unlockChecklist, unlockKvk, unlockLeaders, type UnlockState } from "@/lib/kvk/actions";
@@ -18,8 +19,12 @@ const TEXTS = {
   checklist: { body: "checklist.locked.body", unavailable: "checklist.unavailable" },
 } as const satisfies Record<KvkArea, unknown>;
 
-/** Password form. On success the Server Action sets the cookie and the page re-renders unlocked. */
-export function UnlockCard({ dict, area = "plan" }: { dict: Dictionary; area?: KvkArea }) {
+/**
+ * Password form. On success the Server Action sets the cookie and the page
+ * re-renders unlocked. `title` and `body` name what the password opens when it
+ * is one part of a public page (the prep page's council plan) rather than the page.
+ */
+export function UnlockCard({ dict, area = "plan", title = "kvk.locked.title", body }: { dict: Dictionary; area?: KvkArea; title?: UiKey; body?: UiKey }) {
   const [state, formAction, pending] = useActionState(ACTIONS[area], INITIAL);
   const now = useNow(1000);
   // After too many wrong passwords the server names a moment; the form waits for it with a countdown.
@@ -45,8 +50,8 @@ export function UnlockCard({ dict, area = "plan" }: { dict: Dictionary; area?: K
       <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
         <LockKeyhole className="size-8" />
       </span>
-      <h2 className="mt-4 text-xl font-black text-ink">{dict["kvk.locked.title"]}</h2>
-      <p className="mt-1 text-sm font-semibold text-ink-muted">{dict[TEXTS[area].body]}</p>
+      <h2 className="mt-4 text-xl font-black text-ink">{dict[title]}</h2>
+      <p className="mt-1 text-sm font-semibold text-ink-muted">{dict[body ?? TEXTS[area].body]}</p>
 
       <label htmlFor="kvk-password" className="label mt-5 text-start">
         {dict["kvk.password"]}

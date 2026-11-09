@@ -1,4 +1,5 @@
 import { parsePasswordRules, type PasswordRules } from "@/lib/kvk/password-rules";
+import { localSchedules, parsePrepSchedules, type PrepSchedules } from "@/lib/kvk/prep-schedule";
 import { createLogger } from "@/lib/log";
 import { type FeedbackDefaults, parseFeedbackDefaults } from "@/lib/retro/form-defaults";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,4 +36,14 @@ export async function getPasswordRules(): Promise<PasswordRules> {
 
 export async function getFeedbackDefaults(): Promise<FeedbackDefaults> {
   return parseFeedbackDefaults(await setting("feedback_defaults"));
+}
+
+/**
+ * The council's prep buff days per round; a round that isn't listed follows
+ * the template. Without a database (a local review build) `PREP_SCHEDULE_LOCAL`
+ * stands in, like Rally Sync's memory store.
+ */
+export async function getPrepSchedules(): Promise<PrepSchedules> {
+  if (!isSupabaseAdminConfigured()) return localSchedules(process.env.PREP_SCHEDULE_LOCAL, new Date());
+  return parsePrepSchedules(await setting("prep_schedule"));
 }
