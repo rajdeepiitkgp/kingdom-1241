@@ -46,8 +46,22 @@ test("TOUR-01 the locked battle pages explain more once they are open", async ({
 });
 
 test("TOUR-02 Escape closes the tour and the page stays", async ({ page }) => {
+  // A first load runs no view transition: the prep board streams in behind Suspense, and a browser drops every tap
+  // while a transition runs, so the "?" tapped right after the page appeared did nothing (the iPhone job, Nov 2026).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __viewTransitions: number };
+    w.__viewTransitions = 0;
+    const original = document.startViewTransition?.bind(document);
+    if (!original) return;
+    document.startViewTransition = ((callback: Parameters<Document["startViewTransition"]>[0]) => {
+      w.__viewTransitions += 1;
+      return original(callback);
+    }) as Document["startViewTransition"];
+  });
   await page.goto(at("en", "/kvk/prep"));
   await hydrated(tourButton(page));
+  await expect(page.locator('[data-tour="prep-days"]')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(0);
   await tourButton(page).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
