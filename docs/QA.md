@@ -169,6 +169,12 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | TOOLS-01 | The rally refill and pack value calculators answer as the numbers change. | Browser |
 | TOOLS-02 | Numbers are read as the visitor's language writes them: `2.500` and `2,5` in German, `2,500` and `2.5` in English, Arabic digits too. | Unit: tests/lib/tools/number-input.test.ts |
 
+### Operations
+
+| ID | What must hold | Checked by |
+| --- | --- | --- |
+| OPS-01 | The weekly backup carries the content images as an encrypted archive next to the table dump, refuses a damaged or altered archive, and a restore uploads only the files the bucket lacks. | Unit: tests/lib/backup/images.test.ts |
+
 ### Live site
 
 | ID | What must hold | Checked by |
