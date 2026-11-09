@@ -113,12 +113,13 @@ test("RS-15 Re-sync on the next :00 starts the slowest leader on a whole minute,
   const hit = await hitTime(page);
   const rows = await leaderRows(page.locator('[data-tour="sync-leaders"]'));
   for (const row of rows) expect(clockText(row.start), `${row.name}'s start`).toBe(clockText(hit - RALLY_TIMER - row.march));
-  // The slowest leader starts first, on :00, at least the buffer and at most a minute more after the tap.
+  // The slowest leader starts first, on :00, at least the buffer and at most a minute more after the tap, plus the
+  // tap's way to the server: the clock was read before it, and WebKit on a busy Mac takes two or three seconds.
   const slowest = rows[0];
   expect(slowest.march).toBe(Math.max(...rows.map((r) => r.march)));
   expect(slowest.start % 60).toBe(0);
   expect(after(before, slowest.start)).toBeGreaterThanOrEqual(BUFFER - 1);
-  expect(after(before, slowest.start)).toBeLessThanOrEqual(BUFFER + 61);
+  expect(after(before, slowest.start)).toBeLessThanOrEqual(BUFFER + 65);
 
   // Both copies: the clock times of this hit, and the order for any minute.
   await page.getByRole("button", { name: t("sync.copyChat"), exact: true }).click();
