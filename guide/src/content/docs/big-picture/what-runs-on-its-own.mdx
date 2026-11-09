@@ -43,7 +43,7 @@ flowchart TB
 | Every hour at :23 | Read kingshot.net's gift codes and update Home; take expired codes and announcements off Home | **Gift codes** workflow → the site |
 | 03:17 daily | Delete the database's job history older than three days | The database (pg_cron) |
 | 03:29 daily, and after every deployment | Delete old Vercel builds, keeping the live one and the one before it | **Prune deployments** workflow → Vercel |
-| 04:17 Mondays | Encrypted backup of every table, kept 90 days | **Maintenance** workflow |
+| 04:17 Mondays | Encrypted backup of every table and of the content images, kept 90 days | **Maintenance** workflow |
 | 05:41 daily | Delete feedback past its retention, closed rooms, images no text uses | **Maintenance** workflow |
 | 06:07 daily | Sync the alliances' names, power, leaders and members from MightPulse | **Maintenance** workflow → the site |
 | 06:30 daily | Open the live site in a browser: Home in every language, the main pages, the alliances, the not-found page | **E2E live** workflow |

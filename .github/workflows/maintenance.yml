@@ -161,12 +161,15 @@ jobs:
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: npm run backup
 
+      # Runs even when the script failed after writing the table dump (while
+      # listing or downloading the images): the dump is never lost, and the red
+      # run says what went wrong.
       - name: Keep the backup for 90 days
-        if: env.TASK == 'backup'
+        if: env.TASK == 'backup' && !cancelled()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kingdom-1241-backup-${{ github.run_number }}
-          path: backups/*.json.enc
+          path: backups/*.enc
           if-no-files-found: error
           retention-days: 90
           compression-level: 0

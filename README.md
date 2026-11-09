@@ -50,7 +50,7 @@ src/
   lib/retro/              battle feedback: question catalogue, form rules, MightPulse lookup, summary maths, results paging and the hide-names view, CSV, retention and prune
   lib/log.ts              structured logger (pretty in dev, JSON lines in production) + request ids
   lib/translate/          provider switch (Anthropic / Gemini / off), shared prompt + glossary, batched row translator with change hashes
-  lib/backup/             what the encrypted content backup contains and how it is restored (pure; the script is scripts/backup.ts)
+  lib/backup/             what the encrypted content backup contains (tables and the image files) and how it is restored (pure; the script is scripts/backup.ts)
   lib/vercel/             which old Vercel deployments to delete (pure; the script is scripts/prune-deployments.ts)
   lib/tools/              pure calculator logic (rally refill, pack value)
   lib/tour/               guided tours: which tours a device has seen, where the step card goes, which voice reads a step aloud (pure); each feature keeps its own steps (lib/rally-sync/tours.ts, lib/admin/tours.ts, lib/kvk/tours.ts, lib/tour/home.ts)
@@ -69,7 +69,7 @@ scripts/
   content-review.ts       npm run content:review (read-only export of the battle plan and other content for the same review)
   content-fixes.ts        npm run content:fixes (applies the review's content fixes; preview without --apply)
   dev-admin.ts            npm run dev:admin (local admin account, see SETUP.md § 8.3)
-  backup.ts               npm run backup (encrypted dump and restore of all content, SETUP.md § 10)
+  backup.ts               npm run backup (encrypted dump of all content and the images, and its restore, SETUP.md § 10)
   prune.ts                npm run prune (deletes battle feedback past its retention period, closed Rally Sync rooms and unused editor images, SETUP.md § 9a/9b/9f)
   prune-deployments.ts    npm run deployments:prune (deletes old Vercel deployments, SETUP.md § 5)
   vercel-ignore-build.sh  Vercel runs it before each build: skips builds nothing on the site needs, and the PAUSE_DEPLOYS switch (SETUP.md § 5)
@@ -117,7 +117,7 @@ Pages are prerendered and content is cached for a day (`cacheLife('content')` in
 | `npm run db:seed` | Insert seed content into Supabase (idempotent) |
 | `npm run translate` | Translate missing/outdated content with the configured provider |
 | `npm run dev:admin` | Create the local development admin account (SETUP.md § 8.3) |
-| `npm run backup` | Encrypted dump of all content and admin tables; `-- --restore <file> --yes` writes it back (SETUP.md § 10) |
+| `npm run backup` | Encrypted dump of all content and admin tables plus the content images; `-- --restore <file> --yes` writes it back, images included (SETUP.md § 10) |
 | `npm run prune` | Delete battle feedback past its retention period, closed Rally Sync rooms and editor images no text uses (`-- --dry-run` to preview; SETUP.md § 9a, § 9b, § 9f) |
 | `npm run deployments:prune` | Delete old Vercel deployments, keeping the live one, the one before it and open pull requests' previews (`-- --dry-run` to preview; needs `VERCEL_TOKEN`, SETUP.md § 5) |
 
