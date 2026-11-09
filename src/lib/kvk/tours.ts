@@ -44,10 +44,20 @@ export const KVK_TOURS = {
       lock,
     ],
   },
+  // Public page; the council's buff days (and Lock page) show with the battle plan's cookie, a row with the password button without it.
   prep: {
     id: "kvk-prep",
-    version: 1,
-    steps: [uiStep("prep-status", "prep.status"), uiStep("prep-days", "prep.days"), uiStep("prep-day", "prep.day"), uiStep("prep-table", "prep.table", "prep.tableTitle"), uiStep("prep-save", "prep.save", "prep.saveTitle")],
+    version: 2,
+    steps: [
+      uiStep("prep-status", "prep.status"),
+      uiStep("prep-council", "prep.council", "prep.council.title"),
+      lock,
+      uiStep("prep-unlock", "prep.unlock", "prep.council.title"),
+      uiStep("prep-days", "prep.days"),
+      uiStep("prep-day", "prep.day"),
+      uiStep("prep-table", "prep.table", "prep.tableTitle"),
+      uiStep("prep-save", "prep.save", "prep.saveTitle"),
+    ],
   },
   feedback: {
     id: "kvk-feedback",

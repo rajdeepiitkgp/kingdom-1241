@@ -7,7 +7,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * tolerantly, so a missing row or table means "the defaults".
  */
 
-export type ConfigKey = "rally_sync_capacity" | "translation" | "password_rules" | "feedback_defaults" | "alliance_sync" | "gift_code_sync" | "last_backup" | "last_prune" | "last_expiry_check";
+export type ConfigKey =
+  | "rally_sync_capacity"
+  | "translation"
+  | "password_rules"
+  | "feedback_defaults"
+  | "alliance_sync"
+  | "gift_code_sync"
+  | "last_backup"
+  | "last_prune"
+  | "last_expiry_check"
+  /** The council's KvK prep buff days per round (set by moderators on /admin/prep). */
+  | "prep_schedule";
 
 /** The stored value, or null when there is none. Errors (a missing table included) are thrown for the caller to judge. */
 export async function readConfig(supabase: SupabaseClient, key: ConfigKey): Promise<unknown> {

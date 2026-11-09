@@ -16,31 +16,39 @@ import {
   defaultDay,
   INTEL_STACK_STEPS,
   intelStackFor,
+  BUFFS,
+  buffDay,
   markOn,
+  ministryOf,
   PREP_DAYS,
   PREP_ITEMS,
-  PREP_TIPS,
   type PrepDay,
   type PrepItem,
   type PrepPhase,
   type PrepRound,
+  type PrepSchedule,
   pointsOn,
   prepPhase,
   roundFor,
   SAVE_FOR_KVK,
   SCORING_DAYS,
   type ScoringDay,
+  tipsFor,
 } from "@/lib/kvk/prep";
+import { type PrepSchedules, scheduleFor } from "@/lib/kvk/prep-schedule";
 import { DAY, formatLocalDateTime, formatUtcDate, formatUtcTime, HOUR, pad2, splitDuration } from "@/lib/time";
 import { DurationUnits } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 import { ItemIcon } from "./ItemIcon";
+import { LockButton } from "./LockButton";
 import {
   CALENDAR_IMAGE,
   DAY_ICON,
   DAY_IMAGES,
   dayLabel,
   ITEM_IMAGES,
+  BUFF_ICON,
+  BUFF_IMAGES,
   MARK_ICON,
   MASTER_PAN_IMAGE,
   phaseView,
@@ -53,13 +61,26 @@ import {
 } from "./prep-labels";
 
 /**
- * The public KvK prep page: where the round stands (live countdown), the day
- * picker with what to use, wait for or skip on that day plus the council's
- * tips, the item × day table and the "save these for KvK" reminder. Everything
- * comes from `src/lib/kvk/prep.ts`; the clock only picks today and the dates,
- * so the server renders the same page for everyone (UTC, no dates).
+ * The council's buff days as the gate hands them over once the battle plan's
+ * cookie is there: every stored round, and the schedule of the round the
+ * server took for the current one (the first paint), null while locked.
  */
-export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }) {
+export interface CouncilView {
+  schedules: PrepSchedules;
+  current: PrepSchedule;
+}
+
+/**
+ * The KvK prep page: where the round stands (live countdown), the day picker
+ * with what to use, wait for or skip on that day plus the council's tips, the
+ * item × day table and the "save these for KvK" reminder. Everything comes
+ * from `src/lib/kvk/prep.ts`; the clock only picks today and the dates, so the
+ * server renders the same page for everyone (UTC, no dates). With `council`
+ * (the battle plan's password) the five ministry items follow the round's
+ * buff days instead of being ✅ on all three of theirs; `unlock` is the row
+ * with the password button shown in the card's place while locked.
+ */
+export function PrepBoard({ dict, locale, council, unlock }: { dict: Dictionary; locale: string; council: CouncilView | null; unlock?: ReactNode }) {
   // A minute is precise enough to move "today"; the status card ticks every second on its own.
   const now = useNow(60_000);
   const round = now ? roundFor(now) : null;
@@ -67,15 +88,19 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
   const today = phase?.kind === "day" ? phase.day : null;
   const [picked, setPicked] = useState<PrepDay | null>(null);
   const shown = picked ?? (phase ? defaultDay(phase) : 0);
+  const schedule = council ? (round ? scheduleFor(council.schedules, round) : council.current) : null;
 
   return (
     <div className="space-y-10">
       <PrepStatus dict={dict} locale={locale} />
 
+      {schedule ? <CouncilCard schedule={schedule} round={round} dict={dict} locale={locale} /> : unlock}
+
       <section aria-label={dict["prep.title"]}>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" data-tour="prep-days">
           {PREP_DAYS.map((day) => {
             const active = day === shown;
+            const buffs = schedule && day !== 0 ? BUFFS.filter((buff) => buffDay(schedule, buff) === day) : [];
             return (
               <button
                 key={day}
@@ -95,6 +120,16 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
                 </span>
                 <span className={clsx("text-sm font-black wrap-break-word", active ? "text-primary" : "text-ink")}>{dayLabel(day, dict)}</span>
                 <span className="line-clamp-2 text-[0.6875rem]/tight font-bold wrap-break-word hyphens-auto text-ink-muted">{dict[`prep.theme.${day}`]}</span>
+                {buffs.length > 0 && (
+                  <span className="flex gap-1">
+                    {buffs.map((buff) => (
+                      <span key={buff} className="grid size-5 place-items-center rounded-md bg-success-soft">
+                        <ItemIcon image={BUFF_IMAGES[buff]} emoji={BUFF_ICON[buff]} className="size-4" />
+                        <span className="sr-only">{dict[`prep.council.${buff}`]}</span>
+                      </span>
+                    ))}
+                  </span>
+                )}
                 <DayTimer day={day} dict={dict} />
               </button>
             );
@@ -102,13 +137,13 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
         </div>
         {/* Hidden until the clock has picked today, so visitors don't see Day 0 flash first. */}
         <div className={clsx("mt-4 transition-opacity duration-300", !now && picked === null && "opacity-0")} data-tour="prep-day">
-          <DayPanel day={shown} round={round} isToday={shown === today} dict={dict} locale={locale} />
+          <DayPanel day={shown} round={round} isToday={shown === today} schedule={schedule} locked={Boolean(unlock)} dict={dict} locale={locale} />
         </div>
       </section>
 
       <section data-tour="prep-table">
         <SectionTitle icon="📋" title={dict["prep.tableTitle"]} />
-        <PrepTable today={today} dict={dict} />
+        <PrepTable today={today} schedule={schedule} dict={dict} />
       </section>
 
       <section data-tour="prep-save">
@@ -125,6 +160,58 @@ export function PrepBoard({ dict, locale }: { dict: Dictionary; locale: string }
           ))}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/**
+ * The council's buff days of this round (unlocked with the battle plan's
+ * password): one sticker per buff (construction and research as the council
+ * set them, training on Day 4 by the game) with its day and, once the clock
+ * knows the round, its date; Lock page for a shared device.
+ */
+function CouncilCard({ schedule, round, dict, locale }: { schedule: PrepSchedule; round: PrepRound | null; dict: Dictionary; locale: string }) {
+  return (
+    <section id="prep-council" className="card scroll-mt-24 border-2 border-success/60 p-4 md:p-5" data-tour="prep-council" aria-label={dict["prep.council.title"]}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 basis-48 text-xs font-bold tracking-wider text-ink-muted uppercase">
+          <span aria-hidden>🔑 </span>
+          {dict["prep.council.title"]}
+        </p>
+        <LockButton label={dict["kvk.lock"]} />
+      </div>
+      <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {BUFFS.map((buff) => {
+          const day = buffDay(schedule, buff);
+          return (
+            <li key={buff} className="flex min-w-0 items-center gap-3 rounded-2xl bg-success-soft px-3 py-2">
+              <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-card text-xl shadow-soft" aria-hidden>
+                <ItemIcon image={BUFF_IMAGES[buff]} emoji={BUFF_ICON[buff]} className="size-11" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold tracking-wider wrap-break-word text-ink-muted uppercase">{dict[`prep.council.${buff}`]}</span>
+                <span className="block text-lg/tight font-black text-ink">{dayLabel(day, dict)}</span>
+                {round && <span className="block text-xs font-semibold text-ink-muted">{formatUtcDate(dayStart(round, day), locale)}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-xs font-semibold wrap-break-word text-ink-muted">{dict["prep.council.hint"]}</p>
+    </section>
+  );
+}
+
+/** While the gate reads the cookie: the status card's and the day tabs' outlines. */
+export function PrepBoardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-10" aria-hidden>
+      <div className="card h-52 bg-card-soft" />
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {PREP_DAYS.map((day) => (
+          <div key={day} className="h-28 rounded-2xl bg-card-soft" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -204,11 +291,36 @@ function PhaseFooter({ phase, dict, locale }: { phase: PrepPhase; dict: Dictiona
   );
 }
 
-function DayPanel({ day, round, isToday, dict, locale }: { day: PrepDay; round: PrepRound | null; isToday: boolean; dict: Dictionary; locale: string }) {
-  const plan = dayPlan(day);
-  const tips = PREP_TIPS[day];
+function DayPanel({
+  day,
+  round,
+  isToday,
+  schedule,
+  locked,
+  dict,
+  locale,
+}: {
+  day: PrepDay;
+  round: PrepRound | null;
+  isToday: boolean;
+  schedule: PrepSchedule | null;
+  /** The council's plan can be unlocked on this page: ministry items point at it. */
+  locked: boolean;
+  dict: Dictionary;
+  locale: string;
+}) {
+  const plan = dayPlan(day, schedule);
+  const tips = tipsFor(day, schedule);
   const stackFor = intelStackFor(day);
   const scoringDay = day === 0 ? undefined : day;
+  const buffs = schedule && day !== 0 ? BUFFS.filter((buff) => buffDay(schedule, buff) === day) : [];
+  // While locked, the ministry items' ✅ stand for "one of these days": the note leads to the council's row.
+  const pickNote = (item: PrepItem) =>
+    locked && ministryOf(item.id) ? (
+      <a href="#prep-council" className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline">
+        <span aria-hidden>🔑</span> {dict["prep.council.pick"]}
+      </a>
+    ) : undefined;
 
   return (
     <article className={clsx("card border-2 p-4 md:p-6", isToday ? "border-success/60 ring-4 ring-success/20" : "border-primary/40")}>
@@ -220,6 +332,11 @@ function DayPanel({ day, round, isToday, dict, locale }: { day: PrepDay; round: 
           <p className="flex flex-wrap items-center gap-2 text-xs font-bold tracking-wider text-ink-muted uppercase">
             {dayLabel(day, dict)}
             {isToday && <span className="chip bg-success-soft text-success normal-case">● {dict["prep.today"]}</span>}
+            {buffs.map((buff) => (
+              <span key={buff} className="chip bg-success-soft text-success normal-case">
+                <ItemIcon image={BUFF_IMAGES[buff]} emoji={BUFF_ICON[buff]} className="size-4" /> {dict[`prep.council.${buff}`]}
+              </span>
+            ))}
           </p>
           <h2 className="text-xl/tight font-black wrap-break-word text-ink md:text-2xl">{dict[`prep.theme.${day}`]}</h2>
           {themeAlt(day, dict) && <p className="text-sm font-bold wrap-break-word text-ink-muted">({themeAlt(day, dict)})</p>}
@@ -235,7 +352,7 @@ function DayPanel({ day, round, isToday, dict, locale }: { day: PrepDay; round: 
           <Group icon={MARK_ICON.best} title={dict["prep.group.best"]}>
             <ItemGrid>
               {plan.best.map((item) => (
-                <ItemSticker key={item.id} item={item} tone="bg-success-soft" dict={dict} locale={locale} day={scoringDay} />
+                <ItemSticker key={item.id} item={item} tone="bg-success-soft" dict={dict} locale={locale} day={scoringDay} note={pickNote(item)} />
               ))}
             </ItemGrid>
           </Group>
@@ -477,8 +594,8 @@ function TipList({ tips, dict }: { tips: ReadonlyArray<Parameters<typeof tipText
   );
 }
 
-/** The item × day table, today's column highlighted. */
-function PrepTable({ today, dict }: { today: PrepDay | null; dict: Dictionary }) {
+/** The item × day table, today's column highlighted; the ministry items follow the council's buff days once unlocked. */
+function PrepTable({ today, schedule, dict }: { today: PrepDay | null; schedule: PrepSchedule | null; dict: Dictionary }) {
   const tone = { best: "bg-success-soft", ok: "bg-primary-soft", wait: "bg-gold-soft", no: "" } as const;
   return (
     <div className="card p-2 sm:p-4">
@@ -517,7 +634,7 @@ function PrepTable({ today, dict }: { today: PrepDay | null; dict: Dictionary })
                 </span>
               </th>
               {SCORING_DAYS.map((day, index) => {
-                const mark = markOn(item, day);
+                const mark = markOn(item, day, schedule);
                 return (
                   <td
                     key={day}

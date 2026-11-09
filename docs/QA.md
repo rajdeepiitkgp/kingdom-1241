@@ -125,11 +125,13 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | KVK-03 | The commander's ticks stay on the device after a reload, and unticking sticks too. | Browser |
 | KVK-04 | On a prep day the prep page opens on that day, marked Today, with its countdown running; another day can be picked. | Browser |
 | KVK-05 | The feedback page says so when there is no feedback form. | Browser |
-| KVK-06 | The prep calendar: rounds every 28 days from 1 Nov 2026, the day boundaries, the Saturday shield and battle times, the intel stacking days. | Unit: tests/lib/kvk/prep.test.ts |
+| KVK-06 | The prep calendar: rounds every 28 days from 1 Nov 2026, the day boundaries, the Saturday shield and battle times, the intel stacking days, the gathering tips (marches sent out the day before a gathering day, recalled before it ends); and every ✅ or 🆗 of the item × day table, with or without the council's buff days, falls on a day the game scores that item (the in-game Point Sources, Nov 2026). | Unit: tests/lib/kvk/prep.test.ts |
 | KVK-07 | Wrong passwords lock out one address for a while and only alert for the plan; nobody is ever locked out by other players' guesses. | Unit: tests/lib/kvk/throttle.test.ts |
 | KVK-08 | A battle's plan stays active while its feedback form is open: the editor refuses to activate another plan or deactivate this one until the form is closed, and a form opens for the active plan only. | Unit: tests/lib/admin/kvk-forms.test.ts |
 | KVK-09 | The battle-plan intro's `{{when}}`, `{{date}}`, `{{time}}` and `{{utc}}` tokens come from the battle time: UTC in the server's HTML, the visitor's zone and words once the page is live. | Unit: tests/lib/kvk/battle-tokens.test.ts |
 | KVK-10 | A table with centred header cells in a battle-page text (the battlefield map) is drawn as a diagram: narrow and centred on a wide screen, the width of the text on a phone, its cells centred, header cells included; at the largest text size it scrolls sideways inside its box instead of being cut, and the page never scrolls sideways. | Browser |
+| KVK-11 | The prep page shows the five ministry items (Truegold, Tempered Truegold, construction speedups, Truegold Dust, research speedups) as ✅ on Days 1, 2 and 5 for everyone; the council's buff days (construction and research as set, training on Day 4) appear only with the battle plan's password, typed in a popup from the plan's row (a wrong one stays in the popup), which narrows those ✅ to the chosen days (the other two 🆗), and Lock page hides them again. | Browser |
+| KVK-12 | The council's buff days: the stored value is read tolerantly, a round without one follows the template (construction Day 1, research Day 2), the admin form takes Days 1, 2 or 5 only (the same day for both allowed) and rounds that are over are dropped at a save. | Unit: tests/lib/kvk/prep-schedule.test.ts |
 
 ### Rally Sync
 
@@ -187,3 +189,4 @@ Run through the ones that apply before each battle day, and after any change in 
 | MAN-07 | The feedback results print to PDF on light and dark paper in Chrome and Safari. | Manual |
 | MAN-08 | Admin: with transfers switched open, the transfers page shows the terms and Home's banner shows the badge; closed again, both go. | Manual |
 | MAN-09 | Admin: the editor's Preview shows a text as players will see it (formatting, a danger box, an image). | Manual |
+| MAN-10 | Admin: a moderator moves the construction buff to Day 5 under Prep days; the unlocked prep page shows Day 5 ✅ for Truegold on the next visit, and the change is listed under Recent changes. | Manual |

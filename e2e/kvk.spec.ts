@@ -77,6 +77,44 @@ test("KVK-04 the prep page opens on today's prep day with its countdown", async 
   await expectHealthyPage(page, "en");
 });
 
+test("KVK-11 the council's buff days show on the prep page with the battle plan's password only", async ({ page }) => {
+  await page.goto(at("en", "/kvk/prep"));
+  const council = page.locator('[data-tour="prep-council"]');
+  await expect(council).toHaveCount(0);
+  const best = t("prep.mark.best");
+  const ok = t("prep.mark.ok");
+  const no = t("prep.mark.no");
+  // The marks of one item's row, Day 1 to Day 5 (the cells name their mark in `title`).
+  const rowOf = (item: "prep.item.truegold" | "prep.item.tgDust") => page.locator('[data-tour="prep-table"] tbody tr', { has: page.getByRole("rowheader", { name: t(item), exact: true }) });
+  const marks = (item: "prep.item.truegold" | "prep.item.tgDust") => rowOf(item).locator("td span[title]").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("title")));
+  // Everyone sees the ministry items ticked on all three of their days.
+  await expect(rowOf("prep.item.truegold").locator("td span[title]")).toHaveCount(5);
+  expect(await marks("prep.item.truegold")).toEqual([best, best, no, no, best]);
+  // The password form lives in a popup behind the row's button; a wrong password stays in it, the right one closes it with the row.
+  const open = page.getByRole("button", { name: t("prep.council.open") });
+  await hydrated(open);
+  await open.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await unlock(page, "not-the-password");
+  await expect(page.getByRole("dialog").getByText(t("kvk.wrongPassword"))).toBeVisible();
+  await unlock(page, SEED_PASSWORDS.plan);
+  await expect(council).toBeVisible();
+  await expect(page.locator('[data-tour="prep-unlock"]')).toHaveCount(0);
+  // The two days the council sets, and the training day the game fixes.
+  for (const buff of ["construction", "research", "training"] as const) await expect(council).toContainText(t(`prep.council.${buff}`));
+  await expect(council).toContainText(t("prep.day", "en", { n: 4 }));
+  // The test server stores nothing, so the template applies: construction on Day 1, research on Day 2.
+  await expect.poll(() => marks("prep.item.truegold")).toEqual([best, ok, no, no, ok]);
+  expect(await marks("prep.item.tgDust")).toEqual([ok, best, no, no, ok]);
+  await expectHealthyPage(page, "en");
+  // Lock page hides the plan again.
+  const lock = page.getByRole("button", { name: t("kvk.lock") });
+  await hydrated(lock);
+  await lock.click();
+  await expect(council).toHaveCount(0);
+  await expect.poll(() => marks("prep.item.truegold")).toEqual([best, best, no, no, best]);
+});
+
 test("KVK-05 the feedback page says so when there is no form", async ({ page }) => {
   await page.goto(at("en", "/kvk/feedback"));
   await expect(page.getByText(t("retro.none"))).toBeVisible();

@@ -10,6 +10,11 @@ describe("adminNavGroups", () => {
     expect(labels({ canManageUsers: true, isOwner: false }).at(-1)).toEqual(["Access & settings", ["Users"]]);
   });
 
+  it("lists the battle tools, the prep days among them", () => {
+    expect(labels({ canManageUsers: false, isOwner: false }).find(([label]) => label === "Battle")?.[1]).toEqual(["Battle plans", "Prep days", "Feedback", "Rally Sync"]);
+    expect(activeAdminPath("/en/admin/prep", adminNavGroups({ canManageUsers: false, isOwner: false }))).toBe("/prep");
+  });
+
   it("drops the last group for a moderator", () => {
     expect(labels({ canManageUsers: false, isOwner: false }).map(([label]) => label)).toEqual([null, "Battle", "Website"]);
   });

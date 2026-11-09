@@ -1,5 +1,7 @@
-import { ArrowRight, LockKeyhole, Swords } from "lucide-react";
+import { ArrowRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
+import { ItemIcon } from "@/components/kvk/ItemIcon";
+import { KVK_EVENT_IMAGE } from "@/components/kvk/prep-labels";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath } from "@/lib/i18n/paths";
 
@@ -12,8 +14,9 @@ export function KvkCard({ dict, locale }: { dict: Dictionary; locale: string }) 
       className="card group relative flex items-center gap-4 overflow-hidden border-2 border-gold/60 p-5 transition-shadow hover:shadow-lift md:p-6"
     >
       <div className="pointer-events-none absolute -inset-e-10 -top-10 size-32 rounded-full bg-gold/20 blur-2xl" aria-hidden />
-      <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-on-gold shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
-        <Swords className="size-7" />
+      {/* The game's Kingdom of Power sticker, the same as on the prep page's header. */}
+      <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gold text-3xl shadow-[0_4px_0_0_var(--gold-strong)]" aria-hidden>
+        <ItemIcon image={KVK_EVENT_IMAGE} emoji="⚔️" className="size-12" />
       </span>
       <div className="relative min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-lg font-black text-ink">

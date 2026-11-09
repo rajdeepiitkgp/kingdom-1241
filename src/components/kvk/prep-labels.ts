@@ -2,6 +2,7 @@
 import type { UiKey } from "@/content/seed/ui-strings";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import {
+  type Buff,
   KVK_SATURDAY,
   type PrepDay,
   type PrepItemId,
@@ -58,12 +59,19 @@ export const SAVE_IMAGES: Partial<Record<SaveItemId, string>> = {
 /** Tips with a picture instead of the ❗. */
 export const TIP_IMAGES: Partial<Record<PrepTipId, string>> = {
   intelOpen: ITEM_IMAGES.intel,
+  intelSaturday: ITEM_IMAGES.intel,
+  gatherRecall: ITEM_IMAGES.gathering,
+  gatherRecallAgain: ITEM_IMAGES.gathering,
+  gatherRecallInvasion: ITEM_IMAGES.gathering,
   bisonSave: "/items/bison.webp",
   gatherBoost: "/items/gathering-boost.webp",
   warAcademy: "/items/war-academy.webp",
   shield: "/items/shield.webp",
   homeCoords: "/items/teleporter.webp",
 };
+/** The three minister buffs of the council's card, drawn with the item they go with. */
+export const BUFF_IMAGES: Record<Buff, string> = { construction: "/items/construction-speedup.webp", research: "/items/research-speedup.webp", training: "/items/troop-training.webp" };
+export const BUFF_ICON: Record<Buff, string> = { construction: "🏗️", research: "🔬", training: "⚔️" };
 export const MASTER_PAN_IMAGE = "/items/master-pan.webp";
 export const KVK_EVENT_IMAGE = "/items/kingdom-of-power.webp";
 export const CALENDAR_IMAGE = "/items/calendar.webp";
@@ -103,7 +111,7 @@ export const SATURDAY = {
 };
 
 export function tipText(tip: { id: PrepTipId; day?: ScoringDay }, dict: Dictionary): string {
-  return format(dict[`prep.tip.${tip.id}`], { day: tip.day ?? "", time: SATURDAY.battle, from: SATURDAY.shieldFrom, to: SATURDAY.shieldTo });
+  return format(dict[`prep.tip.${tip.id}`], { day: tip.day ?? "", time: SATURDAY.battle, from: SATURDAY.shieldFrom, to: SATURDAY.shieldTo, invasion: SATURDAY.invasion });
 }
 
 /**
