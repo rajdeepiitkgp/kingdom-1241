@@ -1,3 +1,4 @@
+import { discordInvite } from "@/lib/admin/site-forms";
 import type { Localized } from "@/lib/i18n/localized";
 import { EVENT_CATEGORIES } from "@/lib/events/options";
 import { readStoredAnalysis } from "@/lib/retro/analysis";
@@ -69,6 +70,12 @@ function str(value: unknown, fallback = ""): string {
 
 function strOrNull(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
+}
+
+/** A Discord invite from a row, checked again here: the forms check what they store, and anything else is left out all the same. */
+function inviteOrNull(value: unknown): string | null {
+  const raw = strOrNull(value);
+  return raw ? (discordInvite(raw) ?? null) : null;
 }
 
 function num(value: unknown, fallback: number): number {
@@ -181,7 +188,7 @@ export function mapAlliance(row: Row): Alliance {
     description: loc(row.description),
     requirements: loc(row.requirements),
     languages: strOrNull(row.languages),
-    discordUrl: strOrNull(row.discord_url),
+    discordUrl: inviteOrNull(row.discord_url),
     sortOrder: num(row.sort_order, 0),
     published: row.published !== false,
   };
@@ -213,12 +220,12 @@ export function mapSettings(rows: Row[], defaults: SiteSettings): SiteSettings {
     kingdomName: values.kingdom_name ? loc(values.kingdom_name) : defaults.kingdomName,
     tagline: values.tagline ? loc(values.tagline) : defaults.tagline,
     dailyResetUtcHour: num(values.daily_reset_utc_hour, defaults.dailyResetUtcHour),
-    discordInviteUrl: strOrNull(values.discord_invite_url) ?? defaults.discordInviteUrl,
+    discordInviteUrl: inviteOrNull(values.discord_invite_url) ?? defaults.discordInviteUrl,
     transferContact: values.transfer_contact ? loc(values.transfer_contact) : defaults.transferContact,
     transfersOpen: typeof values.transfers_open === "boolean" ? values.transfers_open : defaults.transfersOpen,
     transferInfo: values.transfer_info ? loc(values.transfer_info) : defaults.transferInfo,
     transferTerms: "transfer_terms" in values ? parseTransferTerms(values.transfer_terms) : defaults.transferTerms,
-    transferDiscordUrl: strOrNull(values.transfer_discord_url) ?? defaults.transferDiscordUrl,
+    transferDiscordUrl: inviteOrNull(values.transfer_discord_url) ?? defaults.transferDiscordUrl,
     createdBy: strOrNull(values.created_by) ?? defaults.createdBy,
   };
 }

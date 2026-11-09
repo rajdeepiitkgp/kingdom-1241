@@ -29,8 +29,8 @@ const iso = (value: unknown): string | null => (typeof value === "string" && !Nu
 
 /**
  * The codes in the answer, or null when the answer isn't the list it should
- * be: a changed format must never read as "no codes" (that would end every
- * code on Home). Entries that aren't a code are skipped.
+ * be, or is empty: a changed format or a glitch must never read as "no codes"
+ * (that would end every code on Home). Entries that aren't a code are skipped.
  */
 export function parseGiftCodeFeed(value: unknown): FeedCode[] | null {
   if (!value || typeof value !== "object") return null;
@@ -46,5 +46,7 @@ export function parseGiftCodeFeed(value: unknown): FeedCode[] | null {
     seen.add(code);
     codes.push({ code, expiresAt: iso(row.expiresAt), createdAt: iso(row.createdAt) });
   }
-  return codes;
+  // An empty list has never been their real answer (there are always a few working codes): taken at face value it would
+  // end every code at once, so it counts as no answer, and the next hourly run reads the list again.
+  return codes.length > 0 ? codes : null;
 }

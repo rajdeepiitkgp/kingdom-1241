@@ -27,8 +27,9 @@ describe("parseGiftCodeFeed", () => {
     ]);
   });
 
-  it("takes an empty list as no codes", () => {
-    expect(parseGiftCodeFeed({ status: "success", data: { giftCodes: [] } })).toEqual([]);
+  it("takes an empty list as no answer, since it would end every code at once", () => {
+    expect(parseGiftCodeFeed({ status: "success", data: { giftCodes: [] } })).toBeNull();
+    expect(parseGiftCodeFeed({ status: "success", data: { giftCodes: [{ code: "" }, null] } })).toBeNull();
   });
 
   it("refuses an answer that isn't the list, so a new format never ends every code", () => {

@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
+import { readJson } from "@/lib/fetch-json";
 import { createLogger, elapsedMs } from "@/lib/log";
 import { type GovernorProfile, parseMightPulsePlayer } from "./governor";
 
@@ -52,7 +53,7 @@ export async function lookupGovernor(governorId: string, options: { fetchImpl?: 
       log.warn("MightPulse answered with an error", { status: response.status, elapsedMs: elapsedMs(started) });
       return { status: "unavailable" };
     }
-    const profile = parseMightPulsePlayer(await response.json(), governorId);
+    const profile = parseMightPulsePlayer(await readJson(response), governorId);
     if (!profile) {
       log.warn("MightPulse answer had an unexpected shape", { elapsedMs: elapsedMs(started) });
       return { status: "unavailable" };

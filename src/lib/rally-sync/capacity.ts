@@ -87,7 +87,7 @@ function clamp(mode: RoomMode, field: CapacityField, value: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** The stored value as limits (tolerant: a missing or malformed number takes its default, every number stays within its bounds). */
+/** The stored value as limits (tolerant: a missing, negative or malformed number takes its default, as the database's rally_sync_limit() does; every number stays within its bounds). */
 export function parseCapacity(value: unknown): Capacity {
   const stored = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
   const out = {} as Capacity;
@@ -96,7 +96,9 @@ export function parseCapacity(value: unknown): Capacity {
     const limits = {} as ModeCapacity;
     for (const field of FIELDS) {
       const n = raw[field];
-      limits[field] = clamp(mode, field, typeof n === "number" && Number.isInteger(n) ? n : DEFAULT_CAPACITY[mode][field]);
+      // Read as rally_sync_limit() reads it: a whole number from 0 to 9999, else the default; then the bounds.
+      const wanted = typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 9999 ? n : DEFAULT_CAPACITY[mode][field];
+      limits[field] = clamp(mode, field, wanted);
     }
     out[mode] = limits;
   }

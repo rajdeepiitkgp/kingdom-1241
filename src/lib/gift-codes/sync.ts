@@ -2,6 +2,7 @@
 import { audit, systemAudit } from "@/lib/admin/audit";
 import type { CurrentUser } from "@/lib/auth/server";
 import { readConfig, writeConfig } from "@/lib/config/app-config";
+import { readJson } from "@/lib/fetch-json";
 import { createLogger, elapsedMs } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
@@ -43,7 +44,7 @@ async function fetchFeed(): Promise<FeedCode[] | null> {
       log.warn("kingshot.net answered with an error", { status: response.status, elapsedMs: elapsedMs(started) });
       return null;
     }
-    const codes = parseGiftCodeFeed(await response.json());
+    const codes = parseGiftCodeFeed(await readJson(response));
     if (!codes) log.warn("kingshot.net's answer isn't the list of codes it used to be", { elapsedMs: elapsedMs(started) });
     return codes;
   } catch (error) {

@@ -134,6 +134,9 @@ describe("content mappers", () => {
     const alliance = mapAlliance({ id: "al1", tag: "ULU", name: "Ulu", power: "123", members: null, languages: "EN / DE" });
     expect(alliance).toMatchObject({ tag: "ULU", color: "#3b82f6", leader: null, power: 123, members: null, maxMembers: 100, languages: "EN / DE", discordUrl: null });
     expect(alliance.description).toEqual({});
+    // A Discord link is checked again on the way out: an invite is normalised, anything else is dropped.
+    expect(mapAlliance({ id: "al1", tag: "ULU", name: "Ulu", discord_url: "discord.gg/abc-123" }).discordUrl).toBe("https://discord.gg/abc-123");
+    expect(mapAlliance({ id: "al1", tag: "ULU", name: "Ulu", discord_url: "https://evil.example/x" }).discordUrl).toBeNull();
     expect(mapGiftCode({ id: "c1", code: "KS2026", rewards: { en: "Gems" }, active: false, added_at: "2026-10-01T00:00:00Z" })).toMatchObject({
       code: "KS2026",
       active: false,
