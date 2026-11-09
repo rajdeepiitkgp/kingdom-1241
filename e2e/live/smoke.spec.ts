@@ -1,4 +1,4 @@
-import type { Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import { OPT_OUT_KEY } from "@/lib/analytics";
 import { at, expectHealthyPage, t } from "../support/site";
 import { expect, test } from "../support/test";
@@ -9,19 +9,27 @@ import { expect, test } from "../support/test";
  * sends a form, so it changes nothing and trips no alarm. A link prefetch is
  * answered here with an empty reply: otherwise every link in view would make
  * Vercel rebuild that page in that language once a day (ISR writes) for
- * nobody. The live site counts its visitors (Vercel Web Analytics): these
+ * nobody. A page's own payload is let through: an address Vercel has not
+ * rendered since the last deploy (the not-found page, on a deploy day) arrives
+ * as an empty shell that fetches its own content with the same prefetch
+ * headers, and an empty answer leaves the page blank (React #412, "Connection
+ * closed"). That request asks for the whole page (`/_full`) at the page's own
+ * address; a link prefetch asks for parts (`/_tree`, `/_head`) of another.
+ * The live site counts its visitors (Vercel Web Analytics): these
  * browsers opt out through Vercel's own flag before any page loads, so the
  * daily run never shows up as three visitors. The words are the bundled
  * English ones, which the live site may have reworded since, so these checks
  * lean on structure.
  */
-const isPrefetch = (request: Request) => {
+const isLinkPrefetch = (request: Request, page: Page) => {
   const headers = request.headers();
-  return "next-router-prefetch" in headers || "next-router-segment-prefetch" in headers;
+  if (!("next-router-prefetch" in headers || "next-router-segment-prefetch" in headers)) return false;
+  if (headers["next-router-segment-prefetch"] === "/_full") return false;
+  return new URL(request.url()).pathname !== new URL(page.url()).pathname;
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.route("**/*", (route) => (isPrefetch(route.request()) ? route.fulfill({ status: 204, body: "" }) : route.continue()));
+  await page.route("**/*", (route) => (isLinkPrefetch(route.request(), page) ? route.fulfill({ status: 204, body: "" }) : route.continue()));
   await page.addInitScript((key) => {
     try {
       window.localStorage.setItem(key, "1");

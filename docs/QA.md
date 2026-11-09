@@ -27,7 +27,7 @@ The tests read their words from the same seed files the pages are built from (`t
 
 ### The live check
 
-The daily run behaves like a visitor and changes nothing: it never types a password, opens a room or sends a form, so it never trips the wrong-password alarms. It answers Next's link prefetches itself with an empty reply. Without that, every link in view would make Vercel rebuild that page in that language for nobody, spending ISR writes. It also opts its browsers out of the visitor count (Vercel's `va-disable` flag, set before any page loads), so the daily run never shows up as three visitors. When it fails, GitHub e-mails the owner. Run it by hand from Actions → E2E live → Run workflow, or locally with `E2E_BASE_URL=https://kingdom-1241.vercel.app npm run e2e`.
+The daily run behaves like a visitor and changes nothing: it never types a password, opens a room or sends a form, so it never trips the wrong-password alarms. It answers Next's link prefetches itself with an empty reply. Without that, every link in view would make Vercel rebuild that page in that language for nobody, spending ISR writes. A page's own payload is let through: an address not rendered since the last deploy (the not-found page, on a deploy day) arrives as an empty shell that fetches its own content with the same prefetch headers, and an empty answer would leave it blank. It also opts its browsers out of the visitor count (Vercel's `va-disable` flag, set before any page loads), so the daily run never shows up as three visitors. When it fails, GitHub e-mails the owner. Run it by hand from Actions → E2E live → Run workflow, or locally with `E2E_BASE_URL=https://kingdom-1241.vercel.app npm run e2e`.
 
 ## Running it
 
