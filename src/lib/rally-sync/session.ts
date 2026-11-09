@@ -111,18 +111,20 @@ async function shownCapacity(): Promise<Capacity> {
 /** The room as its page sees it; counts as somebody (this instance) looking at it. */
 export async function roomState(store: RallyStore, room: RoomRow, instance: InstanceRow | null): Promise<RoomState> {
   const now = Date.now();
+  // Seen within the minute: nothing to bump, so no UPDATE is sent (160 garrison browsers refetch after every change).
+  const stale = (seenAt: string) => Date.parse(seenAt) < now - 60_000;
   const [read, capacity] = await Promise.all([
     store.leaders(room.id),
     shownCapacity(),
-    store.touchRoom(room.id, now),
-    instance ? store.touchInstance(instance.id, now) : undefined,
+    stale(room.lastSeenAt) ? store.touchRoom(room.id, now) : undefined,
+    instance && stale(instance.lastSeenAt) ? store.touchInstance(instance.id, now) : undefined,
   ]);
   // A rally that has landed (or none) holds nobody back: leaders in from the next rally and march times waiting
   // for it fold in here too (nextRallyPatch), not only when the coordinator sets the next hit time.
   const waiting = rallyRunning(room.hitAt, now) ? [] : read.filter((l) => nextRallyPatch(l) !== null);
   if (waiting.length > 0) await startNextRally(store, waiting);
   const leaders = waiting.length > 0 ? read.map((l) => ({ ...l, ...nextRallyPatch(l) })) : read;
-  const seen = Date.parse(room.lastSeenAt) < now - 60_000 ? new Date(now).toISOString() : room.lastSeenAt;
+  const seen = stale(room.lastSeenAt) ? new Date(now).toISOString() : room.lastSeenAt;
   return {
     room: { ...roomView(room), lastSeenAt: seen },
     leaders: leaders.map(leaderView),

@@ -25,11 +25,11 @@ export function missingTable(error: { code?: string } | null): boolean {
   return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
-/** Reads a whole table page by page (the API returns at most 1000 rows per request). */
-async function readAll(admin: SupabaseClient, table: string, columns: string): Promise<{ rows: Record<string, unknown>[]; error: { code?: string; message: string } | null }> {
+/** Reads a whole table page by page (the API returns at most 1000 rows per request), in a fixed order so no row is skipped or read twice between pages. */
+async function readAll(admin: SupabaseClient, table: string, columns: string, orderBy: string): Promise<{ rows: Record<string, unknown>[]; error: { code?: string; message: string } | null }> {
   const rows: Record<string, unknown>[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await admin.from(table).select(columns).range(from, from + PAGE - 1);
+    const { data, error } = await admin.from(table).select(columns).order(orderBy).range(from, from + PAGE - 1);
     if (error) return { rows, error };
     rows.push(...((data ?? []) as unknown as Record<string, unknown>[]));
     if (!data || data.length < PAGE) return { rows, error: null };
@@ -38,7 +38,7 @@ async function readAll(admin: SupabaseClient, table: string, columns: string): P
 
 /** Bytes all content images take, or null while the table is missing. */
 export async function usedImageBytes(admin: SupabaseClient): Promise<number | null> {
-  const { rows, error } = await readAll(admin, "content_images", "bytes");
+  const { rows, error } = await readAll(admin, "content_images", "bytes", "path");
   if (missingTable(error)) return null;
   if (error) throw new Error(`Could not read the image list: ${error.message}`);
   return rows.reduce((sum, row) => sum + Number(row.bytes ?? 0), 0);
@@ -58,13 +58,13 @@ export function unusedImages(images: ReadonlyArray<{ path: string; createdAt: st
 
 /** Deletes the unused images (files and rows); returns what was (or would be, with `dryRun`) deleted. */
 export async function pruneUnusedImages(admin: SupabaseClient, now: Date, options: { dryRun?: boolean } = {}): Promise<{ deleted: number; bytes: number }> {
-  const images = await readAll(admin, "content_images", "path, bytes, created_at");
+  const images = await readAll(admin, "content_images", "path, bytes, created_at", "path");
   if (missingTable(images.error)) return { deleted: 0, bytes: 0 };
   if (images.error) throw new Error(`Could not read the image list: ${images.error.message}`);
 
   const texts: string[] = [];
   for (const [table, columns] of Object.entries(TEXT_COLUMNS)) {
-    const { rows, error } = await readAll(admin, table, columns.join(", "));
+    const { rows, error } = await readAll(admin, table, columns.join(", "), "id");
     // A table that isn't there yet (its migration still to come) holds no texts.
     if (missingTable(error)) continue;
     // Never delete on a partial picture: a text that couldn't be read may hold the image.

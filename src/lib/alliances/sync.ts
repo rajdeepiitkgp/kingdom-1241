@@ -3,6 +3,7 @@ import { audit, systemAudit } from "@/lib/admin/audit";
 import type { CurrentUser } from "@/lib/auth/server";
 import { readConfig, writeConfig } from "@/lib/config/app-config";
 import { getSettings } from "@/lib/data";
+import { readJson } from "@/lib/fetch-json";
 import { createLogger, elapsedMs } from "@/lib/log";
 import { MIGHTPULSE_API, mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,7 +47,7 @@ async function mightPulse(path: string, timeoutMs: number): Promise<unknown> {
       log.warn("MightPulse answered with an error", { path, status: response.status, elapsedMs: elapsedMs(started) });
       return null;
     }
-    return await response.json();
+    return await readJson(response);
   } catch (error) {
     log.warn("MightPulse unreachable", { path, error: error instanceof Error ? error.message : String(error), elapsedMs: elapsedMs(started) });
     return null;

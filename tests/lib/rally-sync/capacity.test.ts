@@ -55,6 +55,8 @@ describe("rally sync capacity", () => {
     expect(stored.rally).toEqual({ rooms: 8, leaders: 10, browsers: 6 });
     expect(stored.garrison).toEqual({ rooms: 1, leaders: 0, browsers: 22 });
     expect(stored.counter).toEqual(DEFAULT_CAPACITY.counter);
+    // A negative or absurd number takes its default (as the database does), not the nearest bound.
+    expect(parseCapacity({ rally: { rooms: -1, browsers: 99999 } }).rally).toEqual(DEFAULT_CAPACITY.rally);
   });
 
   it("adds up what the three kinds could hold and says how far over the budget that is", () => {

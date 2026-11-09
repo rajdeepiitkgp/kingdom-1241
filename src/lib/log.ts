@@ -58,7 +58,8 @@ function serializeError(error: unknown): LogFields {
   if (error && typeof error === "object") {
     // Supabase/PostgREST errors are plain objects with message/code/details.
     const { message, code, details, hint } = error as Record<string, unknown>;
-    if (message !== undefined || code !== undefined) return { message, code, details, hint };
+    // details and hint can repeat a row's values (a unique-key violation names the key), so they stay out of production logs.
+    if (message !== undefined || code !== undefined) return isProduction ? { message, code } : { message, code, details, hint };
   }
   return { message: String(error) };
 }
