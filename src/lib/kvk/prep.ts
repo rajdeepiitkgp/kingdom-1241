@@ -68,6 +68,16 @@ export function prepRound(index: number): PrepRound {
   };
 }
 
+/** The number of a round (0 for the first one shown on the site). */
+export function roundIndex(round: PrepRound): number {
+  return Math.round((round.start.getTime() - FIRST_PREP_ROUND) / (PREP_CYCLE_DAYS * DAY));
+}
+
+/** The round after this one. */
+export function nextRound(round: PrepRound): PrepRound {
+  return prepRound(roundIndex(round) + 1);
+}
+
 /** The round in progress, or the next one once its shield window is over. */
 export function roundFor(now: Date): PrepRound {
   const index = Math.floor((now.getTime() - FIRST_PREP_ROUND) / (PREP_CYCLE_DAYS * DAY));
@@ -123,17 +133,24 @@ export function defaultDay(phase: PrepPhase): PrepDay {
 
 /** ✅ best day · 🆗 counts · ⚠ wait (prepare for the next day) · 🚫 don't use. */
 export type PrepMark = "best" | "ok" | "wait" | "no";
-type Marks = readonly [PrepMark, PrepMark, PrepMark, PrepMark, PrepMark];
+export type Marks = readonly [PrepMark, PrepMark, PrepMark, PrepMark, PrepMark];
 
-/** One row of the table: what to use on which of Days 1–5 (the council's KvK prep template). */
+/**
+ * One row of the table: what to use on which of Days 1–5, as every player
+ * sees it. The five ministry items (Truegold, Tempered Truegold and
+ * construction speedups; Truegold Dust and research speedups) score the same
+ * on Days 1, 2 and 5, so they are ✅ on all three here; which of those days
+ * the kingdom actually uses is the council's buff schedule (`marksFor`), shown
+ * behind the battle plan's password. Everything else is fixed by the game.
+ */
 export const PREP_ITEMS = [
   { id: "intel", icon: "👀", marks: ["best", "wait", "best", "wait", "best"] },
   { id: "gathering", icon: "🚜", marks: ["wait", "best", "wait", "best", "best"] },
-  { id: "truegold", icon: "🪙", marks: ["best", "ok", "no", "no", "ok"] },
-  { id: "temperedTruegold", icon: "🔶", marks: ["best", "ok", "no", "no", "ok"] },
-  { id: "construction", icon: "🏗️", marks: ["best", "ok", "no", "no", "ok"] },
-  { id: "tgDust", icon: "💫", marks: ["ok", "best", "no", "no", "ok"] },
-  { id: "research", icon: "🔬", marks: ["ok", "best", "no", "no", "ok"] },
+  { id: "truegold", icon: "🪙", marks: ["best", "best", "no", "no", "best"] },
+  { id: "temperedTruegold", icon: "🔶", marks: ["best", "best", "no", "no", "best"] },
+  { id: "construction", icon: "🏗️", marks: ["best", "best", "no", "no", "best"] },
+  { id: "tgDust", icon: "💫", marks: ["best", "best", "no", "no", "best"] },
+  { id: "research", icon: "🔬", marks: ["best", "best", "no", "no", "best"] },
   { id: "masterSkill", icon: "🎓", marks: ["ok", "best", "no", "no", "best"] },
   { id: "emblem", icon: "🔷", marks: ["no", "best", "ok", "no", "no"] },
   { id: "manuscript", icon: "📘", marks: ["no", "best", "ok", "no", "no"] },
@@ -150,6 +167,83 @@ export const PREP_ITEMS = [
 
 export type PrepItem = (typeof PREP_ITEMS)[number];
 export type PrepItemId = PrepItem["id"];
+
+/**
+ * The game's own coding: the days each item scores on, read from the in-game
+ * "Point Sources" of every sub-phase (Nov 2026). A test keeps the table above
+ * and the council's schedule inside it: a ✅ or 🆗 may only sit on one of these
+ * days, a ⚠ never does. Trained troops score per troop on Day 4 only; their
+ * speedups score like every other speedup (Days 1, 2 and 5), which the
+ * council marks 🚫 on Days 1 and 2 on purpose (keep speedups for the buff days).
+ */
+export const OFFICIAL_DAYS: Record<PrepItemId, readonly ScoringDay[]> = {
+  intel: [1, 3, 5],
+  gathering: [2, 4, 5],
+  truegold: [1, 2, 5],
+  temperedTruegold: [1, 2, 5],
+  construction: [1, 2, 5],
+  tgDust: [1, 2, 5],
+  research: [1, 2, 5],
+  masterSkill: [1, 2, 5],
+  emblem: [2, 3],
+  manuscript: [2, 3],
+  roulette: [2, 3],
+  shards: [2, 3],
+  pets: [3, 5],
+  troops: [1, 2, 4, 5],
+  charms: [1, 3, 4],
+  gear: [5],
+  widgets: [4, 5],
+  hammers: [4, 5],
+  mithril: [4, 5],
+};
+
+/**
+ * The king gives the construction and the research minister buff on one day
+ * each; the training buff always goes to Day 4, where troops score. Both can
+ * fall on any day the game scores the items (Days 1, 2 and 5, Friday being the
+ * last with the buff), and on the same day.
+ */
+export type BuffDay = 1 | 2 | 5;
+export const BUFF_DAYS: readonly BuffDay[] = [1, 2, 5];
+export type Ministry = "construction" | "research";
+export const MINISTRIES: readonly Ministry[] = ["construction", "research"];
+export type PrepSchedule = Record<Ministry, BuffDay>;
+
+/** What the council usually does; the public page's day names follow it. */
+export const TEMPLATE_SCHEDULE: PrepSchedule = { construction: 1, research: 2 };
+
+export const isBuffDay = (value: unknown): value is BuffDay => BUFF_DAYS.includes(value as BuffDay);
+
+/** The three minister buffs as the council's card shows them: the two the council places, and training, Day 4 by the game. */
+export type Buff = Ministry | "training";
+export const BUFFS: readonly Buff[] = ["construction", "research", "training"];
+export const TRAINING_DAY: ScoringDay = 4;
+
+export function buffDay(schedule: PrepSchedule, buff: Buff): ScoringDay {
+  return buff === "training" ? TRAINING_DAY : schedule[buff];
+}
+
+/** The items whose ✅ follows a ministry buff. */
+export const MINISTRY_ITEMS: Record<Ministry, readonly PrepItemId[]> = {
+  construction: ["truegold", "temperedTruegold", "construction"],
+  research: ["tgDust", "research"],
+};
+
+export function ministryOf(id: PrepItemId): Ministry | null {
+  return MINISTRIES.find((ministry) => MINISTRY_ITEMS[ministry].includes(id)) ?? null;
+}
+
+/**
+ * An item's marks for one round: with the council's schedule a ministry item
+ * is ✅ on its buff day and 🆗 on the other two scoring days; without one
+ * (the public page) the table's own marks.
+ */
+export function marksFor(item: PrepItem, schedule: PrepSchedule | null): Marks {
+  const ministry = schedule && ministryOf(item.id);
+  if (!ministry) return item.marks;
+  return SCORING_DAYS.map((day) => (day === schedule[ministry] ? "best" : isBuffDay(day) ? "ok" : "no")) as unknown as Marks;
+}
 
 /** How an item scores: per unit, per intel mission, per Roulette spin, per +1 Charm/Gear/pet score, per minute of speedup, … */
 export type PrepPoints =
@@ -196,14 +290,14 @@ export function pointsOn(id: PrepItemId, day: ScoringDay): PrepPoints | undefine
   return POINTS_ON_DAY[id]?.[day] ?? PREP_POINTS[id];
 }
 
-export function markOn(item: PrepItem, day: ScoringDay): PrepMark {
-  return item.marks[day - 1];
+export function markOn(item: PrepItem, day: ScoringDay, schedule: PrepSchedule | null = null): PrepMark {
+  return marksFor(item, schedule)[day - 1];
 }
 
 /** First day after `day` with one of the marks, trying them in order (✅ before 🆗), or null. */
-function nextDayWith(item: PrepItem, day: PrepDay, marks: readonly PrepMark[]): ScoringDay | null {
+function nextDayWith(item: PrepItem, day: PrepDay, marks: readonly PrepMark[], schedule: PrepSchedule | null): ScoringDay | null {
   for (const mark of marks) {
-    const next = SCORING_DAYS.find((d) => d > day && markOn(item, d) === mark);
+    const next = SCORING_DAYS.find((d) => d > day && markOn(item, d, schedule) === mark);
     if (next) return next;
   }
   return null;
@@ -219,16 +313,19 @@ export interface DayPlan {
   no: Array<{ item: PrepItem; day: ScoringDay | null }>;
 }
 
-/** The table read for one day. Day 0 scores nothing, so everything waits for Day 1 and later. */
-export function dayPlan(day: PrepDay): DayPlan {
+/**
+ * The table read for one day, with the council's buff schedule once the page
+ * is unlocked. Day 0 scores nothing, so everything waits for Day 1 and later.
+ */
+export function dayPlan(day: PrepDay, schedule: PrepSchedule | null = null): DayPlan {
   const plan: DayPlan = { best: [], ok: [], wait: [], no: [] };
   if (day === 0) return plan;
   for (const item of PREP_ITEMS) {
-    const mark = markOn(item, day);
+    const mark = markOn(item, day, schedule);
     if (mark === "best") plan.best.push(item);
-    else if (mark === "ok") plan.ok.push({ item, bestDay: nextDayWith(item, day, ["best"]) });
-    else if (mark === "wait") plan.wait.push({ item, day: nextDayWith(item, day, ["best", "ok"]) });
-    else plan.no.push({ item, day: nextDayWith(item, day, ["best", "ok"]) });
+    else if (mark === "ok") plan.ok.push({ item, bestDay: nextDayWith(item, day, ["best"], schedule) });
+    else if (mark === "wait") plan.wait.push({ item, day: nextDayWith(item, day, ["best", "ok"], schedule) });
+    else plan.no.push({ item, day: nextDayWith(item, day, ["best", "ok"], schedule) });
   }
   return plan;
 }
@@ -256,10 +353,14 @@ export function intelStackFor(day: PrepDay): ScoringDay | null {
 
 export type PrepTipId =
   | "intelOpen"
+  | "intelSaturday"
   | "bisonSave"
   | "allianceNode"
   | "gatherEarly"
   | "gatherBoost"
+  | "gatherRecall"
+  | "gatherRecallAgain"
+  | "gatherRecallInvasion"
   | "warAcademy"
   | "troopBatch"
   | "troopsFirst"
@@ -268,15 +369,34 @@ export type PrepTipId =
   | "homeCoords"
   | "battleNext";
 
-/** The ❗ lines of each day; `day` fills the tip's {day}. Intel stacking has its own card (`INTEL_STACK_STEPS`). */
+/**
+ * The ❗ lines of each day; `day` fills the tip's {day}. Intel stacking has
+ * its own card (`INTEL_STACK_STEPS`). Gathering counts on the day the march
+ * comes home (Days 2, 4 and 5): the day before, send marches out late enough
+ * to return after the reset; on the day, recall them before it ends (Day 4
+ * sends them straight out again for Day 5, Day 5 ends at the invasion, where
+ * Saturday's early intel batches still count too).
+ */
 export const PREP_TIPS: Record<PrepDay, ReadonlyArray<{ id: PrepTipId; day?: ScoringDay }>> = {
   0: [],
   1: [{ id: "intelOpen" }, { id: "bisonSave", day: 2 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
-  2: [{ id: "warAcademy" }],
+  2: [{ id: "gatherRecall" }, { id: "warAcademy" }],
   3: [{ id: "intelOpen" }, { id: "troopBatch", day: 4 }, { id: "bisonSave", day: 4 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
-  4: [{ id: "troopsFirst" }, { id: "bisonSave", day: 5 }, { id: "allianceNode" }, { id: "gatherEarly" }, { id: "gatherBoost" }],
-  5: [{ id: "intelOpen" }, { id: "finalPush" }, { id: "battleNext" }, { id: "shield" }, { id: "homeCoords" }],
+  4: [{ id: "troopsFirst" }, { id: "bisonSave", day: 5 }, { id: "allianceNode" }, { id: "gatherRecallAgain" }, { id: "gatherBoost" }],
+  5: [{ id: "intelOpen" }, { id: "intelSaturday" }, { id: "gatherRecallInvasion" }, { id: "finalPush" }, { id: "battleNext" }, { id: "shield" }, { id: "homeCoords" }],
 };
+
+/** The tips that go with a ministry's buff day (the template puts them on its day; the schedule moves them). */
+const MINISTRY_TIPS: Record<Ministry, readonly PrepTipId[]> = { construction: [], research: ["warAcademy"] };
+
+/** One day's tips: the template's, with each ministry's tips moved to its buff day once the schedule is known. */
+export function tipsFor(day: PrepDay, schedule: PrepSchedule | null = null): ReadonlyArray<{ id: PrepTipId; day?: ScoringDay }> {
+  if (!schedule) return PREP_TIPS[day];
+  const moved = new Set(MINISTRIES.flatMap((ministry) => MINISTRY_TIPS[ministry]));
+  const fixed = PREP_TIPS[day].filter((tip) => !moved.has(tip.id));
+  const ofDay = MINISTRIES.filter((ministry) => schedule[ministry] === day).flatMap((ministry) => MINISTRY_TIPS[ministry].map((id) => ({ id })));
+  return [...fixed, ...ofDay];
+}
 
 /** The council's "save these for KvK" reminder, shown between rounds too. */
 export const SAVE_FOR_KVK = [
