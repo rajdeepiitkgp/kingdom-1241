@@ -128,6 +128,17 @@ export function UsageReport({ data, locale }: { data: UsageData; locale: string 
             </p>
           </li>
           <li>
+            <p className="font-bold text-ink">Visitors and page speed (Vercel)</p>
+            <p className="text-ink-muted">
+              How many browsers open the site each day and which pages (Web Analytics; a visitor is a hash of the request, dropped after a day, no cookie), and how fast the pages feel to them (Speed Insights, the Real Experience Score). Signed-in council members are left out. Both pause by themselves above their free allowance.
+            </p>
+            <p className="text-xs">
+              <Destination link={{ label: "Web Analytics", href: LINKS.vercelAnalytics }} locale={locale} />
+              {" · "}
+              <Destination link={{ label: "Speed Insights", href: LINKS.vercelSpeedInsights }} locale={locale} />
+            </p>
+          </li>
+          <li>
             <p className="font-bold text-ink">Supabase (free plan)</p>
             <p className="text-ink-muted">Egress (5 GB a month), Realtime messages (2 million) and peak connections (200), sign-ins.</p>
             <p className="text-xs">

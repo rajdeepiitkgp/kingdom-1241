@@ -8,8 +8,10 @@ import "../globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { PersistentUiState } from "@/components/layout/PersistentUiState";
+import { SiteAnalytics } from "@/components/layout/SiteAnalytics";
 import { UiInit } from "@/components/layout/UiInit";
 import { BottomNav } from "@/components/layout/NavLinks";
+import { showAnalytics } from "@/lib/analytics";
 import { getLanguages, getSettings } from "@/lib/data";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getLanguageInfo } from "@/lib/i18n/languages";
@@ -111,6 +113,8 @@ export default async function RootLayout({
             adminHref={`/${currentLocale}/admin`}
           />
         <BottomNav locale={currentLocale} dict={dict} />
+        {/* Visitor counts and page speed, on Vercel only: elsewhere the scripts would 404 (src/lib/analytics.ts). */}
+        {showAnalytics(process.env) && <SiteAnalytics />}
       </body>
     </html>
   );

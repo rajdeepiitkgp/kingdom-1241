@@ -1,4 +1,5 @@
 import type { Request } from "@playwright/test";
+import { OPT_OUT_KEY } from "@/lib/analytics";
 import { at, expectHealthyPage, t } from "../support/site";
 import { expect, test } from "../support/test";
 
@@ -8,8 +9,11 @@ import { expect, test } from "../support/test";
  * sends a form, so it changes nothing and trips no alarm. A link prefetch is
  * answered here with an empty reply: otherwise every link in view would make
  * Vercel rebuild that page in that language once a day (ISR writes) for
- * nobody. The words are the bundled English ones, which the live site may
- * have reworded since, so these checks lean on structure.
+ * nobody. The live site counts its visitors (Vercel Web Analytics): these
+ * browsers opt out through Vercel's own flag before any page loads, so the
+ * daily run never shows up as three visitors. The words are the bundled
+ * English ones, which the live site may have reworded since, so these checks
+ * lean on structure.
  */
 const isPrefetch = (request: Request) => {
   const headers = request.headers();
@@ -18,6 +22,13 @@ const isPrefetch = (request: Request) => {
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/*", (route) => (isPrefetch(route.request()) ? route.fulfill({ status: 204, body: "" }) : route.continue()));
+  await page.addInitScript((key) => {
+    try {
+      window.localStorage.setItem(key, "1");
+    } catch {
+      // Storage blocked: this browser would count once, like any such visitor.
+    }
+  }, OPT_OUT_KEY);
 });
 
 test("LIVE-01 Home opens in every language the site offers", async ({ page }) => {
