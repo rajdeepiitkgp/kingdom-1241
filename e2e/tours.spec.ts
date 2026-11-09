@@ -15,19 +15,28 @@ test("TOUR-01 every public guide reads from the first step to Done", async ({ pa
 });
 
 test("TOUR-01 the locked battle pages explain more once they are open", async ({ page }) => {
-  test.slow(); // three locked pages, each unlocked and toured: a sweep, three times the budget
+  test.slow(); // four pages, each unlocked and toured: a sweep, three times the budget
   const areas = [
-    { path: "/kvk", password: SEED_PASSWORDS.plan },
-    { path: "/kvk/leaders", password: SEED_PASSWORDS.leaders },
-    { path: "/kvk/checklist", password: SEED_PASSWORDS.checklist },
+    { path: "/kvk", password: SEED_PASSWORDS.plan, marker: "kvk-unlock" },
+    { path: "/kvk/leaders", password: SEED_PASSWORDS.leaders, marker: "kvk-unlock" },
+    { path: "/kvk/checklist", password: SEED_PASSWORDS.checklist, marker: "kvk-unlock" },
+    // Public, with the council's buff days behind the battle plan's password, typed in a popup.
+    { path: "/kvk/prep", password: SEED_PASSWORDS.plan, marker: "prep-unlock" },
   ];
-  for (const { path, password } of areas) {
+  for (const { path, password, marker } of areas) {
     await test.step(path, async () => {
+      // Every page starts locked: the prep page rides on the battle plan's cookie, which the /kvk step has just set.
+      await page.context().clearCookies();
       await page.goto(at("en", path));
       // The password card streams in after the header's "?": opened before it, the tour would have no step for it,
       // and the card's field (autofocus) would take the focus the closing tour hands back to the "?".
-      await expect(page.locator('[data-tour="kvk-unlock"]')).toBeVisible();
+      await expect(page.locator(`[data-tour="${marker}"]`)).toBeVisible();
       const locked = await walkTour(page);
+      if (marker === "prep-unlock") {
+        const open = page.getByRole("button", { name: t("prep.council.open") });
+        await hydrated(open);
+        await open.click();
+      }
       await unlock(page, password);
       await expect(page.getByRole("button", { name: t("kvk.lock") })).toBeVisible();
       // Steps about the plan's parts are left out while it is locked and come back with it.
