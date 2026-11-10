@@ -260,7 +260,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "The rounds",
         "The current prep week and the next one. The buff days shown come from Prep days: set those first, because a player's times are for a date. If construction and research fall on the same day, players get one card for both and one list ranked by both together.",
       ),
-      step("ministry-admin-open", "Open the sign-ups", "Tick it and save, then tell players in Discord. Untick it to close the round's page again; the entries stay."),
+      step("ministry-admin-open", "Open the sign-ups", "Tick it and save, then tell players in Discord. Only one round is open at a time: opening one closes the other. Untick it to close the round's page again; the entries stay."),
       step(
         "ministry-admin-deadlines",
         "A deadline per buff day",
@@ -275,7 +275,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "ministry-admin-list",
         "The ranking",
-        "Highest score first. The score is what the player's numbers are worth in KvK points, with the prep page's own table: Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30. Power is what MightPulse reported at sign-up, so a number that doesn't fit the player stands out.",
+        "Highest first. Construction and research: the KvK points the numbers are worth (Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30). Training: the speedups alone, since the game scores the troops trained. Power is MightPulse's figure at sign-up, so an odd number stands out.",
       ),
       step(
         "ministry-admin-actions",

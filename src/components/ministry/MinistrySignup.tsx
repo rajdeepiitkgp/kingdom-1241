@@ -8,7 +8,7 @@ import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { Buff, ScoringDay } from "@/lib/kvk/prep";
 import { lookupMinistryGovernor, myMinistrySignups, submitMinistrySignup, withdrawMinistrySignup, type LookupState, type MySignup, type SubmitState } from "@/lib/ministry/actions";
 import { FIELD, type SignupErrorCode } from "@/lib/ministry/form";
-import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, sectionScore, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
+import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, scoredInPoints, sectionScore, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { GAME_NAME_MAX } from "@/lib/retro/config";
 import { isGovernorId, NO_ALLIANCE, normalizeGovernorId } from "@/lib/retro/form";
 import { formatLocalDateTime, formatUtcTime } from "@/lib/time";
@@ -336,6 +336,12 @@ function SignupForm({
     }
   };
 
+  /** "140 days 12 hrs", in the page's words. */
+  const speedupText = (minutes: number) => {
+    const { days, hours } = splitSpeedup(minutes);
+    return `${number(days)} ${dict[days === 1 ? "common.day" : "common.days"]} ${hours} ${dict["common.hours"]}`;
+  };
+
   const waitMs = state.status === "throttled" && state.retryAt && now ? Math.max(0, state.retryAt - now.getTime()) : 0;
   const waiting = state.status === "throttled" && (now === null || waitMs > 0);
   const errors = state.status === "invalid" ? (state.errors ?? {}) : {};
@@ -573,7 +579,10 @@ function SignupForm({
                 </div>
                 <p className="text-xs font-semibold text-ink-faint">{dict["ministry.speedups.hint"]}</p>
                 <p className={clsx("rounded-2xl px-4 py-3 text-sm font-extrabold", joinError ? "bg-danger-soft text-danger" : "bg-gold-soft text-gold-ink")} role={joinError ? "alert" : undefined}>
-                  {joinError ?? format(dict["ministry.score"], { points: number(sectionScore(section, amounts)) })}
+                  {joinError ??
+                    (scoredInPoints(section)
+                      ? format(dict["ministry.score"], { points: number(sectionScore(section, amounts)) })
+                      : format(dict["ministry.rank.speedups"], { time: speedupText(amounts.trainingMinutes) }))}
                 </p>
                 <SlotPicker
                   id={id}

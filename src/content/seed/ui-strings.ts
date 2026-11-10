@@ -1683,6 +1683,13 @@ export const UI_STRINGS = {
     ar: "أضف التسريعات العامة التي تنوي استخدامها هنا.",
   },
   "ministry.score": { en: "Your score for this day: {points} points", de: "Deine Punkte für diesen Tag: {points}", ko: "이날 예상 점수: {points}점", pl: "Twój wynik w tym dniu: {points} pkt", ar: "نقاطك لهذا اليوم: {points} نقطة" },
+  "ministry.rank.speedups": {
+    en: "This day is ranked by your training speedups: {time}",
+    de: "Dieser Tag wird nach deinen Ausbildungs-Beschleunigungen gereiht: {time}",
+    ko: "이날은 훈련 가속으로 순위를 정합니다: {time}",
+    pl: "W tym dniu o kolejności decydują twoje przyspieszenia szkolenia: {time}",
+    ar: "يُرتَّب هذا اليوم حسب تسريعات التدريب لديك: {time}",
+  },
   "ministry.slots.title": { en: "When can you take the appointment?", de: "Wann kannst du den Termin übernehmen?", ko: "언제 임명을 받을 수 있나요?", pl: "Kiedy możesz przyjąć nominację?", ar: "متى يمكنك استلام الموعد؟" },
   "ministry.slots.hint": {
     en: "Tap every time you can be online. You get one 30-minute appointment inside one of them.",

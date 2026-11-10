@@ -6,7 +6,7 @@ import { adminPath } from "@/lib/auth/paths";
 import { checkAccess, type CurrentUser } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
 import { FIELD, parseSignupForm, type SignupErrorCode } from "@/lib/ministry/form";
-import { CLOSED_ROUND, MAX_SIGNUPS_PER_ROUND, parseRoundSettingsForm, withRoundSettings } from "@/lib/ministry/ministry";
+import { CLOSED_ROUND, MAX_SIGNUPS_PER_ROUND, parseRoundSettingsForm, roundsClosedBy, withRoundSettings } from "@/lib/ministry/ministry";
 import { ministryRounds } from "@/lib/ministry/state";
 import { ministryMemory, ministryStore } from "@/lib/ministry/store";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
@@ -59,11 +59,17 @@ export async function saveMinistryRound(_previous: ActionState, formData: FormDa
     const { round, settings } = parsed.value;
     const stored = await store.settings();
     const before = stored[round] ?? CLOSED_ROUND;
+    // One round is open at a time: opening this one closes the other.
+    const closed = roundsClosedBy(stored, round, settings, rounds[0].key);
     await store.saveSettings(withRoundSettings(stored, round, settings, rounds[0].key));
-    await record(access.user, "ministry.round", null, { round, before, after: settings });
-    log.info("Ministry round saved", { round, open: settings.open });
+    await record(access.user, "ministry.round", null, { round, before, after: settings, closed });
+    log.info("Ministry round saved", { round, open: settings.open, closed: closed.length });
     changed(formData);
-    return { status: "saved", message: settings.open ? "Saved. Players with the battle plan unlocked can sign up for this round now." : "Saved. Sign-ups for this round are closed." };
+    if (!settings.open) return { status: "saved", message: "Saved. Sign-ups for this round are closed." };
+    return {
+      status: "saved",
+      message: `Saved. Players with the battle plan unlocked can sign up for this round now.${closed.length > 0 ? " The other round is closed: only one round is open at a time. Its entries and deadlines are kept." : ""}`,
+    };
   } catch (error) {
     return failed(log, "Saving the ministry round", problem(error));
   }
