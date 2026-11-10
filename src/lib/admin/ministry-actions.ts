@@ -6,14 +6,14 @@ import { adminPath } from "@/lib/auth/paths";
 import { checkAccess, type CurrentUser } from "@/lib/auth/server";
 import { getAlliances, getSettings } from "@/lib/data";
 import { FIELD, parseSignupForm, type SignupErrorCode } from "@/lib/ministry/form";
-import { placementProblem } from "@/lib/ministry/assign";
+import { firstFreeOwn, placementProblem } from "@/lib/ministry/assign";
 import { CLOSED_ROUND, deadlineFor, isScoringDay, joined, MAX_SIGNUPS_PER_ROUND, parseRoundSettingsForm, roundsClosedBy, sectionOn, slotLabel, SLOTS_PER_DAY, withRoundSettings } from "@/lib/ministry/ministry";
 import { closedDays, runAssignment } from "@/lib/ministry/roster";
 import { ministryRounds } from "@/lib/ministry/state";
 import { isGovernorId, normalizeGovernorId } from "@/lib/retro/form";
 import type { GovernorProfile } from "@/lib/retro/governor";
 import { lookupGovernor, mightPulseConfigured } from "@/lib/retro/mightpulse";
-import { ministryMemory, ministryStore } from "@/lib/ministry/store";
+import { ministryMemory, type MinistryStore, ministryStore, type StoredSignup } from "@/lib/ministry/store";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
@@ -122,6 +122,31 @@ export async function lookupMinistryEntryGovernor(rawId: string): Promise<EntryL
   return profile ? { status, name: profile.name, allianceTag: profile.allianceTag } : { status };
 }
 
+/**
+ * An entry a moderator added, changed or put back after a day's appointments were given out: on every such day the
+ * player takes part in and holds no appointment, they get the earliest free time among their own. Nobody else moves
+ * (the roster is out), so a day without a free time of theirs is named for the moderator to settle by hand.
+ * Returns the sentence for the notice ("" when no day is given out yet). Never throws.
+ */
+async function placeAfterwards(store: MinistryStore, signup: StoredSignup, days: readonly number[]): Promise<string> {
+  try {
+    if (signup.disabled) return "";
+    const roster = await store.roster(signup.round);
+    const placed: string[] = [];
+    const none: number[] = [];
+    for (const day of days) {
+      if (!isScoringDay(day) || !roster.assignedAt[day] || (signup.slots[day]?.length ?? 0) === 0) continue;
+      if (roster.appointments.some((held) => held.day === day && held.signupId === signup.id)) continue;
+      const slot = firstFreeOwn(roster.appointments, day, signup.slots[day] ?? []);
+      if (slot !== null && (await store.place(signup.round, day, signup.id, slot, "auto")) === "ok") placed.push(`Day ${day} ${slotLabel(slot)} UTC`);
+      else none.push(day);
+    }
+    return `${placed.length > 0 ? ` The appointments of ${placed.length === 1 ? "that day are" : "those days are"} given out already, so the player got the earliest free time among their own: ${placed.join(", ")}.` : ""}${none.length > 0 ? ` On Day ${none.join(" and Day ")} none of their times is free: move them by hand in that day's table.` : ""}`;
+  } catch {
+    return " Their appointment could not be set; use Assign again on the day's tab.";
+  }
+}
+
 /** Add an entry by hand (no `id`) or change one. The Governor ID of an existing entry stays. */
 export async function saveMinistryEntry(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
@@ -151,8 +176,10 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
       // A day the player no longer takes part in gives its appointment back.
       await store.unplace(existing.id, round.sections.map((section) => section.day).filter((day) => (entry.slots[day]?.length ?? 0) === 0));
       await record(access.user, "ministry.signup_edit", existing.id, { round: round.key, name: entry.gameName, before: { amounts: existing.amounts, slots: existing.slots }, after: { amounts: entry.amounts, slots: entry.slots } });
+      const after = await store.get(existing.id);
+      const note = after ? await placeAfterwards(store, after, round.sections.map((section) => section.day)) : "";
       changed(formData);
-      return { status: "saved", message: `Saved ${entry.gameName}.` };
+      return { status: "saved", message: `Saved ${entry.gameName}.${note}` };
     }
     if ((await store.count(round.key)) >= MAX_SIGNUPS_PER_ROUND) return { status: "error", message: `The round has ${MAX_SIGNUPS_PER_ROUND} sign-ups, the most it takes. Remove one first.` };
     // Confirmed like a player's own sign-up when the name and alliance are the ones MightPulse has for the ID; anything else is stored as typed.
@@ -172,8 +199,9 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
     });
     if (saved === "duplicate") return invalid({ [FIELD.governorId]: "That Governor ID is signed up already. Change its entry in the list." });
     await record(access.user, "ministry.signup_add", saved.id, { round: round.key, name: entry.gameName });
+    const note = await placeAfterwards(store, saved, round.sections.map((section) => section.day));
     changed(formData);
-    return { status: "saved", message: `${entry.gameName} is on the list.` };
+    return { status: "saved", message: `${entry.gameName} is on the list.${note}` };
   } catch (error) {
     return failed(log, "Saving the ministry sign-up", problem(error));
   }
@@ -193,9 +221,10 @@ export async function setMinistryEntryDisabled(_previous: ActionState, formData:
     if (!saved) return NOT_FOUND;
     // Set aside = off the lists and the rosters: the appointments are free again.
     if (disabled) await store.unplace(id);
+    const note = disabled ? "" : await placeAfterwards(store, saved, [1, 2, 3, 4, 5]);
     await record(access.user, disabled ? "ministry.signup_disable" : "ministry.signup_enable", id, { round: saved.round, name: saved.gameName });
     changed(formData);
-    return { status: "saved", message: disabled ? `${saved.gameName} is set aside: kept, but left out of the lists, and any appointment is free again.` : `${saved.gameName} is back on the lists.` };
+    return { status: "saved", message: disabled ? `${saved.gameName} is set aside: kept, but left out of the lists, and any appointment is free again.` : `${saved.gameName} is back on the lists.${note}` };
   } catch (error) {
     return failed(log, "Setting the ministry sign-up aside", problem(error));
   }

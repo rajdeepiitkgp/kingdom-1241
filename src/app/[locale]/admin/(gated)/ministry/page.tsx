@@ -182,6 +182,7 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
           <div className="mb-4 border-t border-line pt-4">
             <h3 className="mb-2 text-base font-extrabold text-ink">Appointments</h3>
             <RosterPanel
+              key={`${selected.key}-${section.day}`}
               roundKey={selected.key}
               day={section.day}
               title={`${sectionName(section)} · ${section.date}`}

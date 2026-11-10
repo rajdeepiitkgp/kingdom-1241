@@ -124,6 +124,12 @@ export function freeSlots(appointments: readonly Pick<Appointment, "day" | "slot
   return free;
 }
 
+/** The earliest free slot among a player's own times, or null: where someone who joins a day after its appointments were given out goes, without anyone else moving. */
+export function firstFreeOwn(appointments: readonly Pick<Appointment, "day" | "slot">[], day: ScoringDay, own: readonly number[]): number | null {
+  const free = new Set(freeSlots(appointments, day));
+  return [...own].sort((a, b) => a - b).find((slot) => free.has(slot)) ?? null;
+}
+
 /** A moderator's or a late player's place: the reason it can't be given, or null. */
 export function placementProblem(appointments: readonly Appointment[], day: ScoringDay, signupId: string, slot: number): "badSlot" | "slotTaken" | null {
   if (!Number.isInteger(slot) || slot < 0 || slot >= SLOTS_PER_DAY) return "badSlot";

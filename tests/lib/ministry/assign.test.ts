@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
-import { type Appointment, assignDay, assignSlots, type Candidate, freeSlots, isFixed, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
+import { type Appointment, assignDay, assignSlots, type Candidate, firstFreeOwn, freeSlots, isFixed, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
 import { NO_AMOUNTS, rankSection, type Section, type Signup, SLOTS_PER_DAY } from "@/lib/ministry/ministry";
 
 const c = (id: string, ...slots: number[]): Candidate => ({ id, slots });
@@ -195,5 +195,19 @@ describe("the roster", () => {
     const roster = [{ name: "[NAM] Rudy" }, null, { name: "Sylphy" }];
     expect(rosterChat(roster, "Construction, Mon 30 Nov (UTC)")).toBe("Construction, Mon 30 Nov (UTC)\n00:00–00:30 [NAM] Rudy\n01:00–01:30 Sylphy");
     expect(rosterChat(roster, "Free", true)).toBe("Free\n00:00–00:30 [NAM] Rudy\n00:30–01:00 —\n01:00–01:30 Sylphy");
+  });
+});
+
+describe("firstFreeOwn", () => {
+  it("gives the earliest free time among the player's own, or null", () => {
+    const held = [
+      { day: 2 as const, slot: 8 },
+      { day: 2 as const, slot: 9 },
+      { day: 1 as const, slot: 10 },
+    ];
+    expect(firstFreeOwn(held, 2, [24, 9, 10, 8])).toBe(10);
+    expect(firstFreeOwn(held, 2, [8, 9])).toBeNull();
+    expect(firstFreeOwn(held, 2, [])).toBeNull();
+    expect(firstFreeOwn(held, 1, [8])).toBe(8);
   });
 });
