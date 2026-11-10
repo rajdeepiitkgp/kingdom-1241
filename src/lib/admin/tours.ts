@@ -279,8 +279,13 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step(
         "ministry-admin-assign",
-        "Assign again",
-        "After you changed, added or set aside entries, this places everyone anew. Players you placed by hand keep their time. It needs a second tap, because it may move players.",
+        "Assign this day again",
+        "For the buff day of the open tab only: places everyone on its list anew. Players you placed or moved by hand keep their time. It needs a second tap, because it may move players. The other days have the same button on their tabs.",
+      ),
+      step(
+        "ministry-admin-fresh",
+        "Start this day from scratch",
+        "Like Assign this day again, but it also forgets every time you placed or moved by hand, so the whole day is given out by the rules alone. To let go of one hand placing only, pick the player in the move form below with No appointment, then assign again.",
       ),
       step(
         "ministry-admin-table",

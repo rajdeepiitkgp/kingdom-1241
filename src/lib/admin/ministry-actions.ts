@@ -272,7 +272,7 @@ export async function removeAllMinistryEntries(_previous: ActionState, formData:
 
 const dayField = (formData: FormData): number => Number(textField(formData, "day"));
 
-/** Runs a buff day's assignment again (after its deadline): players placed by hand and late players stay, the rest is placed anew. */
+/** Runs a buff day's assignment again (after its deadline): players placed by hand and late players stay, the rest is placed anew. With `fresh` those are forgotten too. */
 export async function assignMinistryDay(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
@@ -288,15 +288,18 @@ export async function assignMinistryDay(_previous: ActionState, formData: FormDa
     if (!closedDays(round, now).includes(day)) {
       return { status: "error", message: "Players can still sign up for this day. The appointments are given out by themselves at the deadline; to do it now, set the day's deadline to a time that has passed." };
     }
+    // From scratch: the times placed by hand (and those of players who took a free one) are forgotten first, so everyone is placed by the rules alone.
+    const fresh = textField(formData, "fresh") === "1";
+    if (fresh) await store.clearRoster(round.key, day);
     const run = await runAssignment(store, round, day, false);
     if (run.outcome === "unavailable") return NO_ROSTER_TABLE;
     if (run.outcome === "clash") return { status: "error", message: "A player took a free appointment at the same moment, so nothing was changed. Press the button again." };
-    await record(access.user, "ministry.assign", null, { round: round.key, day, placed: run.placed, unplaced: run.unplaced, at: "button" });
+    await record(access.user, "ministry.assign", null, { round: round.key, day, placed: run.placed, unplaced: run.unplaced, at: "button", ...(fresh ? { fresh: true } : {}) });
     log.info("Ministry assignment ran", { round: round.key, day, placed: run.placed, unplaced: run.unplaced });
     changed(formData);
     return {
       status: "saved",
-      message: `Done. The assignment gave out ${run.placed} appointment${run.placed === 1 ? "" : "s"}; players placed by hand and players who took a free appointment kept theirs.${run.unplaced > 0 ? ` ${run.unplaced} player${run.unplaced === 1 ? " has" : "s have"} no appointment: every time they picked went to a higher score.` : ""}`,
+      message: `Done for Day ${day}. The assignment gave out ${run.placed} appointment${run.placed === 1 ? "" : "s"}${fresh ? " from scratch: every earlier placing of this day, also by hand, is forgotten" : "; players placed by hand and players who took a free appointment kept theirs"}.${run.unplaced > 0 ? ` ${run.unplaced} player${run.unplaced === 1 ? " has" : "s have"} no appointment: every time they picked went to a higher score.` : ""}`,
     };
   } catch (error) {
     return failed(log, "Running the ministry assignment", problem(error));

@@ -546,28 +546,37 @@ export function RosterPanel({
 /** Runs the day's assignment; a second tap within a few seconds confirms, since it moves players who were placed by it. */
 function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day: ScoringDay; first: boolean; locale: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(assignMinistryDay, IDLE_STATE);
-  const [armed, setArmed] = useState(false);
+  // Which of the two buttons waits for its second tap: "again" keeps the times placed by hand, "fresh" forgets them too.
+  const [armed, setArmed] = useState<"again" | "fresh" | null>(null);
   return (
     <form
       action={formAction}
       className="contents"
       onSubmit={(event) => {
-        if (first || armed) {
-          setArmed(false);
-          return;
-        }
+        const pressed = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-run") === "fresh" ? "fresh" : "again";
+        if (first || armed === pressed) return;
         event.preventDefault();
-        setArmed(true);
-        window.setTimeout(() => setArmed(false), 4000);
+        setArmed(pressed);
+        window.setTimeout(() => setArmed((now) => (now === pressed ? null : now)), 4000);
       }}
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="round" value={roundKey} />
       <input type="hidden" name="day" value={day} />
-      <button type="submit" className={clsx("btn-sm", armed ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
-        {pending ? "Assigning…" : first ? "Assign this day now" : armed ? "Tap again to assign this day anew" : "Assign this day again"}
+      <input type="hidden" name="fresh" value={armed === "fresh" ? "1" : ""} />
+      <button type="submit" data-run="again" className={clsx("btn-sm", armed === "again" ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
+        {pending ? "Assigning…" : first ? "Assign this day now" : armed === "again" ? "Tap again to assign this day anew" : "Assign this day again"}
       </button>
-      {!first && !armed && state.status === "idle" && <span className="text-xs font-semibold text-ink-faint">A fresh start for this day only, with everyone on its list now. Players placed by hand keep their time. The other buff days have their own button on their tabs.</span>}
+      {!first && (
+        <button type="submit" data-run="fresh" className={clsx("btn-ghost btn-sm text-danger", armed === "fresh" && "border-danger")} disabled={pending} data-tour="ministry-admin-fresh">
+          {armed === "fresh" ? "Tap again: forget every placing" : "Start this day from scratch"}
+        </button>
+      )}
+      {!first && armed === null && state.status === "idle" && (
+        <span className="w-full text-xs font-semibold text-ink-faint">
+          Both are for this day only (the other buff days have their own buttons on their tabs) and place everyone on its list now. Assign this day again keeps the players you placed or moved by hand; Start this day from scratch forgets those too.
+        </span>
+      )}
       <Notice state={state} />
     </form>
   );
