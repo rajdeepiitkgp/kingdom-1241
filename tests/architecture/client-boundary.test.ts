@@ -56,6 +56,7 @@ const SERVER_ONLY = [
   "lib/ministry/memory-store.ts",
   "lib/ministry/state.ts",
   "lib/ministry/prune.ts",
+  "lib/ministry/roster.ts",
   "lib/admin/ministry-data.ts",
   "lib/translate/anthropic.ts",
   "lib/translate/gemini.ts",

@@ -2,18 +2,19 @@
 "use client";
 
 import clsx from "clsx";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Check, Copy } from "lucide-react";
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPicker";
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { type ActionState, IDLE_STATE } from "@/lib/admin/action-state";
-import { removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
+import { assignMinistryDay, placeMinistryEntry, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
 import type { AdminSignup } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
+import type { AppointmentSource } from "@/lib/ministry/assign";
 import { FIELD } from "@/lib/ministry/form";
-import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, type ResourceField, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
+import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, type ResourceField, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, SLOTS_PER_DAY, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { NO_ALLIANCE } from "@/lib/retro/form";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
@@ -154,6 +155,7 @@ export function SignupList({
   roundKey,
   alliances,
   locale,
+  placement,
 }: {
   rows: RankedRow[];
   section: AdminSection;
@@ -161,16 +163,29 @@ export function SignupList({
   roundKey: string;
   alliances: Array<{ tag: string; name: string }>;
   locale: string;
+  /** The day's appointments once they are given out: each row then shows the player's and lets a moderator change it. */
+  placement?: Placement;
 }) {
   if (rows.length === 0) return <EmptyRow>Nobody has signed up for this day yet.</EmptyRow>;
   return (
     <ol className="divide-y divide-line">
       {rows.map((row, index) => (
-        <SignupRow key={row.signup.id} rank={index + 1} row={row} section={section} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} />
+        <SignupRow key={row.signup.id} rank={index + 1} row={row} section={section} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} placement={placement} />
       ))}
     </ol>
   );
 }
+
+/** A day's appointments as the list needs them: who holds which slot. */
+export interface Placement {
+  day: ScoringDay;
+  /** Per sign-up id. */
+  held: Record<string, { slot: number; source: AppointmentSource }>;
+  /** Per slot, the holder's name. */
+  takenBy: Record<number, string>;
+}
+
+const SOURCE_NOTE: Record<AppointmentSource, string | null> = { auto: null, moderator: "placed by hand", late: "took a free time" };
 
 /** The entries a moderator set aside: kept, left out of every list. */
 export function DisabledList({ signups, sections, roundKey, alliances, locale }: { signups: AdminSignup[]; sections: AdminSection[]; roundKey: string; alliances: Array<{ tag: string; name: string }>; locale: string }) {
@@ -191,6 +206,7 @@ function SignupRow({
   roundKey,
   alliances,
   locale,
+  placement,
 }: {
   rank?: number;
   row: RankedRow;
@@ -200,8 +216,10 @@ function SignupRow({
   roundKey: string;
   alliances: Array<{ tag: string; name: string }>;
   locale: string;
+  placement?: Placement;
 }) {
   const { signup, score } = row;
+  const held = placement?.held[signup.id];
   const [editing, setEditing] = useState(false);
   const [disableState, disableAction, disabling] = useActionState<ActionState, FormData>(setMinistryEntryDisabled, IDLE_STATE);
   const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(removeMinistryEntry, IDLE_STATE);
@@ -227,6 +245,16 @@ function SignupRow({
         <span className="chip bg-card-soft text-ink-muted">ID {signup.governorId}</span>
         {power && <span className="chip bg-card-soft text-ink-muted">Power {power}</span>}
         {section && <span className="chip bg-gold-soft text-gold-ink">{scoredInPoints(section) ? `${number(score)} points` : `${speedupLabel(signup.amounts.trainingMinutes)} of speedups`}</span>}
+        {placement &&
+          (held ? (
+            <span className="chip bg-primary-soft text-primary-strong tabular" data-tour="ministry-admin-appointment">
+              {slotLabel(held.slot)} UTC{SOURCE_NOTE[held.source] ? ` · ${SOURCE_NOTE[held.source]}` : ""}
+            </span>
+          ) : (
+            <span className="chip bg-danger-soft text-danger" data-tour="ministry-admin-appointment">
+              No appointment
+            </span>
+          ))}
         {signup.disabled && <span className="chip bg-gold-soft text-gold-ink">Set aside</span>}
         {!signup.ownedByBrowser && <span className="chip bg-card-soft text-ink-muted">Added by a moderator</span>}
       </div>
@@ -275,12 +303,187 @@ function SignupRow({
       </div>
       <Notice state={disableState} />
       <Notice state={removeState} />
+      {placement && !signup.disabled && <PlaceForm id={signup.id} placement={placement} own={signup.slots[placement.day] ?? []} locale={locale} />}
       {editing && (
         <div className="rounded-xl border border-line p-4">
           <EntryForm roundKey={roundKey} sections={sections} alliances={alliances} locale={locale} entry={signup} />
         </div>
       )}
     </li>
+  );
+}
+
+/** A player's appointment, changed by hand: any free time (their own times are marked), or none. */
+function PlaceForm({ id, placement, own, locale }: { id: string; placement: Placement; own: readonly number[]; locale: string }) {
+  const [state, formAction] = useActionState<ActionState, FormData>(placeMinistryEntry, IDLE_STATE);
+  const submit = useSubmitInTransition(formAction);
+  const held = placement.held[id];
+  const mine = new Set(own);
+  return (
+    <form action={formAction} onSubmit={submit} className="flex flex-wrap items-end gap-x-2 gap-y-3" data-tour="ministry-admin-place">
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="day" value={placement.day} />
+      <Field label="Appointment (UTC)" htmlFor={`place-${id}`} error={state.errors?.slot}>
+        {/* Keyed on the stored appointment: a new run of the assignment may move the player, and the dropdown follows. */}
+        <select key={held?.slot ?? "none"} id={`place-${id}`} name="slot" className="input select-chevron tabular" defaultValue={held ? String(held.slot) : ""}>
+          <option value="">No appointment</option>
+          {Array.from({ length: SLOTS_PER_DAY }, (_, slot) => {
+            const holder = placement.takenBy[slot];
+            const taken = holder !== undefined && held?.slot !== slot;
+            return (
+              <option key={slot} value={slot} disabled={taken}>
+                {slotLabel(slot)}
+                {taken ? ` · ${holder}` : mine.has(slot) ? " · picked by the player" : ""}
+              </option>
+            );
+          })}
+        </select>
+      </Field>
+      <SubmitButton className="btn-ghost btn-sm">Place by hand</SubmitButton>
+      <Notice state={state} />
+    </form>
+  );
+}
+
+export interface RosterCell {
+  name: string;
+  source: AppointmentSource;
+}
+
+/**
+ * A buff day's roster for moderators. `preview`: sign-ups are still open, so this is how the appointments would be
+ * given out right now (nothing is stored). Otherwise the stored roster, with the button that runs the assignment again.
+ */
+export function RosterPanel({
+  roundKey,
+  day,
+  title,
+  mode,
+  deadline,
+  cells,
+  unplaced,
+  chat,
+  locale,
+}: {
+  roundKey: string;
+  day: ScoringDay;
+  /** "Construction · Mon 30 Nov". */
+  title: string;
+  mode: "preview" | "assigned" | "waiting";
+  /** "Sun 29 Nov, 00:00" UTC. */
+  deadline: string;
+  /** The day's 48 appointments in order. */
+  cells: Array<RosterCell | null>;
+  /** Players on the day's list without an appointment. */
+  unplaced: string[];
+  chat: string;
+  locale: string;
+}) {
+  const filled = cells.filter(Boolean).length;
+  const free = cells.length - filled;
+  return (
+    <div className="space-y-3" data-tour="ministry-admin-roster">
+      <p className="text-sm font-bold text-ink">
+        {mode === "preview" && `Players can sign up until ${deadline} UTC; the appointments are then given out by themselves. If that were now: ${filled} of 48 filled.`}
+        {mode === "assigned" && `${title}: ${filled} of the 48 appointments are filled${free > 0 ? `, ${free} are free (red). Players see the free ones on the Ministry page and can take one.` : "."}`}
+        {mode === "waiting" && `The deadline (${deadline} UTC) has passed, but the appointments aren't given out yet: that happens by itself only while the round is open for players. Press the button to do it now.`}
+      </p>
+      {mode !== "waiting" && (
+        <>
+          <div className="grid grid-cols-48 gap-px overflow-hidden rounded-lg" role="img" aria-label={`${filled} of 48 appointments filled`}>
+            {cells.map((cell, slot) => (
+              <span key={slot} title={`${slotLabel(slot)} UTC: ${cell ? cell.name : "free"}`} className={clsx("h-6", cell ? (cell.source === "auto" ? "bg-primary" : "bg-gold") : "bg-danger")} />
+            ))}
+          </div>
+          <p className="text-xs text-ink-faint">Blue: given out by the assignment. Gold: placed by hand, or a player took the free time. Red: free. Hover a cell for its time and player.</p>
+          {filled > 0 && (
+            <ol className="grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2 xl:grid-cols-3">
+              {cells.map((cell, slot) =>
+                cell ? (
+                  <li key={slot} className="flex min-w-0 gap-2">
+                    <span className="shrink-0 font-bold text-ink tabular" dir="ltr">
+                      {slotLabel(slot)}
+                    </span>
+                    <span className="min-w-0 wrap-break-word text-ink-muted" dir="auto">
+                      {cell.name}
+                      {SOURCE_NOTE[cell.source] ? ` (${SOURCE_NOTE[cell.source]})` : ""}
+                    </span>
+                  </li>
+                ) : null,
+              )}
+            </ol>
+          )}
+          {unplaced.length > 0 && (
+            <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink" dir="auto">
+              {mode === "preview" ? "Would get no appointment" : "No appointment"} (every time they picked {mode === "preview" ? "would go" : "went"} to a higher score): {unplaced.join(", ")}.
+              {mode === "assigned" && free > 0 ? " Place them by hand in a free time below, or they take one themselves on the Ministry page." : ""}
+            </p>
+          )}
+        </>
+      )}
+      {mode !== "preview" && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
+          <AssignButton roundKey={roundKey} day={day} first={mode === "waiting"} locale={locale} />
+          {mode === "assigned" && filled > 0 && <CopyText text={chat} label="Copy for game chat" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Runs the day's assignment; a second tap within a few seconds confirms, since it moves players who were placed by it. */
+function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day: ScoringDay; first: boolean; locale: string }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(assignMinistryDay, IDLE_STATE);
+  const [armed, setArmed] = useState(false);
+  return (
+    <form
+      action={formAction}
+      className="contents"
+      onSubmit={(event) => {
+        if (first || armed) {
+          setArmed(false);
+          return;
+        }
+        event.preventDefault();
+        setArmed(true);
+        window.setTimeout(() => setArmed(false), 4000);
+      }}
+    >
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="round" value={roundKey} />
+      <input type="hidden" name="day" value={day} />
+      <button type="submit" className={clsx("btn-sm", armed ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
+        {pending ? "Assigning…" : first ? "Assign now" : armed ? "Tap again to assign anew" : "Assign again"}
+      </button>
+      {!first && !armed && state.status === "idle" && <span className="text-xs font-semibold text-ink-faint">Keeps players placed by hand and players who took a free time; places everyone else anew.</span>}
+      <Notice state={state} />
+    </form>
+  );
+}
+
+/** Copies a text; where the browser has no clipboard or refuses, the text shows to copy by hand. */
+function CopyText({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setBlocked(false);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setBlocked(true);
+    }
+  }
+  return (
+    <>
+      <button type="button" className="btn-ghost btn-sm" onClick={() => void copy()}>
+        {copied ? <Check className="size-4 text-success" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+        {copied ? "Copied" : label}
+      </button>
+      {blocked && <p className="w-full rounded-lg bg-card-soft px-3 py-2 text-sm whitespace-pre-line text-ink select-all">{text}</p>}
+    </>
   );
 }
 
