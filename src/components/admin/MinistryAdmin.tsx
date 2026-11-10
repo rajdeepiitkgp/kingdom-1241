@@ -2,19 +2,19 @@
 "use client";
 
 import clsx from "clsx";
-import { BadgeCheck, Check, Copy } from "lucide-react";
-import { useActionState, useRef, useState, useSyncExternalStore } from "react";
+import { BadgeCheck, Check, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { useActionState, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPicker";
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { type ActionState, IDLE_STATE } from "@/lib/admin/action-state";
-import { assignMinistryDay, placeMinistryEntry, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
+import { assignMinistryDay, placeMinistryEntry, shiftMinistryEntry, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
 import type { AdminSignup } from "@/lib/admin/ministry-data";
-import { BUFF_NAME, sectionName } from "@/lib/admin/ministry-labels";
+import { BUFF_NAME, RESOURCE_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
 import type { AppointmentSource } from "@/lib/ministry/assign";
 import { FIELD } from "@/lib/ministry/form";
-import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, type ResourceField, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, SLOTS_PER_DAY, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
+import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, SLOTS_PER_DAY, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { NO_ALLIANCE } from "@/lib/retro/form";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
@@ -22,7 +22,6 @@ import { EmptyRow, Field, Notice } from "./ui";
 
 /** The moderators' side of the ministry sign-ups: a round's switch and deadlines, and its entries. */
 
-const RESOURCE_NAME: Record<ResourceField, string> = { truegold: "Truegold", temperedTruegold: "Tempered Truegold", tgDust: "Truegold Dust" };
 const PICKER: SlotPickerLabels = {
   title: "Times the player can take",
   hint: "UTC. The appointment is assigned inside one of them.",
@@ -303,7 +302,6 @@ function SignupRow({
       </div>
       <Notice state={disableState} />
       <Notice state={removeState} />
-      {placement && !signup.disabled && <PlaceForm id={signup.id} placement={placement} own={signup.slots[placement.day] ?? []} locale={locale} />}
       {editing && (
         <div className="rounded-xl border border-line p-4">
           <EntryForm roundKey={roundKey} sections={sections} alliances={alliances} locale={locale} entry={signup} />
@@ -313,42 +311,84 @@ function SignupRow({
   );
 }
 
-/** A player's appointment, changed by hand: any free time (their own times are marked), or none. */
-function PlaceForm({ id, placement, own, locale }: { id: string; placement: Placement; own: readonly number[]; locale: string }) {
+/**
+ * Moves one player by hand: pick the player, then any free time (their own times are marked) or none.
+ * One form for the whole day, so the list below stays short however many players sign up.
+ */
+function MoveForm({ placement, players, locale }: { placement: Placement; players: RosterPlayer[]; locale: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(placeMinistryEntry, IDLE_STATE);
   const submit = useSubmitInTransition(formAction);
-  const held = placement.held[id];
-  const mine = new Set(own);
+  const [id, setId] = useState("");
+  const player = players.find((entry) => entry.id === id);
+  const held = player ? placement.held[player.id] : undefined;
+  const own = new Set(player?.own ?? []);
   return (
-    <form action={formAction} onSubmit={submit} className="flex flex-wrap items-end gap-x-2 gap-y-3" data-tour="ministry-admin-place">
+    <form action={formAction} onSubmit={submit} className="space-y-3 rounded-xl bg-card-soft p-4" data-tour="ministry-admin-place">
       <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="id" value={id} />
       <input type="hidden" name="day" value={placement.day} />
-      <Field label="Appointment (UTC)" htmlFor={`place-${id}`} error={state.errors?.slot}>
-        {/* Keyed on the stored appointment: a new run of the assignment may move the player, and the dropdown follows. */}
-        <select key={held?.slot ?? "none"} id={`place-${id}`} name="slot" className="input select-chevron tabular" defaultValue={held ? String(held.slot) : ""}>
-          <option value="">No appointment</option>
-          {Array.from({ length: SLOTS_PER_DAY }, (_, slot) => {
-            const holder = placement.takenBy[slot];
-            const taken = holder !== undefined && held?.slot !== slot;
-            return (
-              <option key={slot} value={slot} disabled={taken}>
-                {slotLabel(slot)}
-                {taken ? ` · ${holder}` : mine.has(slot) ? " · picked by the player" : ""}
-              </option>
-            );
-          })}
-        </select>
-      </Field>
-      <SubmitButton className="btn-ghost btn-sm">Place by hand</SubmitButton>
+      <p className="text-sm font-extrabold text-ink">Move a player by hand</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Player" htmlFor="move-player">
+          <select id="move-player" name="id" className="input select-chevron" value={id} onChange={(event) => setId(event.target.value)} required>
+            <option value="" disabled>
+              Choose…
+            </option>
+            {players.map((entry) => {
+              const at = placement.held[entry.id];
+              return (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} · {at ? slotLabel(at.slot) : "no appointment"}
+                </option>
+              );
+            })}
+          </select>
+        </Field>
+        <Field label="New time (UTC)" htmlFor="move-slot" error={state.errors?.slot}>
+          {/* Keyed on the player and their stored time: the dropdown opens on where they are now. */}
+          <select key={`${id}:${held?.slot ?? "none"}`} id="move-slot" name="slot" className="input select-chevron tabular" defaultValue={held ? String(held.slot) : ""} disabled={!player}>
+            <option value="">No appointment</option>
+            {Array.from({ length: SLOTS_PER_DAY }, (_, slot) => {
+              const holder = placement.takenBy[slot];
+              const taken = holder !== undefined && held?.slot !== slot;
+              return (
+                <option key={slot} value={slot} disabled={taken}>
+                  {slotLabel(slot)}
+                  {taken ? ` · ${holder}` : own.has(slot) ? " · picked by the player" : ""}
+                </option>
+              );
+            })}
+          </select>
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
+        <SubmitButton className="btn-ghost btn-sm" disabled={!player}>
+          Move
+        </SubmitButton>
+        <span className="text-xs font-semibold text-ink-faint">Any free time, also outside the times the player picked. Assign again keeps it.</span>
+      </div>
       <Notice state={state} />
     </form>
   );
 }
 
+/** A player of the day's list, for the move form. */
+export interface RosterPlayer {
+  id: string;
+  /** `[TAG] Name`. */
+  name: string;
+  /** The slots the player picked. */
+  own: number[];
+}
+
 export interface RosterCell {
   name: string;
   source: AppointmentSource;
+  /** What the player brings on this day: "Truegold 7,860 · Tempered Truegold 245 · Construction speedups 521 d". */
+  brings: string;
+  /** "45,598,800 points", or the speedups on the training day. */
+  score: string;
+  /** The sign-up, for the arrows (only with the stored roster). */
+  id?: string;
 }
 
 /**
@@ -365,6 +405,8 @@ export function RosterPanel({
   unplaced,
   chat,
   locale,
+  placement,
+  players,
 }: {
   roundKey: string;
   day: ScoringDay;
@@ -379,9 +421,35 @@ export function RosterPanel({
   unplaced: string[];
   chat: string;
   locale: string;
+  /** With the stored roster: who holds what, and the day's players, for the move form. */
+  placement?: Placement;
+  players?: RosterPlayer[];
 }) {
   const filled = cells.filter(Boolean).length;
   const free = cells.length - filled;
+  // The arrows of every row share one answer line, shown above the table.
+  const [shifted, setShifted] = useState<ActionState>(IDLE_STATE);
+  const [shifting, startShift] = useTransition();
+  const movable = mode === "assigned";
+  const shift = (id: string, direction: "up" | "down") => {
+    const data = new FormData();
+    data.set("locale", locale);
+    data.set("id", id);
+    data.set("day", String(day));
+    data.set("direction", direction);
+    startShift(async () => setShifted(await shiftMinistryEntry(IDLE_STATE, data)));
+  };
+  const arrow = "inline-grid size-8 place-items-center rounded-lg text-ink-muted hover:bg-card-soft hover:text-ink disabled:opacity-30";
+  const arrows = (id: string, name: string, slot: number) => (
+    <>
+      <button type="button" className={arrow} disabled={shifting || slot === 0} onClick={() => shift(id, "up")} aria-label={`Move ${name} half an hour earlier`} title="Half an hour earlier">
+        <ChevronUp className="size-5" aria-hidden />
+      </button>
+      <button type="button" className={arrow} disabled={shifting || slot === cells.length - 1} onClick={() => shift(id, "down")} aria-label={`Move ${name} half an hour later`} title="Half an hour later">
+        <ChevronDown className="size-5" aria-hidden />
+      </button>
+    </>
+  );
   return (
     <div className="space-y-3" data-tour="ministry-admin-roster">
       <p className="text-sm font-bold text-ink">
@@ -396,28 +464,70 @@ export function RosterPanel({
               <span key={slot} title={`${slotLabel(slot)} UTC: ${cell ? cell.name : "free"}`} className={clsx("h-6", cell ? (cell.source === "auto" ? "bg-primary" : "bg-gold") : "bg-danger")} />
             ))}
           </div>
-          <p className="text-xs text-ink-faint">Blue: given out by the assignment. Gold: placed by hand, or a player took the free time. Red: free. Hover a cell for its time and player.</p>
-          {filled > 0 && (
-            <ol className="grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2 xl:grid-cols-3">
-              {cells.map((cell, slot) =>
-                cell ? (
-                  <li key={slot} className="flex min-w-0 gap-2">
-                    <span className="shrink-0 font-bold text-ink tabular" dir="ltr">
-                      {slotLabel(slot)}
-                    </span>
-                    <span className="min-w-0 wrap-break-word text-ink-muted" dir="auto">
-                      {cell.name}
-                      {SOURCE_NOTE[cell.source] ? ` (${SOURCE_NOTE[cell.source]})` : ""}
-                    </span>
-                  </li>
-                ) : null,
-              )}
-            </ol>
-          )}
+          <p className="text-xs text-ink-faint">Blue: given out by the assignment. Gold: placed by hand, or a player took the free time. Red: free.</p>
+          {movable && <Notice state={shifted} />}
+          {/* The day from its first half-hour to its last, as it is published: UTC start and end, the player, and for moderators what they bring. */}
+          <table className="w-full border-collapse text-sm" data-tour="ministry-admin-table">
+            <thead>
+              <tr className="border-b border-line text-xs font-extrabold text-ink-muted">
+                <th scope="col" className="py-2 pe-3 text-start">
+                  Time (UTC)
+                </th>
+                <th scope="col" className="py-2 pe-3 text-start">
+                  Player
+                </th>
+                <th scope="col" className="hidden py-2 pe-3 text-start md:table-cell">
+                  Brings
+                </th>
+                <th scope="col" className="hidden py-2 pe-3 text-end md:table-cell">
+                  Score
+                </th>
+                {movable && (
+                  <th scope="col" className="hidden py-2 text-end md:table-cell">
+                    Move
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {cells.map((cell, slot) => (
+                <tr key={slot} className={clsx("border-b border-line/60 align-top", !cell && "bg-danger-soft")}>
+                  <td className="py-1.5 ps-2 pe-3 font-black whitespace-nowrap text-ink tabular">
+                    <span dir="ltr">{slotLabel(slot)}</span>
+                    {/* On a phone the arrows sit under the time, so the name keeps the width. */}
+                    {movable && cell?.id && <span className="block md:hidden">{arrows(cell.id, cell.name, slot)}</span>}
+                  </td>
+                  {cell ? (
+                    <>
+                      {/* max-w-0 below md: the name takes what the time and the arrows leave and wraps inside it. On a phone the score alone stands under it; the amounts are in the ranking below. */}
+                      <td className="w-full max-w-0 py-1.5 pe-3 md:w-auto md:max-w-none">
+                        <span className="font-bold wrap-break-word text-ink" dir="auto">
+                          {cell.name}
+                        </span>
+                        {SOURCE_NOTE[cell.source] && <span className="chip ms-2 bg-gold-soft whitespace-nowrap text-gold-ink">{SOURCE_NOTE[cell.source]}</span>}
+                        <span className="block text-xs text-ink-muted md:hidden">{cell.score}</span>
+                      </td>
+                      <td className="hidden py-1.5 pe-3 text-ink-muted md:table-cell">{cell.brings}</td>
+                      <td className="hidden py-1.5 pe-3 text-end font-bold whitespace-nowrap text-ink tabular md:table-cell">{cell.score}</td>
+                      {movable && (
+                        <td className="hidden py-1 pe-1 text-end whitespace-nowrap md:table-cell" data-tour="ministry-admin-arrows">
+                          {cell.id && arrows(cell.id, cell.name, slot)}
+                        </td>
+                      )}
+                    </>
+                  ) : (
+                    <td colSpan={4} className="py-1.5 pe-2 font-extrabold text-danger">
+                      Free
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {unplaced.length > 0 && (
             <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink" dir="auto">
               {mode === "preview" ? "Would get no appointment" : "No appointment"} (every time they picked {mode === "preview" ? "would go" : "went"} to a higher score): {unplaced.join(", ")}.
-              {mode === "assigned" && free > 0 ? " The Ministry page tells them so and to message a moderator in the game; place them by hand in a free time below." : ""}
+              {mode === "assigned" && free > 0 ? " The Ministry page tells them so and to message a moderator in the game; move them into a free time with the form below." : ""}
             </p>
           )}
         </>
@@ -428,6 +538,7 @@ export function RosterPanel({
           {mode === "assigned" && filled > 0 && <CopyText text={chat} label="Copy for game chat" />}
         </div>
       )}
+      {mode === "assigned" && placement && players && players.length > 0 && <MoveForm placement={placement} players={players} locale={locale} />}
     </div>
   );
 }

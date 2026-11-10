@@ -57,6 +57,8 @@ export interface MinistryStore {
   assign(round: string, day: ScoringDay, rows: ReadonlyArray<{ signupId: string; slot: number }>, first: boolean): Promise<AssignOutcome>;
   /** Puts a player into a slot (moving them when they had another one that day); `slotTaken` when someone else holds it. */
   place(round: string, day: ScoringDay, signupId: string, slot: number, source: AppointmentSource): Promise<"ok" | "slotTaken">;
+  /** Two players of a day trade their slots (both count as placed by hand); false when one of them holds none any more. */
+  swap(round: string, day: ScoringDay, firstId: string, secondId: string): Promise<boolean>;
   /** Takes a player's appointments away: of one day, of some days, or all of them. */
   unplace(signupId: string, days?: readonly ScoringDay[]): Promise<void>;
   /** Back to "not assigned": the day's appointments and its mark go (sign-ups were opened again). */

@@ -263,3 +263,41 @@ export async function placeMinistryEntry(_previous: ActionState, formData: FormD
     return failed(log, "Placing the ministry appointment", problem(error));
   }
 }
+
+/** ▲ ▼ in the day's table: the player moves one half-hour up or down; onto a time someone holds, the two trade places. */
+export async function shiftMinistryEntry(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const store = ministryStore();
+  if (!store) return NO_STORE;
+  const id = uuidField(formData, "id");
+  if (!id) return NOT_FOUND;
+  try {
+    const signup = await store.get(id);
+    if (!signup) return NOT_FOUND;
+    const day = dayField(formData);
+    if (!isScoringDay(day)) return { status: "error", message: "Pick one of the buff days shown. Reload the page." };
+    const roster = await store.roster(signup.round);
+    if (!roster.available) return NO_ROSTER_TABLE;
+    const held = roster.appointments.find((entry) => entry.day === day && entry.signupId === id);
+    if (!held) return { status: "error", message: `${signup.gameName} has no appointment on this day any more. Reload the page.` };
+    const target = held.slot + (textField(formData, "direction") === "up" ? -1 : 1);
+    if (target < 0 || target >= SLOTS_PER_DAY) return { status: "error", message: "That is the edge of the day." };
+    const neighbour = roster.appointments.find((entry) => entry.day === day && entry.slot === target);
+    let with_: string | null = null;
+    if (neighbour) {
+      const other = await store.get(neighbour.signupId);
+      if (!(await store.swap(signup.round, day, id, neighbour.signupId))) return { status: "error", message: "The appointments changed meanwhile. Reload the page." };
+      with_ = other?.gameName ?? null;
+    } else if ((await store.place(signup.round, day, id, target, "moderator")) === "slotTaken") {
+      return { status: "error", message: "Someone took that time a moment ago. Reload the page." };
+    }
+    await record(access.user, "ministry.place", id, { round: signup.round, day, time: slotLabel(target), name: signup.gameName, ...(with_ ? { swappedWith: with_ } : {}) });
+    log.info("Ministry appointment moved by one", { round: signup.round, day, slot: target, swapped: neighbour !== undefined });
+    changed(formData);
+    return { status: "saved", message: with_ ? `${signup.gameName} and ${with_} traded places: ${signup.gameName} has ${slotLabel(target)} UTC now.` : `${signup.gameName} has ${slotLabel(target)} UTC now.` };
+  } catch (error) {
+    return failed(log, "Moving the ministry appointment", problem(error));
+  }
+}

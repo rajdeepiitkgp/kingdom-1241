@@ -122,14 +122,18 @@ test("MIN-06 after a day's deadline its roster shows: every player in a time the
   await expect(roster).toContainText(t("prep.council.training"));
   // Six demo players, 48 half-hours.
   await expect(roster).toContainText(t("ministry.roster.filled").replace("{filled}", "6").replace("{total}", "48"));
-  // One row per player; free neighbours share a row with how many they are.
-  const rows = roster.locator("ol > li");
-  await expect(rows.filter({ hasNotText: t("ministry.roster.free") })).toHaveCount(6);
-  const freeRows = await rows.filter({ hasText: t("ministry.roster.free") }).allInnerTexts();
-  expect(freeRows.reduce((sum, text) => sum + Number(/× (\d+)/.exec(text)?.[1] ?? 1), 0)).toBe(42);
+  // A table from 00:00 to 24:00 UTC: every half-hour with its start and end, its player or "Free".
+  const rows = roster.locator("tbody tr");
+  await expect(rows).toHaveCount(48);
+  await expect(rows.first()).toContainText("00:00–00:30");
+  await expect(rows.last()).toContainText("23:30–24:00");
+  await expect(rows.filter({ hasText: t("ministry.roster.free") })).toHaveCount(42);
   await expect(roster.getByText(t("ministry.roster.freeNote"))).toBeVisible();
+  // The visitor's own time has a column of its own, named.
+  await expect(roster.getByRole("columnheader", { name: t("ministry.roster.col.utc") })).toBeVisible();
+  await expect(roster.getByRole("columnheader", { name: t("ministry.roster.col.local") })).toBeVisible();
   // The highest score has the first of her own times (12:00–20:00 UTC).
-  await expect(rows.filter({ hasText: "Aurelia" })).toContainText("12:00");
+  await expect(rows.filter({ hasText: "Aurelia" })).toContainText("12:00–12:30");
   // Everyone sits inside the times they picked: Eun-ji picked 04:00–10:00.
   const eunji = await rows.filter({ hasText: "Eun-ji" }).innerText();
   expect(Number(eunji.slice(0, 2))).toBeGreaterThanOrEqual(4);

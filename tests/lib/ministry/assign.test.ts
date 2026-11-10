@@ -193,7 +193,7 @@ describe("the roster", () => {
 
   it("copies for the game chat: a heading and one line per appointment", () => {
     const roster = [{ name: "[NAM] Rudy" }, null, { name: "Sylphy" }];
-    expect(rosterChat(roster, "Construction, Mon 30 Nov (UTC)")).toBe("Construction, Mon 30 Nov (UTC)\n00:00 [NAM] Rudy\n01:00 Sylphy");
-    expect(rosterChat(roster, "Free", true)).toBe("Free\n00:00 [NAM] Rudy\n00:30 —\n01:00 Sylphy");
+    expect(rosterChat(roster, "Construction, Mon 30 Nov (UTC)")).toBe("Construction, Mon 30 Nov (UTC)\n00:00–00:30 [NAM] Rudy\n01:00–01:30 Sylphy");
+    expect(rosterChat(roster, "Free", true)).toBe("Free\n00:00–00:30 [NAM] Rudy\n00:30–01:00 —\n01:00–01:30 Sylphy");
   });
 });

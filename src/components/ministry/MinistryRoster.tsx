@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { Buff, ScoringDay } from "@/lib/kvk/prep";
 import { findMinistryAppointments, type FindState } from "@/lib/ministry/actions";
-import { SLOT_MINUTES, slotClock } from "@/lib/ministry/ministry";
+import { SLOT_MINUTES, slotLabel } from "@/lib/ministry/ministry";
 import { isGovernorId, normalizeGovernorId } from "@/lib/retro/form";
 import { MINUTE } from "@/lib/time";
 import { ItemIcon } from "../kvk/ItemIcon";
@@ -31,13 +31,14 @@ export interface RosterDay {
   cells: Array<string | null>;
 }
 
-/** A slot's start in the visitor's own time ("Mon 15:30"), or null where the browser can't say. */
-function localStart(dayStart: number, slot: number, locale: string): string | null {
+/** A half-hour in the visitor's own time ("10:30–11:00", with the weekday when it is another day there than in UTC), or null where the browser can't say. */
+function localRange(dayStart: number, slot: number, locale: string): string | null {
   try {
-    const at = new Date(dayStart + slot * SLOT_MINUTES * MINUTE);
+    const from = new Date(dayStart + slot * SLOT_MINUTES * MINUTE);
+    const to = new Date(from.getTime() + SLOT_MINUTES * MINUTE);
     const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", numberingSystem: "latn" });
-    const day = new Intl.DateTimeFormat(locale, { weekday: "short" });
-    return `${day.format(at)} ${time.format(at)}`;
+    const range = `${time.format(from)}–${time.format(to)}`;
+    return from.getDay() === from.getUTCDay() ? range : `${new Intl.DateTimeFormat(locale, { weekday: "short" }).format(from)} ${range}`;
   } catch {
     return null;
   }
@@ -89,19 +90,12 @@ export function MinistryRoster({
   const filled = shown.cells.filter(Boolean).length;
   const free = shown.cells.length - filled;
   const filtering = byId ? typeof idSlot === "number" : needle !== "";
-  // The whole day: free neighbours share one row ("00:30–04:00 · Free × 7"), so a thin day stays short on a phone. "Free times only" lists each.
-  const each = shown.cells.map((name, slot) => ({ name, slot, length: 1 }));
-  const grouped: typeof each = [];
-  for (const row of each) {
-    const last = grouped[grouped.length - 1];
-    if (row.name === null && last && last.name === null && last.slot + last.length === row.slot) last.length += 1;
-    else grouped.push({ ...row });
-  }
-  const rows = onlyFree ? each.filter(({ name }) => name === null) : filtering ? each.filter(({ name, slot }) => matches(name, slot)) : grouped;
+  const each = shown.cells.map((name, slot) => ({ name, slot }));
+  const rows = onlyFree ? each.filter(({ name }) => name === null) : filtering ? each.filter(({ name, slot }) => matches(name, slot)) : each;
   const nothing = (byId && lookup !== null && lookup.status !== "skipped" && typeof idSlot !== "number") || (!byId && needle !== "" && rows.length === 0 && !onlyFree);
 
   return (
-    <section className="card space-y-4 p-5" data-tour="ministry-roster">
+    <section className="card @container space-y-4 p-5" data-tour="ministry-roster">
       <div>
         <h2 className="text-lg font-extrabold text-ink">{dict["ministry.roster.title"]}</h2>
         <p className="mt-1 text-sm font-semibold text-ink-muted">{dict["ministry.roster.hint"]}</p>
@@ -172,41 +166,61 @@ export function MinistryRoster({
         </p>
       )}
 
-      <ol className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map(({ name, slot, length }) => {
-          const local = hydrated ? localStart(shown.start, slot, locale) : null;
-          const isMine = mine.has(slot);
-          return (
-            <li
-              key={slot}
-              className={clsx(
-                "flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2",
-                name === null ? "border-danger/50 bg-danger-soft" : isMine || matches(name, slot) ? "border-primary bg-primary-soft" : "border-line bg-card-soft",
+      {/* A table from the day's first half-hour to its last, as the council publishes it: each time with its start and end, the visitor's own time in a column of its own. */}
+      {rows.length > 0 && (
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-line text-start text-xs font-extrabold text-ink-muted">
+              <th scope="col" className="py-2 pe-3 text-start">
+                {dict["ministry.roster.col.utc"]}
+              </th>
+              {hydrated && (
+                <th scope="col" className="hidden py-2 pe-3 text-start @[17rem]:table-cell">
+                  {dict["ministry.roster.col.local"]}
+                </th>
               )}
-            >
-              <span className="shrink-0 text-start tabular" dir="ltr">
-                <span className="block text-sm font-black text-ink">{length > 1 ? `${slotClock(slot)}–${slotClock(slot + length)}` : slotClock(slot)}</span>
-                {local && <span className="block text-xs font-semibold text-ink-faint">{local}</span>}
-              </span>
-              {name === null ? (
-                <span className="text-sm font-extrabold text-danger">
-                  {dict["ministry.roster.free"]}
-                  {length > 1 && (
-                    <span className="tabular" dir="ltr">
-                      {" "}
-                      × {length}
-                    </span>
+              <th scope="col" className="py-2 text-start">
+                {dict["ministry.roster.col.player"]}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ name, slot }) => {
+              const local = hydrated ? localRange(shown.start, slot, locale) : null;
+              const marked = name !== null && (mine.has(slot) || matches(name, slot));
+              return (
+                <tr key={slot} className={clsx("border-b border-line/60", name === null ? "bg-danger-soft" : marked && "bg-primary-soft")}>
+                  {/* The direction sits on the text, not the cell: a cell's own direction would put its end padding on the wrong side in Arabic. */}
+                  <td className="py-2 ps-2 pe-3 font-black whitespace-nowrap text-ink tabular">
+                    <span dir="ltr">{slotLabel(slot)}</span>
+                    {/* Where three columns don't fit (a phone at the largest text size) the visitor's time sits under the UTC time, with its name: a bare time there would read as the end. */}
+                    {local && (
+                      <span className="block text-xs font-semibold text-ink-muted @[17rem]:hidden">
+                        {dict["ministry.roster.col.local"]} <span dir="ltr">{local}</span>
+                      </span>
+                    )}
+                  </td>
+                  {hydrated && (
+                    <td className="hidden py-2 pe-3 font-semibold whitespace-nowrap text-ink-muted tabular @[17rem]:table-cell">
+                      <span dir="ltr">{local ?? "—"}</span>
+                    </td>
                   )}
-                </span>
-              ) : (
-                <span className="min-w-0 text-sm font-bold wrap-break-word text-ink" dir="auto">
-                  {name}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+                  {/* max-w-0: the name takes what the two time columns leave and wraps inside it, at any text size. */}
+                  <td className="w-full max-w-0 py-2 pe-2">
+                    {name === null ? (
+                      <span className="font-extrabold text-danger">{dict["ministry.roster.free"]}</span>
+                    ) : (
+                      <span className="font-bold wrap-break-word text-ink" dir="auto">
+                        {name}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
 
       {free > 0 && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm font-bold text-danger">{dict["ministry.roster.freeNote"]}</p>}
     </section>
