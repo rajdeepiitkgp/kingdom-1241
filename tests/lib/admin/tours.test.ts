@@ -34,6 +34,7 @@ describe("the admin page guides", () => {
     expect(adminPageFor("/en/admin/rally-sync")).toBe("rallySync");
     expect(adminPageFor("/en/admin/prep")).toBe("prep");
     expect(adminPageFor("/en/admin/prep/x")).toBeNull();
+    expect(adminPageFor("/en/admin/ministry")).toBe("ministry");
     expect(adminPageFor("/en/admin/gift-codes")).toBe("giftCodes");
     expect(adminPageFor("/en/admin/users")).toBe("users");
     expect(adminPageFor("/en/admin/settings")).toBe("settings");

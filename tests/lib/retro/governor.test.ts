@@ -11,11 +11,11 @@ describe("parseMightPulsePlayer", () => {
       { ok: true, governor_id: "12345678", player: { nick_name: "Rudy", kid: 1241, power: 1, alliance: { abbr: "nam", name: "Namaste" } } },
       "12345678",
     );
-    expect(profile).toEqual({ governorId: "12345678", name: "Rudy", allianceTag: "nam", kingdom: 1241 });
+    expect(profile).toEqual({ governorId: "12345678", name: "Rudy", allianceTag: "nam", kingdom: 1241, power: 1 });
   });
 
   it("copes with a missing alliance or kingdom and rejects an answer without a name", () => {
-    expect(parseMightPulsePlayer({ player: { nick_name: "Solo" } }, "1")).toEqual({ governorId: "1", name: "Solo", allianceTag: null, kingdom: null });
+    expect(parseMightPulsePlayer({ player: { nick_name: "Solo" } }, "1")).toEqual({ governorId: "1", name: "Solo", allianceTag: null, kingdom: null, power: null });
     expect(parseMightPulsePlayer({ player: { kid: 1241 } }, "1")).toBeNull();
     expect(parseMightPulsePlayer("nope", "1")).toBeNull();
     expect(parseMightPulsePlayer({ player: { nick_name: "x".repeat(60) } }, "1")?.name).toHaveLength(40);
@@ -23,7 +23,7 @@ describe("parseMightPulsePlayer", () => {
 });
 
 describe("governor tokens", () => {
-  const profile = { governorId: "12345678", name: "Rudy", allianceTag: "NAM", kingdom: 1241 };
+  const profile = { governorId: "12345678", name: "Rudy", allianceTag: "NAM", kingdom: 1241, power: 98_000_000 };
 
   it("round-trip for the same retrospective within the lifetime", () => {
     const token = signGovernor(profile, "retro-1", NOW, SECRET);

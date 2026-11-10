@@ -25,5 +25,6 @@ export const PUBLIC_PAGES: ReadonlyArray<{ route: string; path: string }> = [
   { route: "/kvk/leaders", path: "/kvk/leaders" },
   { route: "/kvk/checklist", path: "/kvk/checklist" },
   { route: "/kvk/prep", path: "/kvk/prep" },
+  { route: "/kvk/ministry", path: "/kvk/ministry" },
   { route: "/kvk/feedback", path: "/kvk/feedback" },
 ];

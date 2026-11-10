@@ -3,8 +3,9 @@
  * forms (src/lib/retro/prune.ts), and Rally Sync rooms that are closed
  * (src/lib/rally-sync/prune.ts; pg_cron does that every five minutes where it
  * is available, this is the backstop), and the content editor's images that no
- * text uses any more (src/lib/content/image-store.ts). Run daily by the
- * Maintenance workflow.
+ * text uses any more (src/lib/content/image-store.ts), and the ministry
+ * sign-ups of prep rounds that ended two weeks ago (src/lib/ministry/prune.ts).
+ * Run daily by the Maintenance workflow.
  *
  *   npm run prune                 # delete what is due, one audit_log entry per battle
  *   npm run prune -- --dry-run    # only show what would be deleted
@@ -18,12 +19,13 @@ loadEnv();
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  const [{ createAdminClient }, { pruneExpiredResponses }, { pruneClosedRooms }, { pruneUnusedImages }, { writeConfig }] = await Promise.all([
+  const [{ createAdminClient }, { pruneExpiredResponses }, { pruneClosedRooms }, { pruneUnusedImages }, { writeConfig }, { pruneOldSignups }] = await Promise.all([
     import("@/lib/supabase/admin"),
     import("@/lib/retro/prune"),
     import("@/lib/rally-sync/prune"),
     import("@/lib/content/image-store"),
     import("@/lib/config/app-config"),
+    import("@/lib/ministry/prune"),
   ]);
   const dryRun = Boolean(args["dry-run"]);
   const admin = createAdminClient();
@@ -34,10 +36,12 @@ async function main() {
   console.log(`${dryRun ? "Dry run: " : ""}${rooms} closed Rally Sync room${rooms === 1 ? "" : "s"}${dryRun ? " would be" : ""} deleted.`);
   const images = await pruneUnusedImages(admin, new Date(), { dryRun });
   console.log(`${dryRun ? "Dry run: " : ""}${images.deleted} unused image${images.deleted === 1 ? "" : "s"} (${Math.round(images.bytes / 1024)} KB)${dryRun ? " would be" : ""} deleted.`);
+  const signups = await pruneOldSignups(admin, new Date(), { dryRun });
+  console.log(`${dryRun ? "Dry run: " : ""}${signups} ministry sign-up${signups === 1 ? "" : "s"} of past rounds${dryRun ? " would be" : ""} deleted.`);
   if (dryRun) return;
   // When the last prune ran, for the owner's Usage tab; never fails the prune.
   try {
-    await writeConfig(admin, "last_prune", { at: new Date().toISOString(), responses: deleted, rooms, images: images.deleted });
+    await writeConfig(admin, "last_prune", { at: new Date().toISOString(), responses: deleted, rooms, images: images.deleted, signups });
   } catch (error) {
     console.warn(`Could not note the prune for the Usage tab: ${error instanceof Error ? error.message : String(error)}`);
   }

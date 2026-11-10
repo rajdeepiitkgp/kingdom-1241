@@ -11,8 +11,9 @@ describe("adminNavGroups", () => {
   });
 
   it("lists the battle tools, the prep days among them", () => {
-    expect(labels({ canManageUsers: false, isOwner: false }).find(([label]) => label === "Battle")?.[1]).toEqual(["Battle plans", "Prep days", "Feedback", "Rally Sync"]);
+    expect(labels({ canManageUsers: false, isOwner: false }).find(([label]) => label === "Battle")?.[1]).toEqual(["Battle plans", "Prep days", "Ministry sign-ups", "Feedback", "Rally Sync"]);
     expect(activeAdminPath("/en/admin/prep", adminNavGroups({ canManageUsers: false, isOwner: false }))).toBe("/prep");
+    expect(activeAdminPath("/en/admin/ministry", adminNavGroups({ canManageUsers: false, isOwner: false }))).toBe("/ministry");
   });
 
   it("drops the last group for a moderator", () => {

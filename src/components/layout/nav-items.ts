@@ -34,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
     // The prep days are public; every other page has its own password. The battle plan's feedback form lives under /kvk too.
     children: [
       { href: "/kvk/prep", labelKey: "kvk.menu.prep", hintKey: "kvk.menu.prepHint" },
+      { href: "/kvk/ministry", labelKey: "kvk.menu.ministry", hintKey: "kvk.menu.ministryHint" },
       { href: "/kvk", labelKey: "kvk.tab.plan", hintKey: "kvk.menu.planHint" },
       { href: "/kvk/leaders", labelKey: "kvk.menu.leaders", hintKey: "kvk.menu.leadersHint" },
       { href: "/kvk/checklist", labelKey: "kvk.menu.checklist", hintKey: "kvk.menu.checklistHint" },

@@ -135,6 +135,16 @@ Found by the browser suite and not fixed yet. Each has a decision pending; the t
 | KVK-11 | The prep page shows the five ministry items (Truegold, Tempered Truegold, construction speedups, Truegold Dust, research speedups) as ✅ on Days 1, 2 and 5 for everyone; the council's buff days (construction and research as set, training on Day 4) appear only with the battle plan's password, typed in a popup from the plan's row (a wrong one stays in the popup), which narrows those ✅ to the chosen days (the other two 🆗), and Lock page hides them again. | Browser |
 | KVK-12 | The council's buff days: the stored value is read tolerantly, a round without one follows the template (construction Day 1, research Day 2), the admin form takes Days 1, 2 or 5 only (the same day for both allowed) and rounds that are over are dropped at a save. | Unit: tests/lib/kvk/prep-schedule.test.ts |
 
+### Ministry sign-ups
+
+| ID | What must hold | Checked by |
+| --- | --- | --- |
+| MIN-01 | The ministry page is locked with the battle plan's password. Unlocked, it shows the open prep round with its buff days (construction and research as the council set them, training on Day 4) and a card per day; a player who gives a Governor ID, name, alliance, an amount and at least one time is signed up, sees the entry under "Your sign-ups on this device" with its times in UTC, and still sees it after a reload. | Browser |
+| MIN-02 | A sign-up needs at least one day, and every day taken needs an amount and a time; the message sits on the day it is about and nothing is saved. | Browser |
+| MIN-03 | The browser that signed up changes its entry (the form opens with what was saved) and withdraws it with two taps; another browser with the password can't sign the same Governor ID up and is told to ask a moderator. | Browser |
+| MIN-04 | A buff day has 48 half-hour appointments from 00:00 to 24:00 UTC (Day 5 is the whole Friday); the picker's buttons cover the day once whatever their length; construction and research on one day are one section; a section's score uses the prep page's points (Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30); the list is ranked by score, then by who signed up first, without entries set aside; a day's deadline is a day before it starts unless the council set one, never after the day's start; sign-ups are deleted two weeks after their week. | Unit: tests/lib/ministry/ministry.test.ts |
+| MIN-05 | The sign-up form: amounts are whole numbers within their limits, a day the player sits out is ignored, a name and alliance confirmed by MightPulse replace what was typed (tags case-sensitive), and a day past its deadline keeps what was stored whatever the form says. | Unit: tests/lib/ministry/form.test.ts |
+
 ### Rally Sync
 
 | ID | What must hold | Checked by |
@@ -200,3 +210,4 @@ Run through the ones that apply before each battle day, and after any change in 
 | MAN-08 | Admin: with transfers switched open, the transfers page shows the terms and Home's banner shows the badge; closed again, both go. | Manual |
 | MAN-09 | Admin: the editor's Preview shows a text as players will see it (formatting, a danger box, an image). | Manual |
 | MAN-10 | Admin: a moderator moves the construction buff to Day 5 under Prep days; the unlocked prep page shows Day 5 ✅ for Truegold on the next visit, and the change is listed under Recent changes. | Manual |
+| MAN-11 | Admin: a moderator opens the next round under Ministry sign-ups and sets a deadline; a player signs up on the Ministry page; the moderator sees the entry ranked on its buff day with its score, edits its numbers, sets it aside and puts it back, removes it, and each step is listed under Recent changes. | Manual |
