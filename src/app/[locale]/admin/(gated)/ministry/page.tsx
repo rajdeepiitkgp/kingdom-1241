@@ -95,14 +95,14 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
       >
         <nav className="mb-3 flex flex-wrap gap-x-2 gap-y-3" aria-label="Round">
           {rounds.map((round, index) => (
-            <Link key={round.key} href={href(round.key)} aria-current={round.key === selected.key ? "page" : undefined} className={clsx("btn-ghost btn-sm", round.key === selected.key && "border-primary text-primary-strong")}>
+            <Link key={round.key} href={href(round.key)} scroll={false} aria-current={round.key === selected.key ? "page" : undefined} className={clsx("btn-ghost btn-sm", round.key === selected.key && "border-primary text-primary-strong")}>
               {titles[index]}
             </Link>
           ))}
         </nav>
         <nav className="mb-4 flex flex-wrap gap-x-2 gap-y-3" aria-label="Buff day" data-tour="ministry-admin-days">
           {sections.map((entry) => (
-            <Link key={entry.day} href={href(selected.key, entry.day)} aria-current={entry.day === section.day ? "page" : undefined} className={clsx("btn-ghost btn-sm", entry.day === section.day && "border-primary text-primary-strong")}>
+            <Link key={entry.day} href={href(selected.key, entry.day)} scroll={false} aria-current={entry.day === section.day ? "page" : undefined} className={clsx("btn-ghost btn-sm", entry.day === section.day && "border-primary text-primary-strong")}>
               {sectionName(entry)} · Day {entry.day}
             </Link>
           ))}
