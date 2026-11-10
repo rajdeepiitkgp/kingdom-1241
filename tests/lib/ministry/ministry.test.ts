@@ -20,6 +20,7 @@ import {
   roundDue,
   roundOver,
   roundsClosedBy,
+  scoredInPoints,
   sectionScore,
   sectionsFor,
   sectionState,
@@ -117,6 +118,14 @@ describe("scores", () => {
     const both = { day: 2 as const, buffs: ["construction" as const, "research" as const] };
     const given = amounts({ truegold: 1, tgDust: 1, constructionMinutes: 1, researchMinutes: 1 });
     expect(sectionScore(both, given)).toBe(2000 + 1000 + 30 + 30);
+  });
+
+  it("training is ranked by its speedups, not shown as points: the game scores the troops trained", () => {
+    const [construction, research, training] = sectionsFor({ construction: 1, research: 2 });
+    expect([construction, research, training].map(scoredInPoints)).toEqual([true, true, false]);
+    expect(scoredInPoints({ day: 2, buffs: ["construction", "research"] })).toBe(true);
+    // More speedups still rank higher.
+    expect(sectionScore(training, amounts({ trainingMinutes: 200 }))).toBeGreaterThan(sectionScore(training, amounts({ trainingMinutes: 199 })));
   });
 
   it("speedups are typed as days and hours", () => {

@@ -275,7 +275,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step(
         "ministry-admin-list",
         "The ranking",
-        "Highest score first. The score is what the player's numbers are worth in KvK points, with the prep page's own table: Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30. Power is what MightPulse reported at sign-up, so a number that doesn't fit the player stands out.",
+        "Highest first. Construction and research: the KvK points the numbers are worth (Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30). Training: the speedups alone, since the game scores the troops trained. Power is MightPulse's figure at sign-up, so an odd number stands out.",
       ),
       step(
         "ministry-admin-actions",

@@ -13,7 +13,7 @@ import type { AdminSignup } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
 import { FIELD } from "@/lib/ministry/form";
-import { BUFF_FIELDS, type ResourceField, type Section, slotLabel, slotRuns, speedupLabel, splitSpeedup } from "@/lib/ministry/ministry";
+import { BUFF_FIELDS, type ResourceField, scoredInPoints, type Section, slotLabel, slotRuns, speedupLabel, splitSpeedup } from "@/lib/ministry/ministry";
 import { NO_ALLIANCE } from "@/lib/retro/form";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
@@ -174,7 +174,7 @@ function SignupRow({
         )}
         <span className="chip bg-card-soft text-ink-muted">ID {signup.governorId}</span>
         {power && <span className="chip bg-card-soft text-ink-muted">Power {power}</span>}
-        {section && <span className="chip bg-gold-soft text-gold-ink">{number(score)} points</span>}
+        {section && <span className="chip bg-gold-soft text-gold-ink">{scoredInPoints(section) ? `${number(score)} points` : `${speedupLabel(signup.amounts.trainingMinutes)} of speedups`}</span>}
         {signup.disabled && <span className="chip bg-gold-soft text-gold-ink">Set aside</span>}
         {!signup.ownedByBrowser && <span className="chip bg-card-soft text-ink-muted">Added by a moderator</span>}
       </div>

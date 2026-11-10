@@ -135,6 +135,14 @@ export function buffScore(buff: Buff, amounts: Amounts): number {
   return amounts.trainingMinutes * trainingPointsPerMinute();
 }
 
+/**
+ * Whether a section's rank is a number of KvK points. Construction and
+ * research are: their items score per unit. Training is not: the game scores
+ * the troops trained or promoted, which the site can't know, so that day is
+ * ranked by the speedups alone and shows no points (the owner's call).
+ */
+export const scoredInPoints = (section: Section): boolean => !section.buffs.includes("training");
+
 /** A section's score: its buffs together (construction and research on one day count as one). */
 export function sectionScore(section: Section, amounts: Amounts): number {
   return section.buffs.reduce((sum, buff) => sum + buffScore(buff, amounts), 0);
