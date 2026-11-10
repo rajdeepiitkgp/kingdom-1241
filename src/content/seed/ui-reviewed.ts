@@ -65,12 +65,113 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     "zh-TW": "當你的協調員下令時",
   },
   // Set before the first machine run: the top bar's label threshold was measured with these words (NavLinks.tsx).
+  "ministry.closedDay": {
+    en: "Sign-ups for this day are closed. A moderator can still change your entry.",
+    "zh-TW": "這一天的報名已截止。版主仍可以修改您的登記內容。",
+  },
+  "ministry.error.noAmount": {
+    en: "Enter what you will use on this day.",
+    "zh-TW": "請輸入您這一天要使用的內容。",
+  },
+  "ministry.mine.another": {
+    en: "Sign up another account",
+    "zh-TW": "為另一個帳號報名",
+  },
+  "ministry.mine.locked": {
+    en: "A deadline has passed for this sign-up. Ask a moderator to remove it.",
+    "zh-TW": "此報名已過截止時間，請聯絡版主將其移除。",
+  },
+  "ministry.mine.noAppointment": {
+    en: "No appointment on this day: every time you picked went to a player with a higher score. Message a moderator in the game for one of the free times.",
+    "zh-TW": "這一天沒有任命：您選擇的每個時間都分給了分數較高的玩家。請在遊戲中私訊版主，索取其中一個空閒時段。",
+  },
+  "ministry.mine.withdraw": {
+    en: "Withdraw",
+    ja: "取り下げる",
+  },
+  "ministry.mine.withdraw.confirm": {
+    en: "Tap again to withdraw",
+    ja: "もう一度タップして取り下げる",
+  },
+  "ministry.rank.speedups": {
+    en: "This day is ranked by your training speedups: {time}",
+    fr: "Ce jour est classé selon vos accélérateurs d'entraînement : {time}",
+  },
+  "ministry.roster.all": {
+    en: "All times",
+    tr: "Tüm saatler",
+  },
+  "ministry.roster.col.local": {
+    en: "Your time",
+    tr: "Sizin saatiniz",
+    fr: "Votre heure",
+  },
+  "ministry.roster.find.noSlot": {
+    en: "{name} is signed up but has no appointment on this day.",
+    "zh-TW": "{name} 已報名，但這一天沒有安排任何職務。",
+  },
+  "ministry.roster.find.none": {
+    en: "Nobody on this day's list matches.",
+    it: "Nessuno nell'elenco di questo giorno corrisponde.",
+    ja: "この日のリストに該当する人はいません。",
+    "zh-TW": "這一天的名單中沒有符合的人。",
+  },
+  "ministry.roster.free": {
+    en: "Free",
+    tr: "Boş",
+    it: "Libero",
+    ja: "空き",
+    "zh-TW": "空閒",
+    fr: "Libre",
+  },
+  "ministry.roster.freeNote": {
+    en: "The times marked \"Free\" have nobody yet. Want one? Message a moderator in the game.",
+    tr: "\"Boş\" olarak işaretlenen saatlerde henüz kimse yok. Bir tane ister misiniz? Oyun içinden bir moderatöre mesaj gönderin.",
+    it: "Gli orari contrassegnati come \"Libero\" non hanno ancora nessuno. Ne vuoi uno? Scrivi a un moderatore nel gioco.",
+    ja: "「空き」と表示されている時間枠にはまだ誰もいません。ご希望の場合は、ゲーム内でモデレーターにメッセージをお送りください。",
+    "zh-TW": "標示為「空閒」的時段目前還沒有人。想要一個嗎？請在遊戲中私訊版主。",
+  },
+  "ministry.roster.onlyFree": {
+    en: "Free times only",
+    tr: "Yalnızca boş saatler",
+    it: "Solo orari liberi",
+    ja: "空きの時間のみ",
+    "zh-TW": "僅顯示空閒時段",
+    fr: "Créneaux libres uniquement",
+  },
+  "ministry.score": {
+    en: "Your score for this day: {points} points",
+    tr: "Bu gün için puanınız: {points} puan",
+    it: "Il tuo punteggio per questo giorno: {points} punti",
+    "zh-TW": "你這一天的分數：{points} 分",
+    fr: "Votre score pour ce jour : {points} points",
+  },
+  "ministry.slots.local": {
+    en: "My time",
+    tr: "Benim saatim",
+    ja: "自分の時刻",
+    fr: "Mon heure",
+  },
+  "ministry.speedups.research": {
+    en: "Research speedups you will use",
+    "zh-TW": "你會使用的研究加速",
+  },
+  "ministry.submit": {
+    en: "Sign up",
+    "zh-TW": "報名",
+  },
   "nav.transfers": {
     en: "Transfers",
     tr: "Transferler",
     it: "Trasferimenti",
     fr: "Transferts",
     ja: "王国移民",
+  },
+  "prep.council.hint": {
+    en: "Truegold, Tempered Truegold and construction speedups score on Days 1, 2 and 5, and so do Truegold Dust and research speedups. Use each group on its buff day, marked ✅; the other two days are 🆗. Troops are trained on Day 4, the only day they score.",
+    tr: "Truegold, Temperlenmiş Truegold ve inşaat hızlandırmaları 1., 2. ve 5. günlerde puan kazandırır; Truegold Tozu ve araştırma hızlandırmaları da öyledir. Her grubu kendi güçlendirme gününde kullanın, ✅ ile işaretli. Diğer iki gün 🆗. Birlikler yalnızca 4. günde eğitilir ve puan kazandıran tek gün odur.",
+    ja: "純金、錬成純金、建設加速は1日目、2日目、5日目に得点対象となり、純金の粉と研究加速も同じです。各グループは、✅の付いたそれぞれのバフの日に使用してください。残りの2日は🆗です。兵士の訓練は4日目に行います。得点になるのはその日だけです。",
+    "zh-TW": "純金、淬鍊純金和建設加速在第1、2、5天計分，純金粉塵和研究加速也一樣。請在各組標記為✅的增益日使用；其餘兩天為🆗。士兵在第4天訓練，只有這一天計分。",
   },
   "prep.group.best": {
     en: "Use today",
@@ -117,6 +218,12 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     en: "Truegold",
     "zh-TW": "純金",
   },
+  "prep.tip.gatherRecallInvasion": {
+    en: "Recall your gatherers before the invasion at {invasion} on Saturday: resources count when the march comes home, and nothing scores after it.",
+    tr: "Cumartesi günü {invasion} saatindeki istiladan önce toplayıcılarınızı geri çağırın: kaynaklar, sefer eve döndüğünde sayılır ve sonrasında hiçbir puan kazanılmaz.",
+    ja: "土曜日の侵攻（{invasion}）の前に採集部隊を帰還させてください。資源は行軍が戻った時点でカウントされ、侵攻後は何も得点になりません。",
+    "zh-TW": "週六入侵開始前（{invasion}），請召回你的採集部隊：資源在行軍返回時才會計入，入侵之後就不再計分。",
+  },
   "prep.tip.warAcademy": {
     en: "Do both kinds of research today: normal research and War Academy research. Research speedups work for both; War Academy research also needs Truegold Dust.",
     it: "Fai oggi entrambi i tipi di ricerca: la ricerca normale e la ricerca dell'Accademia di Guerra. Gli acceleratori di ricerca valgono per entrambe; la ricerca dell'Accademia di Guerra richiede anche Polvere di Truegold.",
@@ -153,6 +260,14 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
     ja: "復帰",
     "zh-TW": "重新參加",
     fr: "Revenir",
+  },
+  "sync.chat.hint": {
+    en: "Everyone in the room reads this; the messages go when the room closes. Your browser can translate the page, chat included.",
+    tr: "Odadaki herkes bunu okur; oda kapandığında mesajlar silinir. Tarayıcınız sayfayı, sohbet dahil, çevirebilir.",
+    it: "Tutti nella stanza leggono questo; i messaggi spariscono quando la stanza si chiude. Il tuo browser può tradurre la pagina, chat compresa.",
+    ja: "ルームにいる全員がこれを読みます。メッセージはルームが閉じると消えます。お使いのブラウザでチャットを含むページを翻訳できます。",
+    "zh-TW": "房間裡的每個人都會看到這些訊息；房間關閉時，訊息會一併消失。你的瀏覽器可以翻譯整個頁面，包括聊天內容。",
+    fr: "Tout le monde dans le salon lit ceci ; les messages disparaissent à la fermeture du salon. Votre navigateur peut traduire la page, chat compris.",
   },
   "sync.coord.badge": {
     en: "Coordinator",
@@ -431,6 +546,16 @@ export const REVIEWED_UI: Partial<Record<UiKey, ReviewedText>> = {
   "tour.leaders.unlock.title": {
     en: "Leaders' password",
     "zh-TW": "集結隊長密碼",
+  },
+  "tour.ministry.send.body": {
+    en: "Saves your sign-up. You can change it on this device until each day's deadline; after that the council assigns the appointments.",
+    ja: "登録内容を保存します。各日の締め切りまでは、このデバイスで変更できます。締め切り後は、評議会が任命を割り当てます。",
+  },
+  "tour.prep.council.body": {
+    en: "The council's buff days for this round, and the training day the game fixes. Truegold, Tempered Truegold and construction speedups take their ✅ on the construction day, Truegold Dust and research speedups on the research day; the other two scoring days are 🆗.",
+    tr: "Bu turun konseyin güçlendirme günleri ve oyunun belirlediği eğitim günü. Truegold, Temperlenmiş Truegold ve inşaat hızlandırmaları ✅ işaretini inşaat günü alır, Truegold Tozu ve araştırma hızlandırmaları ise araştırma günü alır; diğer iki puanlama günü 🆗 olarak işaretlenir.",
+    ja: "今回のラウンドの評議会のバフ日と、ゲームで固定されている訓練日です。純金、錬成純金、建設加速は建設日に✅、純金の粉と研究加速は研究日に✅となります。残りの2つの得点日は🆗です。",
+    "zh-TW": "本輪議會的增益日，以及遊戲固定的訓練日。純金、淬鍊純金與建設加速會在建設日標上✅，純金粉塵與研究加速則在研究日標上✅；另外兩個計分日為🆗。",
   },
   "tour.prep.day.body": {
     en: "What to use, what also counts, what to get ready and what to keep, with the points each item scores and the council's tips.",
