@@ -3,12 +3,16 @@ import { connection } from "next/server";
 import { getAlliances, getSettings } from "@/lib/data";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { dayStart } from "@/lib/kvk/prep";
+import { rosterOf } from "@/lib/ministry/assign";
+import { rosterDays, rosterFor } from "@/lib/ministry/roster";
 import { ministryUnlocked, openDays, openMinistryRound } from "@/lib/ministry/state";
+import { ministryStore } from "@/lib/ministry/store";
 import { mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { ItemIcon } from "../kvk/ItemIcon";
 import { LockButton } from "../kvk/LockButton";
 import { UnlockCard } from "../kvk/UnlockCard";
 import { BUFF_ICON, BUFF_IMAGES } from "./icons";
+import type { RosterDay } from "./MinistryRoster";
 import { MinistrySignup, type RoundView } from "./MinistrySignup";
 
 /**
@@ -50,6 +54,25 @@ export async function MinistryGate({ dict, locale }: { dict: Dictionary; locale:
     })),
   };
 
+  // The rosters of the days past their deadline (this read runs a due assignment). Names only: no Governor ID goes to the browser.
+  const rosters: RosterDay[] = [];
+  const store = ministryStore();
+  if (store) {
+    const roster = await rosterFor(store, round, now);
+    const days = rosterDays(round, roster, now);
+    if (days.length > 0) {
+      try {
+        const names = new Map((await store.list(round.key)).filter((signup) => !signup.disabled).map((signup) => [signup.id, `${signup.allianceTag ? `[${signup.allianceTag}] ` : ""}${signup.gameName}`]));
+        for (const section of view.sections.filter((entry) => days.includes(entry.day))) {
+          const cells = rosterOf(roster.appointments, section.day).map((held) => (held ? (names.get(held.signupId) ?? null) : null));
+          rosters.push({ day: section.day, buffs: section.buffs, date: section.date, start: section.start, cells });
+        }
+      } catch {
+        // The roster stays away on a failed read; the sign-ups below still work.
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="card relative overflow-hidden p-5 md:p-7" data-tour="ministry-round">
@@ -85,6 +108,7 @@ export async function MinistryGate({ dict, locale }: { dict: Dictionary; locale:
       <MinistrySignup
         round={view}
         openDays={openDays(round, now)}
+        rosters={rosters}
         alliances={alliances.filter((a) => a.published).map((a) => ({ tag: a.tag, name: a.name }))}
         kingdom={settings.kingdomNumber}
         lookupEnabled={mightPulseConfigured()}

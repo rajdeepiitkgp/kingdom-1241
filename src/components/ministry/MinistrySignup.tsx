@@ -16,6 +16,7 @@ import { ItemIcon } from "../kvk/ItemIcon";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
 import { useDeviceKey } from "./device-key";
+import { MinistryRoster, type RosterDay } from "./MinistryRoster";
 import { BUFF_ICON, BUFF_IMAGES, RESOURCE_ICON, RESOURCE_IMAGES } from "./icons";
 import { SlotPicker } from "./SlotPicker";
 
@@ -47,8 +48,8 @@ const IDLE: SubmitState = { status: "idle" };
 
 type Common = { round: RoundView; alliances: Array<{ tag: string; name: string }>; kingdom: number; lookupEnabled: boolean; dict: Dictionary; locale: string };
 
-export function MinistrySignup(props: Common & { openDays: ScoringDay[] }) {
-  const { round, dict } = props;
+export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters: RosterDay[] }) {
+  const { round, dict, rosters } = props;
   const deviceKey = useDeviceKey();
   const now = useNow(15_000);
   // The server's answer until the browser's clock takes over.
@@ -68,6 +69,15 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[] }) {
   const entries = mine ?? [];
   const showForm = open.length > 0 && (editing !== null || (mine !== null && entries.length === 0));
   const entry = editing && editing !== "new" ? entries.find((row) => row.governorId === editing) : undefined;
+
+  // This browser's own appointments, to mark them on the roster.
+  const own: Partial<Record<ScoringDay, number[]>> = {};
+  for (const row of entries) {
+    for (const { day } of rosters) {
+      const slot = row.appointments[day];
+      if (typeof slot === "number") own[day] = [...(own[day] ?? []), slot];
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -90,6 +100,8 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[] }) {
                 row={row}
                 round={round}
                 canChange={open.length > 0}
+                hydrated={now !== null}
+                locale={props.locale}
                 deviceKey={deviceKey}
                 dict={dict}
                 onEdit={() => {
@@ -136,6 +148,7 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[] }) {
       {mine === null && (
         <div className="card h-40 animate-pulse bg-card-soft" aria-hidden />
       )}
+      {rosters.length > 0 && <MinistryRoster days={rosters} own={own} hydrated={now !== null} dict={dict} locale={props.locale} />}
       {open.length === 0 && entries.length === 0 && mine !== null && (
         <p className="card px-5 py-8 text-center font-semibold text-ink-muted">{dict["ministry.error.closed"]}</p>
       )}
@@ -148,6 +161,8 @@ function MineRow({
   row,
   round,
   canChange,
+  hydrated,
+  locale,
   deviceKey,
   dict,
   onEdit,
@@ -156,6 +171,8 @@ function MineRow({
   row: MySignup;
   round: RoundView;
   canChange: boolean;
+  hydrated: boolean;
+  locale: string;
   deviceKey: string | null;
   dict: Dictionary;
   onEdit: () => void;
@@ -206,6 +223,7 @@ function MineRow({
                   .join(", ")}{" "}
                 UTC
               </span>
+              {row.appointments[section.day] !== undefined && <Appointment slot={row.appointments[section.day] ?? null} dayStart={section.start} hydrated={hydrated} locale={locale} dict={dict} />}
             </li>
           ))}
       </ul>
@@ -229,6 +247,25 @@ function MineRow({
     </li>
   );
 }
+/** The player's appointment on a day whose roster is out: its half-hour in UTC and in their own time, or that they got none. */
+function Appointment({ slot, dayStart, hydrated, locale, dict }: { slot: number | null; dayStart: number; hydrated: boolean; locale: string; dict: Dictionary }) {
+  if (slot === null) return <span className="w-full rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["ministry.mine.noAppointment"]}</span>;
+  let local: string | null = null;
+  if (hydrated) {
+    try {
+      local = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", numberingSystem: "latn" }).format(new Date(dayStart + slot * 30 * 60_000));
+    } catch {
+      local = null;
+    }
+  }
+  return (
+    <span className="w-full rounded-xl bg-success-soft px-3 py-2 text-sm font-extrabold text-success" data-appointment={slot}>
+      {format(dict["ministry.mine.appointment"], { time: slotLabel(slot) })}
+      {local && <span className="font-bold"> · {format(dict["ministry.mine.appointment.local"], { time: local })}</span>}
+    </span>
+  );
+}
+
 /** Digits of a typed amount (spaces and separators dropped), as a number; anything else 0. */
 function typed(value: string | undefined): number {
   const digits = (value ?? "").replace(/[\s,.'_]/g, "");
