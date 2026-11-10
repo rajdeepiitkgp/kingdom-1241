@@ -11,10 +11,12 @@ import type { MinistryStore, RoundRoster, StoredSignup } from "./store-types";
  * and for the browser tests (MINISTRY_STORE=memory; ignored on Vercel).
  * Everything lives in this server process and vanishes on restart.
  *
- * The round after the current one is open from the start, with the default
- * deadlines (always weeks ahead, so the tests see the same page on any date),
- * and holds a handful of demo players so the moderators' list has something
- * to show.
+ * The round after the current one is open from the start and holds a handful
+ * of demo players, so the moderators' list has something to show.
+ * Construction and research keep the default deadlines (always weeks ahead, so
+ * the tests see the same page on any date); the training day's deadline has
+ * passed, so its appointments are given out on the first visit and the roster
+ * shows.
  */
 
 interface Memory {
@@ -66,7 +68,8 @@ function memory(): Memory {
   if (!holder.__ministryMemory) {
     const round = roundKey(nextRound(roundFor(new Date())));
     holder.__ministryMemory = {
-      settings: { [round]: { open: true, deadlines: {} } },
+      // The training day's deadline lies behind us, so its roster shows; the other days keep the default (weeks ahead).
+      settings: { [round]: { open: true, deadlines: { 4: "2026-11-01T00:00:00.000Z" } } },
       signups: new Map(demoSignups(round).map((signup) => [signup.id, signup])),
       appointments: [],
       assigned: new Map(),

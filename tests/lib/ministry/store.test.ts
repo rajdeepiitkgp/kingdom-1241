@@ -4,7 +4,7 @@ import { nextRound, roundFor } from "@/lib/kvk/prep";
 import { roundKey } from "@/lib/kvk/prep-schedule";
 import { memoryMinistryStore } from "@/lib/ministry/memory-store";
 import { NO_AMOUNTS } from "@/lib/ministry/ministry";
-import { mapSignupRow } from "@/lib/ministry/store";
+import { mapAppointmentRow, mapSignupRow } from "@/lib/ministry/store";
 
 describe("mapSignupRow", () => {
   it("reads a database row tolerantly", () => {
@@ -28,14 +28,56 @@ describe("mapSignupRow", () => {
   });
 });
 
+describe("mapAppointmentRow", () => {
+  it("reads an appointment and drops a row that isn't one", () => {
+    expect(mapAppointmentRow({ signup_id: "a", day: 4, slot: 47, source: "late" })).toEqual({ signupId: "a", day: 4, slot: 47, source: "late" });
+    expect(mapAppointmentRow({ signup_id: "a", day: 6, slot: 1, source: "auto" })).toBeNull();
+    expect(mapAppointmentRow({ signup_id: "a", day: 1, slot: 48, source: "auto" })).toBeNull();
+    expect(mapAppointmentRow({ signup_id: "a", day: 1, slot: 1, source: "someone" })).toBeNull();
+  });
+});
+
 describe("the memory store", () => {
   const round = roundKey(nextRound(roundFor(new Date())));
   const entry = { round, governorId: "70000001", gameName: "Test", allianceTag: null, verified: false, power: null, amounts: { ...NO_AMOUNTS, truegold: 1 }, slots: { 1: [0] }, locale: "en", deviceHash: "abc" };
 
   it("opens the next round with demo players", async () => {
     const store = memoryMinistryStore();
-    expect((await store.settings())[round]).toEqual({ open: true, deadlines: {} });
+    const settings = (await store.settings())[round];
+    expect(settings.open).toBe(true);
+    // Only the training day is past its deadline, so its roster shows; the other days take sign-ups.
+    expect(Object.keys(settings.deadlines)).toEqual(["4"]);
+    expect(Date.parse(settings.deadlines[4] as string)).toBeLessThan(Date.now());
     expect(await store.count(round)).toBeGreaterThan(0);
+  });
+
+  it("gives a day's appointments out all or nothing, once at the deadline, and keeps hand placements", async () => {
+    const store = memoryMinistryStore();
+    const [a, b, c] = await store.list(round);
+    await store.clearRoster(round, 2);
+    expect((await store.roster(round)).assignedAt[2]).toBeUndefined();
+    expect(await store.assign(round, 2, [{ signupId: a.id, slot: 10 }], true)).toBe("done");
+    // The deadline's run happens once.
+    expect(await store.assign(round, 2, [{ signupId: b.id, slot: 11 }], true)).toBe("skipped");
+    expect((await store.roster(round)).appointments.filter((held) => held.day === 2)).toEqual([{ signupId: a.id, day: 2, slot: 10, source: "auto" }]);
+
+    // By hand: a taken slot is refused, a free one is theirs, and a move takes the player along.
+    expect(await store.place(round, 2, b.id, 10, "moderator")).toBe("slotTaken");
+    expect(await store.place(round, 2, b.id, 20, "moderator")).toBe("ok");
+    expect(await store.place(round, 2, b.id, 21, "moderator")).toBe("ok");
+    // A new run replaces only the assignment's own places, and fails whole when it would hit a kept one.
+    expect(await store.assign(round, 2, [{ signupId: c.id, slot: 21 }], false)).toBe("clash");
+    expect(await store.assign(round, 2, [{ signupId: c.id, slot: 5 }], false)).toBe("done");
+    expect((await store.roster(round)).appointments.filter((held) => held.day === 2)).toEqual([
+      { signupId: c.id, day: 2, slot: 5, source: "auto" },
+      { signupId: b.id, day: 2, slot: 21, source: "moderator" },
+    ]);
+
+    await store.unplace(b.id, [2]);
+    await store.clearRoster(round, 2);
+    const cleared = await store.roster(round);
+    expect(cleared.appointments.filter((held) => held.day === 2)).toEqual([]);
+    expect(cleared.assignedAt[2]).toBeUndefined();
   });
 
   it("keeps one entry per Governor ID and finds a browser's own", async () => {

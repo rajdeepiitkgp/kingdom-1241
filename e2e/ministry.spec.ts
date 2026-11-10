@@ -5,9 +5,11 @@ import { expect, test } from "./support/test";
 
 /**
  * The ministry sign-ups (/kvk/ministry). The test server keeps them in its own
- * memory (MINISTRY_STORE=memory): the round after the current one is open, its
- * deadlines weeks ahead on any date, and the buff days follow the template
- * (construction Day 1, research Day 2, training Day 4).
+ * memory (MINISTRY_STORE=memory): the round after the current one is open and
+ * the buff days follow the template (construction Day 1, research Day 2,
+ * training Day 4). Construction and research take sign-ups (deadlines weeks
+ * ahead on any date); the training day is past its deadline, so its six demo
+ * players have their appointments and the roster shows.
  */
 
 /** A Governor ID no other test uses (tests run side by side on one server). */
@@ -74,12 +76,12 @@ test("MIN-02 a day needs an amount and a time, and the message sits on that day"
   await send.click();
   await expect(page.getByText(t("ministry.error.sections"))).toBeVisible();
   // A day with neither an amount nor a time.
-  await dayCard(page, 2).getByRole("switch").click();
+  await dayCard(page, 1).getByRole("switch").click();
   await send.click();
-  await expect(dayCard(page, 2).getByText(t("ministry.error.noSlots"))).toBeVisible();
-  await slotButtons(page, 2).first().click();
+  await expect(dayCard(page, 1).getByText(t("ministry.error.noSlots"))).toBeVisible();
+  await slotButtons(page, 1).first().click();
   await send.click();
-  await expect(dayCard(page, 2).getByText(t("ministry.error.noAmount"))).toBeVisible();
+  await expect(dayCard(page, 1).getByText(t("ministry.error.noAmount"))).toBeVisible();
   await expect(page.locator('[data-tour="ministry-mine"]')).toHaveCount(0);
   await expectHealthyPage(page, "en");
 });
@@ -112,4 +114,41 @@ test("MIN-03 the device that signed up changes and withdraws its entry; another 
   await mine.getByRole("button", { name: t("ministry.mine.withdraw.confirm") }).click();
   await expect(page.locator('[data-tour="ministry-mine"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: t("ministry.submit"), exact: true })).toBeVisible();
+});
+
+test("MIN-06 after a day's deadline its roster shows: every player in a time they picked, free times marked, found by name or Governor ID", async ({ page }) => {
+  await open(page);
+  const roster = page.locator('[data-tour="ministry-roster"]');
+  await expect(roster).toContainText(t("prep.council.training"));
+  // Six demo players, 48 half-hours.
+  await expect(roster).toContainText(t("ministry.roster.filled").replace("{filled}", "6").replace("{total}", "48"));
+  const rows = roster.locator("ol > li");
+  await expect(rows).toHaveCount(48);
+  await expect(rows.filter({ hasText: t("ministry.roster.free") })).toHaveCount(42);
+  await expect(roster.getByText(t("ministry.roster.freeNote"))).toBeVisible();
+  // The highest score has the first of her own times (12:00–20:00 UTC).
+  await expect(rows.filter({ hasText: "Aurelia" })).toContainText("12:00");
+  // Everyone sits inside the times they picked: Eun-ji picked 04:00–10:00.
+  const eunji = await rows.filter({ hasText: "Eun-ji" }).innerText();
+  expect(Number(eunji.slice(0, 2))).toBeGreaterThanOrEqual(4);
+  expect(Number(eunji.slice(0, 2))).toBeLessThan(10);
+
+  // By name: only the match stays.
+  const find = roster.getByLabel(t("ministry.roster.find"));
+  await hydrated(find);
+  await find.fill("bor");
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("[NAM] Borin");
+  // By Governor ID (the roster itself carries none): looked up on the server.
+  await find.fill("40000006");
+  await find.press("Enter");
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("Farid");
+  await find.fill("nobody-of-that-name");
+  await expect(roster.getByText(t("ministry.roster.find.none"))).toBeVisible();
+  // The free times alone.
+  await find.fill("");
+  await roster.getByRole("button", { name: t("ministry.roster.onlyFree") }).click();
+  await expect(rows).toHaveCount(42);
+  await expectHealthyPage(page, "en");
 });
