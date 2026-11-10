@@ -15,7 +15,7 @@ import { lookupGovernor as fetchGovernor, mightPulseConfigured } from "@/lib/ret
 import { HOUR } from "@/lib/time";
 import { FIELD, isDeviceKey, parseSignupForm, type SignupErrors } from "./form";
 import { type Amounts, MAX_SIGNUPS_PER_ROUND, type SlotChoice } from "./ministry";
-import { rosterDays, rosterFor } from "./roster";
+import { publishedRoster, rosterDays, rosterFor } from "./roster";
 import { type MinistryRound, ministryUnlocked, openDays, openMinistryRound } from "./state";
 import { type MinistryStore, ministryStore, type StoredSignup } from "./store";
 
@@ -97,7 +97,7 @@ function appointmentsOf(row: StoredSignup, held: ReadonlyArray<{ signupId: strin
 async function mine(store: MinistryStore, round: MinistryRound, device: string, now: Date): Promise<MySignup[]> {
   const rows = await store.byDevice(round.key, device);
   if (rows.length === 0) return [];
-  const roster = await rosterFor(store, round, now);
+  const roster = publishedRoster(await rosterFor(store, round, now));
   const days = rosterDays(round, roster, now);
   return rows.map((row) => ({
     governorId: row.governorId,
@@ -305,7 +305,7 @@ export async function findMinistryAppointments(rawId: string): Promise<FindState
   try {
     const row = await store.byGovernor(round.key, governorId);
     if (!row || row.disabled) return { status: "none" };
-    const roster = await rosterFor(store, round, now);
+    const roster = publishedRoster(await rosterFor(store, round, now));
     return { status: "found", name: `${row.allianceTag ? `[${row.allianceTag}] ` : ""}${row.gameName}`, appointments: appointmentsOf(row, roster.appointments, rosterDays(round, roster, now)) };
   } catch (error) {
     baseLog.warn("Could not look a Governor ID up on the roster", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
-import { type Appointment, assignDay, assignSlots, type Candidate, firstFreeOwn, freeSlots, isFixed, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
+import { type Appointment, assignDay, assignSlots, type Candidate, draftChanges, firstFreeOwn, freeSlots, isFixed, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
 import { NO_AMOUNTS, rankSection, type Section, type Signup, SLOTS_PER_DAY } from "@/lib/ministry/ministry";
 
 const c = (id: string, ...slots: number[]): Candidate => ({ id, slots });
@@ -211,3 +211,24 @@ describe("firstFreeOwn", () => {
     expect(firstFreeOwn(held, 1, [8])).toBe(8);
   });
 });
+
+describe("draftChanges", () => {
+  it("lists the half-hours where the working roster differs from the published one", () => {
+    const live = [
+      { day: 2 as const, slot: 8, signupId: "a" },
+      { day: 2 as const, slot: 9, signupId: "b" },
+      { day: 1 as const, slot: 3, signupId: "a" },
+    ];
+    expect(draftChanges(live, live, 2)).toEqual([]);
+    // b moved to 10, c took 9, a left: three half-hours read differently.
+    const draft = [
+      { day: 2 as const, slot: 9, signupId: "c" },
+      { day: 2 as const, slot: 10, signupId: "b" },
+      { day: 1 as const, slot: 3, signupId: "a" },
+    ];
+    expect(draftChanges(draft, live, 2)).toEqual([8, 9, 10]);
+    expect(draftChanges(draft, live, 1)).toEqual([]);
+    expect(draftChanges(draft, [], 2)).toEqual([9, 10]);
+  });
+});
+

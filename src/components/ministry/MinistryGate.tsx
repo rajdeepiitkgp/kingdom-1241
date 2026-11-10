@@ -4,7 +4,7 @@ import { getAlliances, getSettings } from "@/lib/data";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { dayStart } from "@/lib/kvk/prep";
 import { rosterOf } from "@/lib/ministry/assign";
-import { rosterDays, rosterFor } from "@/lib/ministry/roster";
+import { publishedRoster, rosterDays, rosterFor } from "@/lib/ministry/roster";
 import { ministryUnlocked, openDays, openMinistryRound } from "@/lib/ministry/state";
 import { ministryStore } from "@/lib/ministry/store";
 import { mightPulseConfigured } from "@/lib/retro/mightpulse";
@@ -58,7 +58,8 @@ export async function MinistryGate({ dict, locale }: { dict: Dictionary; locale:
   const rosters: RosterDay[] = [];
   const store = ministryStore();
   if (store) {
-    const roster = await rosterFor(store, round, now);
+    // What players see is the published copy; a moderator's draft stays on the admin page.
+    const roster = publishedRoster(await rosterFor(store, round, now));
     const days = rosterDays(round, roster, now);
     if (days.length > 0) {
       try {

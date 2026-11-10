@@ -4,7 +4,7 @@ import { nextRound, roundFor } from "@/lib/kvk/prep";
 import { roundKey } from "@/lib/kvk/prep-schedule";
 import { memoryMinistryStore } from "@/lib/ministry/memory-store";
 import { NO_AMOUNTS } from "@/lib/ministry/ministry";
-import { mapAppointmentRow, mapSignupRow } from "@/lib/ministry/store";
+import { mapAppointmentRow, mapSignupRow, publishedRoster } from "@/lib/ministry/store";
 
 describe("mapSignupRow", () => {
   it("reads a database row tolerantly", () => {
@@ -86,6 +86,37 @@ describe("the memory store", () => {
     const cleared = await store.roster(round);
     expect(cleared.appointments.filter((held) => held.day === 2)).toEqual([]);
     expect(cleared.assignedAt[2]).toBeUndefined();
+  });
+
+  it("keeps what players see apart from the moderators' draft until a publish, and a discard goes back to it", async () => {
+    const store = memoryMinistryStore();
+    const [a, b] = await store.list(round);
+    await store.clearRoster(round, 5);
+    await store.assign(round, 5, [{ signupId: a.id, slot: 4 }], false);
+    // Assigned, never published: players see no list for the day.
+    expect((await store.roster(round)).published[5]).toBeUndefined();
+    expect(publishedRoster(await store.roster(round)).assignedAt[5]).toBeUndefined();
+    await store.publish(round, 5);
+    const live = [{ signupId: a.id, day: 5, slot: 4, source: "auto" }];
+    expect((await store.roster(round)).published[5]).toEqual(live);
+
+    // A move and a new player: the draft changes, the published copy stays.
+    await store.place(round, 5, a.id, 6, "moderator");
+    await store.place(round, 5, b.id, 4, "moderator");
+    const draft = await store.roster(round);
+    expect(draft.appointments.filter((held) => held.day === 5).map((held) => held.slot)).toEqual([4, 6]);
+    expect(draft.published[5]).toEqual(live);
+    expect(publishedRoster(draft).appointments.filter((held) => held.day === 5)).toEqual(live);
+
+    // Discard: back to what players see. From scratch: the published copy outlives the emptied day.
+    expect(await store.restore(round, 5)).toBe(true);
+    expect((await store.roster(round)).appointments.filter((held) => held.day === 5)).toEqual(live);
+    await store.clearAppointments(round, 5);
+    const emptied = await store.roster(round);
+    expect(emptied.appointments.filter((held) => held.day === 5)).toEqual([]);
+    expect(emptied.published[5]).toEqual(live);
+    await store.clearRoster(round, 5);
+    expect(await store.restore(round, 5)).toBe(false);
   });
 
   it("empties a round: its sign-ups, appointments and marks go, another round stays", async () => {

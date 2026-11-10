@@ -25,6 +25,8 @@ interface Memory {
   appointments: Array<Appointment & { round: string }>;
   /** `<round>:<day>` → when the day's assignment ran. */
   assigned: Map<string, string>;
+  /** `<round>:<day>` → what players see since the day's last publish. */
+  published: Map<string, { at: string; rows: Appointment[] }>;
 }
 
 // Server Actions and pages are separate bundles: one copy on globalThis.
@@ -73,6 +75,7 @@ function memory(): Memory {
       signups: new Map(demoSignups(round).map((signup) => [signup.id, signup])),
       appointments: [],
       assigned: new Map(),
+      published: new Map(),
     };
   }
   return holder.__ministryMemory;
@@ -130,16 +133,39 @@ export function memoryMinistryStore(): MinistryStore {
       for (const signup of gone) state.signups.delete(signup.id);
       state.appointments = state.appointments.filter((held) => held.round !== round);
       for (const key of [...state.assigned.keys()]) if (key.startsWith(`${round}:`)) state.assigned.delete(key);
+      for (const key of [...state.published.keys()]) if (key.startsWith(`${round}:`)) state.published.delete(key);
       return gone.length;
     },
     async roster(round) {
       const assignedAt: RoundRoster["assignedAt"] = {};
+      const published: RoundRoster["published"] = {};
+      const publishedAt: RoundRoster["publishedAt"] = {};
       for (const [key, at] of state.assigned) {
         const [of, day] = key.split(":");
-        if (of === round && isScoringDay(Number(day))) assignedAt[Number(day) as ScoringDay] = at;
+        if (of !== round || !isScoringDay(Number(day))) continue;
+        assignedAt[Number(day) as ScoringDay] = at;
+        const live = state.published.get(key);
+        if (live) {
+          published[Number(day) as ScoringDay] = structuredClone(live.rows);
+          publishedAt[Number(day) as ScoringDay] = live.at;
+        }
       }
       const appointments = state.appointments.filter((held) => held.round === round).map(({ signupId, day, slot, source }) => ({ signupId, day, slot, source }));
-      return { appointments: appointments.sort((a, b) => a.day - b.day || a.slot - b.slot), assignedAt, available: true };
+      return { appointments: appointments.sort((a, b) => a.day - b.day || a.slot - b.slot), assignedAt, available: true, published, publishedAt, drafts: true };
+    },
+    async publish(round, day) {
+      const rows = state.appointments.filter((held) => held.round === round && held.day === day).map(({ signupId, slot, source }) => ({ signupId, day, slot, source }));
+      state.published.set(`${round}:${day}`, { at: new Date().toISOString(), rows: rows.sort((a, b) => a.slot - b.slot) });
+    },
+    async restore(round, day) {
+      const live = state.published.get(`${round}:${day}`);
+      if (!live) return false;
+      const others = state.appointments.filter((held) => !(held.round === round && held.day === day));
+      state.appointments = [...others, ...live.rows.filter((row) => state.signups.has(row.signupId)).map((row) => ({ ...row, round }))];
+      return true;
+    },
+    async clearAppointments(round, day) {
+      state.appointments = state.appointments.filter((held) => !(held.round === round && held.day === day));
     },
     async assign(round, day, rows, first) {
       const key = `${round}:${day}`;
@@ -172,6 +198,7 @@ export function memoryMinistryStore(): MinistryStore {
     async clearRoster(round, day) {
       state.appointments = state.appointments.filter((held) => !(held.round === round && held.day === day));
       state.assigned.delete(`${round}:${day}`);
+      state.published.delete(`${round}:${day}`);
     },
   };
 }
