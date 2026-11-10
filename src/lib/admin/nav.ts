@@ -7,6 +7,7 @@ export type AdminNavIcon =
   | "overview"
   | "plans"
   | "prep"
+  | "ministry"
   | "feedback"
   | "rallySync"
   | "announcements"
@@ -43,6 +44,7 @@ export function adminNavGroups(access: { canManageUsers: boolean; isOwner: boole
       items: [
         { path: "/kvk", label: "Battle plans", icon: "plans", tour: "admin-nav-plans" },
         { path: "/prep", label: "Prep days", icon: "prep", tour: "admin-nav-prep" },
+        { path: "/ministry", label: "Ministry sign-ups", icon: "ministry", tour: "admin-nav-ministry" },
         { path: "/feedback", label: "Feedback", icon: "feedback", tour: "admin-nav-feedback" },
         { path: "/rally-sync", label: "Rally Sync", icon: "rallySync", tour: "admin-nav-rally" },
       ],

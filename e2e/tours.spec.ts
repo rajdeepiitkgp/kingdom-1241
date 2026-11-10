@@ -15,13 +15,15 @@ test("TOUR-01 every public guide reads from the first step to Done", async ({ pa
 });
 
 test("TOUR-01 the locked battle pages explain more once they are open", async ({ page }) => {
-  test.slow(); // four pages, each unlocked and toured: a sweep, three times the budget
+  test.slow(); // five pages, each unlocked and toured: a sweep, three times the budget
   const areas = [
     { path: "/kvk", password: SEED_PASSWORDS.plan, marker: "kvk-unlock" },
     { path: "/kvk/leaders", password: SEED_PASSWORDS.leaders, marker: "kvk-unlock" },
     { path: "/kvk/checklist", password: SEED_PASSWORDS.checklist, marker: "kvk-unlock" },
     // Public, with the council's buff days behind the battle plan's password, typed in a popup.
     { path: "/kvk/prep", password: SEED_PASSWORDS.plan, marker: "prep-unlock" },
+    // The ministry sign-ups, behind the battle plan's password too.
+    { path: "/kvk/ministry", password: SEED_PASSWORDS.plan, marker: "kvk-unlock" },
   ];
   for (const { path, password, marker } of areas) {
     await test.step(path, async () => {

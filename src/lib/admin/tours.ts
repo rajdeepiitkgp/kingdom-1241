@@ -15,6 +15,7 @@ export type AdminPage =
   | "plans"
   | "plan"
   | "prep"
+  | "ministry"
   | "leaders"
   | "checklist"
   | "feedback"
@@ -79,6 +80,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Battle plans",
         "Everything players read for a battle: the plan for all players, the rally-leader page and the commander checklist, each behind its own password. Most of the work happens here.",
       ),
+      step("admin-nav-ministry", "Ministry sign-ups", "Before a KvK prep week: open the sign-ups for the king's buff days, set each day's deadline, and see who signed up with how much."),
       step("admin-nav-feedback", "Feedback", "The short form players fill in after a battle, and its results: averages, comments, an AI summary and a CSV export."),
       step("admin-nav-rally", "Rally Sync", "Create the rooms that line up rally start times on battle day, and get the links to share."),
       step("admin-nav-announcements", "Announcements", "The news on Home. Write it in English, with images if you like; players read it in their language a minute later."),
@@ -242,6 +244,46 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       ),
       step("checklist-rules", "Orders and guidelines", "Do / Don't / Info lines: the commander's orders, and the general guidelines for everyone who coordinates."),
       step("plan-view", "Check the page", "Opens /kvk/checklist in a new tab; it asks for the checklist password."),
+    ],
+  },
+  ministry: {
+    id: "admin-ministry",
+    version: 1,
+    steps: [
+      step(
+        null,
+        "What this page is for",
+        "In the KvK prep week the king gives a construction, a research and a training buff, each on one day, as 48 appointments of 30 minutes. Players sign up on the Ministry page of the KvK menu: what they will use and when they can be online. Here you open the sign-ups, set the deadlines and look after the entries.",
+      ),
+      step(
+        "ministry-admin-round",
+        "The rounds",
+        "The current prep week and the next one. The buff days shown come from Prep days: set those first, because a player's times are for a date. If construction and research fall on the same day, players get one card for both and one list ranked by both together.",
+      ),
+      step("ministry-admin-open", "Open the sign-ups", "Tick it and save, then tell players in Discord. Untick it to close the round's page again; the entries stay."),
+      step(
+        "ministry-admin-deadlines",
+        "A deadline per buff day",
+        "Until its deadline players sign up for a day and change their entry on the device they used. Left alone, it is a day before the day starts, which leaves the council a day to make the appointments in the game. It can't be later than 00:00 UTC of the day.",
+      ),
+      step("ministry-admin-days", "One list per buff day", "Pick the round and the buff day. Each list shows only the players who take part on that day."),
+      step(
+        "ministry-admin-cover",
+        "Where the day is thin",
+        "The 48 appointments of the day from 00:00 to 24:00 UTC. Red: nobody can take it. Gold: one player. Green: two or more. Ask in Discord for the red times before the deadline.",
+      ),
+      step(
+        "ministry-admin-list",
+        "The ranking",
+        "Highest score first. The score is what the player's numbers are worth in KvK points, with the prep page's own table: Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30. Power is what MightPulse reported at sign-up, so a number that doesn't fit the player stands out.",
+      ),
+      step(
+        "ministry-admin-actions",
+        "Edit, set aside, remove",
+        "Edit corrects a player's numbers or times, also after the deadline. Set aside keeps the entry but leaves it out of the lists, for one you want to check first. Remove deletes it; the player can sign up again. A player who lost their device asks you for the change.",
+      ),
+      step("ministry-admin-add", "Add a sign-up by hand", "For a player who can't use the site, or a test entry to try the page: any Governor ID works here. Remove test entries before the deadline."),
+      step(null, "Good practice", "Set the buff days under Prep days, open the round a week before, and remind players a day before each deadline. Every change you make here is listed under Recent changes on the Overview."),
     ],
   },
   prep: {
@@ -802,6 +844,7 @@ export function adminPageFor(pathname: string): AdminPage | null {
   if (section === "kvk") return parts.length === 1 ? "plans" : parts.length === 2 ? "plan" : parts.length === 3 && (sub === "leaders" || sub === "checklist") ? sub : null;
   if (section === "feedback") return parts.length === 1 ? "feedback" : parts.length === 2 && id ? "results" : parts.length === 3 && sub === "print" ? "print" : null;
   if (parts.length === 1 && section === "prep") return "prep";
+  if (parts.length === 1 && section === "ministry") return "ministry";
   if (parts.length === 1 && section === "rally-sync") return "rallySync";
   if (section === "announcements") return parts.length === 1 ? "announcements" : parts.length === 2 ? "announcement" : null;
   if (section === "events") return parts.length === 1 ? "events" : parts.length === 2 ? "event" : null;

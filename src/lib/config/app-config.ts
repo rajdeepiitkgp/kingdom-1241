@@ -18,7 +18,9 @@ export type ConfigKey =
   | "last_prune"
   | "last_expiry_check"
   /** The council's KvK prep buff days per round (set by moderators on /admin/prep). */
-  | "prep_schedule";
+  | "prep_schedule"
+  /** The ministry sign-ups: which rounds are open and the deadline of each buff day (set by moderators on /admin/ministry). */
+  | "ministry";
 
 /** The stored value, or null when there is none. Errors (a missing table included) are thrown for the caller to judge. */
 export async function readConfig(supabase: SupabaseClient, key: ConfigKey): Promise<unknown> {

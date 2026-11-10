@@ -19,6 +19,8 @@ export interface GovernorProfile {
   allianceTag: string | null;
   /** The kingdom number MightPulse reports (`kid`), or null when missing. */
   kingdom: number | null;
+  /** The player's power as MightPulse last saw it, when its answer carries one (the ministry sign-ups show it to moderators). */
+  power?: number | null;
 }
 
 function str(value: unknown): string | null {
@@ -28,6 +30,12 @@ function str(value: unknown): string | null {
 function int(value: unknown): number | null {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
   return Number.isInteger(n) ? n : null;
+}
+
+/** A whole, positive power figure, else null. */
+function power(value: unknown): number | null {
+  const n = int(value);
+  return n !== null && n > 0 ? n : null;
 }
 
 /** The `player` block of GET /v1/players/{id} (include=base) → profile; null when the shape is not what we expect. */
@@ -45,13 +53,14 @@ export function parseMightPulsePlayer(json: unknown, governorId: string): Govern
     // As the game writes it: tags are case-sensitive ([NAM] and [Nam] are two alliances of 1241).
     allianceTag: allianceTag ? allianceTag.slice(0, 8) : null,
     kingdom: int(player.kid) ?? int(player.kingdom),
+    power: power(player.power),
   };
 }
 
 export const GOVERNOR_TOKEN_MAX_AGE = 2 * HOUR;
 
 function payloadOf(profile: GovernorProfile, scope: string, issuedAt: number): string {
-  return Buffer.from(JSON.stringify({ g: profile.governorId, n: profile.name, a: profile.allianceTag, k: profile.kingdom, s: scope, t: issuedAt })).toString("base64url");
+  return Buffer.from(JSON.stringify({ g: profile.governorId, n: profile.name, a: profile.allianceTag, k: profile.kingdom, p: profile.power ?? null, s: scope, t: issuedAt })).toString("base64url");
 }
 
 function sign(payload: string, secret: string): string {
@@ -84,6 +93,7 @@ export function verifyGovernor(token: string | null | undefined, scope: string, 
       name: data.n,
       allianceTag: typeof data.a === "string" && data.a ? data.a : null,
       kingdom: typeof data.k === "number" ? data.k : null,
+      power: power(data.p),
     };
   } catch {
     return null;
