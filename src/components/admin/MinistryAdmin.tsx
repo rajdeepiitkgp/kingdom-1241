@@ -565,9 +565,9 @@ function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day:
       <input type="hidden" name="round" value={roundKey} />
       <input type="hidden" name="day" value={day} />
       <button type="submit" className={clsx("btn-sm", armed ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
-        {pending ? "Assigning…" : first ? "Assign now" : armed ? "Tap again to assign anew" : "Assign again"}
+        {pending ? "Assigning…" : first ? "Assign this day now" : armed ? "Tap again to assign this day anew" : "Assign this day again"}
       </button>
-      {!first && !armed && state.status === "idle" && <span className="text-xs font-semibold text-ink-faint">Keeps players placed by hand and players who took a free time; places everyone else anew.</span>}
+      {!first && !armed && state.status === "idle" && <span className="text-xs font-semibold text-ink-faint">A fresh start for this day only, with everyone on its list now. Players placed by hand keep their time. The other buff days have their own button on their tabs.</span>}
       <Notice state={state} />
     </form>
   );
