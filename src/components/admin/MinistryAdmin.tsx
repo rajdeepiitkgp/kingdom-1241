@@ -3,7 +3,7 @@
 
 import clsx from "clsx";
 import { BadgeCheck } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPicker";
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
@@ -58,6 +58,19 @@ function formValues(form: HTMLFormElement): string {
   return JSON.stringify([...new FormData(form)].map(([name, value]) => [name, typeof value === "string" ? value : ""]));
 }
 
+// Which round's form was sent last. Saving one round changes the other (it closes it), so the other's
+// "Saved … can sign up for this round now" would stay on the page saying something that is no longer true.
+let lastSent: string | null = null;
+const sentListeners = new Set<() => void>();
+const watchSent = (listener: () => void) => {
+  sentListeners.add(listener);
+  return () => void sentListeners.delete(listener);
+};
+function markSent(roundKey: string) {
+  lastSent = roundKey;
+  for (const listener of sentListeners) listener();
+}
+
 /**
  * One round's switch and deadlines. Its fields are drawn again after every save and whenever the stored
  * values change (saving the other round closes this one), so they always show what is stored and Save
@@ -72,7 +85,16 @@ export function RoundForm(props: RoundFormProps) {
     if (state.status === "saved") setSaves(saves + 1);
   }
   const stored = `${props.open}|${props.sections.map((section) => section.deadline).join("|")}`;
-  return <RoundFields key={`${saves}|${stored}`} {...props} state={state} formAction={formAction} />;
+  const newest = useSyncExternalStore(
+    watchSent,
+    () => lastSent === props.roundKey,
+    () => false,
+  );
+  const send = (data: FormData) => {
+    markSent(props.roundKey);
+    formAction(data);
+  };
+  return <RoundFields key={`${saves}|${stored}`} {...props} state={newest ? state : IDLE_STATE} formAction={send} />;
 }
 
 function RoundFields({ roundKey, title, open, sections, locale, state, formAction }: RoundFormProps & { state: ActionState; formAction: (data: FormData) => void }) {
