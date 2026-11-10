@@ -13,7 +13,7 @@ import type { AdminSignup } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
 import { FIELD } from "@/lib/ministry/form";
-import { BUFF_FIELDS, type ResourceField, scoredInPoints, type Section, slotLabel, slotRuns, speedupLabel, splitSpeedup } from "@/lib/ministry/ministry";
+import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, type ResourceField, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { NO_ALLIANCE } from "@/lib/retro/form";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
@@ -239,12 +239,29 @@ export function EntryForm({ roundKey, sections, alliances, locale, entry }: { ro
   const hydrated = useNow(60_000) !== null;
   const [joined, setJoined] = useState<ReadonlySet<ScoringDay>>(() => new Set(sections.filter((section) => (entry?.slots[section.day]?.length ?? 0) > 0).map((section) => section.day)));
   const [slots, setSlots] = useState<Partial<Record<ScoringDay, ReadonlySet<number>>>>(() => Object.fromEntries(sections.map((section) => [section.day, new Set(entry?.slots[section.day] ?? [])])));
+  // What is typed right now, so each day shows its score before the save (the server works it out again from the form).
+  const [amounts, setAmounts] = useState<Amounts>(entry?.amounts ?? NO_AMOUNTS);
+  const readAmounts = (form: HTMLFormElement) => {
+    const data = new FormData(form);
+    const typed = (name: string) => Number(String(data.get(name) ?? "").trim() || 0);
+    const minutes = (buff: keyof typeof BUFF_FIELDS) => speedupMinutes(typed(FIELD.days(buff)), typed(FIELD.hours(buff)));
+    setAmounts(
+      parseAmounts({
+        truegold: typed("truegold"),
+        temperedTruegold: typed("temperedTruegold"),
+        tgDust: typed("tgDust"),
+        constructionMinutes: minutes("construction"),
+        researchMinutes: minutes("research"),
+        trainingMinutes: minutes("training"),
+      }),
+    );
+  };
   const errors = state.errors ?? {};
   const key = entry?.id ?? "new";
   const show = (n: number | undefined) => (n && n > 0 ? String(n) : "");
   const knownTag = entry?.allianceTag && alliances.some((a) => a.tag === entry.allianceTag) ? entry.allianceTag : null;
   return (
-    <form action={formAction} onSubmit={submit} className="space-y-4">
+    <form action={formAction} onSubmit={submit} onInput={(event) => readAmounts(event.currentTarget)} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name={FIELD.round} value={roundKey} />
       {entry && <input type="hidden" name="id" value={entry.id} />}
@@ -315,6 +332,9 @@ export function EntryForm({ roundKey, sections, alliances, locale, entry }: { ro
                     ];
                   })}
                 </div>
+                <p className="rounded-xl bg-gold-soft px-4 py-3 text-sm font-extrabold text-gold-ink" aria-live="polite">
+                  {scoredInPoints(section) ? `Score on this day: ${number(sectionScore(section, amounts))} points` : `Ranked on this day by its speedups: ${speedupLabel(amounts.trainingMinutes)}`}
+                </p>
                 <SlotPicker
                   id={id}
                   dayStart={section.start}
