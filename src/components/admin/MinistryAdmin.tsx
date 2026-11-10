@@ -8,14 +8,14 @@ import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPic
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { type ActionState, IDLE_STATE } from "@/lib/admin/action-state";
-import { assignMinistryDay, placeMinistryEntry, shiftMinistryEntry, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
+import { assignMinistryDay, type EntryLookup, lookupMinistryEntryGovernor, placeMinistryEntry, shiftMinistryEntry, removeAllMinistryEntries, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
 import type { AdminSignup } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, RESOURCE_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
 import type { AppointmentSource } from "@/lib/ministry/assign";
 import { FIELD } from "@/lib/ministry/form";
 import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, parseAmounts, scoredInPoints, type Section, sectionScore, slotLabel, slotRuns, SLOTS_PER_DAY, speedupLabel, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
-import { NO_ALLIANCE } from "@/lib/retro/form";
+import { isGovernorId, NO_ALLIANCE, normalizeGovernorId } from "@/lib/retro/form";
 import { DateTimeField } from "./DateTimeField";
 import { SubmitButton } from "./SubmitButton";
 import { EmptyRow, Field, Notice } from "./ui";
@@ -573,6 +573,34 @@ function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day:
   );
 }
 
+/** Administrators: removes every sign-up of the round. Two taps, and the button names how many go. */
+export function ClearRound({ roundKey, count, locale }: { roundKey: string; count: number; locale: string }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(removeAllMinistryEntries, IDLE_STATE);
+  const [armed, setArmed] = useState(false);
+  return (
+    <form
+      action={formAction}
+      className="flex flex-wrap items-center gap-3"
+      onSubmit={(event) => {
+        if (armed) {
+          setArmed(false);
+          return;
+        }
+        event.preventDefault();
+        setArmed(true);
+        window.setTimeout(() => setArmed(false), 4000);
+      }}
+    >
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="round" value={roundKey} />
+      <button type="submit" className={clsx("btn-ghost btn-sm text-danger", armed && "border-danger")} disabled={pending || count === 0} data-tour="ministry-admin-clear">
+        {pending ? "Removing…" : armed ? `Tap again to remove all ${count}` : `Remove all ${count} sign-ups`}
+      </button>
+      <Notice state={state} />
+    </form>
+  );
+}
+
 /** Copies a text; where the browser has no clipboard or refuses, the text shows to copy by hand. */
 function CopyText({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -622,6 +650,40 @@ export function EntryForm({ roundKey, sections, alliances, locale, entry }: { ro
       }),
     );
   };
+  // A new entry: the typed Governor ID is looked up, and a player MightPulse knows fills in the name and alliance. Nothing is blocked.
+  const nameInput = useRef<HTMLInputElement>(null);
+  const allianceInput = useRef<HTMLSelectElement>(null);
+  const [looked, setLooked] = useState<{ id: string; result: EntryLookup } | null>(null);
+  const [looking, startLookup] = useTransition();
+  const lookUp = (raw: string) => {
+    const id = normalizeGovernorId(raw);
+    if (entry || !isGovernorId(id) || looked?.id === id) return;
+    startLookup(async () => {
+      const result = await lookupMinistryEntryGovernor(id);
+      setLooked({ id, result });
+      if (result.status !== "found") return;
+      if (nameInput.current) nameInput.current.value = result.name ?? "";
+      if (allianceInput.current) allianceInput.current.value = result.allianceTag && alliances.some((a) => a.tag === result.allianceTag) ? result.allianceTag : NO_ALLIANCE;
+    });
+  };
+  /** Another ID than the one the name came from: the name and alliance go, so they never stay with the wrong ID. */
+  const idChanged = (raw: string) => {
+    if (!looked || normalizeGovernorId(raw) === looked.id) return;
+    if (looked.result.status === "found") {
+      if (nameInput.current) nameInput.current.value = "";
+      if (allianceInput.current) allianceInput.current.value = "";
+    }
+    setLooked(null);
+  };
+  const lookupNote = looking
+    ? "Asking MightPulse…"
+    : looked?.result.status === "found"
+      ? `MightPulse: ${looked.result.allianceTag ? `[${looked.result.allianceTag}] ` : ""}${looked.result.name}. Name and alliance are filled in.`
+      : looked?.result.status === "unknown"
+        ? "MightPulse doesn't know this ID. Fine for a test entry; for a real player, check the number."
+        : looked?.result.status === "elsewhere"
+          ? "MightPulse has this ID in another kingdom. Check the number."
+          : null;
   const errors = state.errors ?? {};
   const key = entry?.id ?? "new";
   const show = (n: number | undefined) => (n && n > 0 ? String(n) : "");
@@ -632,14 +694,14 @@ export function EntryForm({ roundKey, sections, alliances, locale, entry }: { ro
       <input type="hidden" name={FIELD.round} value={roundKey} />
       {entry && <input type="hidden" name="id" value={entry.id} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label="Governor ID" htmlFor={`m-gov-${key}`} error={errors[FIELD.governorId]} hint={entry ? "Fixed: remove the entry to sign up another ID." : "Digits only. Any number works for a test entry."} tour={entry ? undefined : "ministry-admin-governor"}>
-          <input id={`m-gov-${key}`} name={FIELD.governorId} className={clsx("input", entry && "text-ink-muted")} inputMode="numeric" dir="ltr" autoComplete="off" defaultValue={entry?.governorId} readOnly={Boolean(entry)} required />
+        <Field label="Governor ID" htmlFor={`m-gov-${key}`} error={errors[FIELD.governorId]} hint={entry ? "Fixed: remove the entry to sign up another ID." : (lookupNote ?? "Digits only. A player's real ID fills in the name and alliance; any number works for a test entry.")} tour={entry ? undefined : "ministry-admin-governor"}>
+          <input id={`m-gov-${key}`} name={FIELD.governorId} className={clsx("input", entry && "text-ink-muted")} inputMode="numeric" dir="ltr" autoComplete="off" defaultValue={entry?.governorId} readOnly={Boolean(entry)} required onBlur={(event) => lookUp(event.currentTarget.value)} onChange={(event) => idChanged(event.currentTarget.value)} />
         </Field>
         <Field label="In-game name" htmlFor={`m-name-${key}`} error={errors[FIELD.gameName]}>
-          <input id={`m-name-${key}`} name={FIELD.gameName} className="input" dir="auto" autoComplete="off" maxLength={40} defaultValue={entry?.gameName} required />
+          <input ref={nameInput} id={`m-name-${key}`} name={FIELD.gameName} className="input" dir="auto" autoComplete="off" maxLength={40} defaultValue={entry?.gameName} required />
         </Field>
         <Field label="Alliance" htmlFor={`m-alliance-${key}`} error={errors[FIELD.alliance]}>
-          <select id={`m-alliance-${key}`} name={FIELD.alliance} className="input select-chevron" defaultValue={entry ? (knownTag ?? NO_ALLIANCE) : ""} required>
+          <select ref={allianceInput} id={`m-alliance-${key}`} name={FIELD.alliance} className="input select-chevron" defaultValue={entry ? (knownTag ?? NO_ALLIANCE) : ""} required>
             <option value="" disabled>
               Choose…
             </option>

@@ -125,6 +125,13 @@ export function memoryMinistryStore(): MinistryStore {
       state.appointments = state.appointments.filter((held) => held.signupId !== id);
       return state.signups.delete(id);
     },
+    async removeRound(round) {
+      const gone = inRound(round);
+      for (const signup of gone) state.signups.delete(signup.id);
+      state.appointments = state.appointments.filter((held) => held.round !== round);
+      for (const key of [...state.assigned.keys()]) if (key.startsWith(`${round}:`)) state.assigned.delete(key);
+      return gone.length;
+    },
     async roster(round) {
       const assignedAt: RoundRoster["assignedAt"] = {};
       for (const [key, at] of state.assigned) {

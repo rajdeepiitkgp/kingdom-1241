@@ -88,6 +88,25 @@ describe("the memory store", () => {
     expect(cleared.assignedAt[2]).toBeUndefined();
   });
 
+  it("empties a round: its sign-ups, appointments and marks go, another round stays", async () => {
+    const store = memoryMinistryStore();
+    const other = "2099-01-04";
+    const kept = await store.insert({ ...entry, round: other, governorId: "70000009" });
+    if (kept === "duplicate") throw new Error("unexpected duplicate");
+    const before = await store.count(round);
+    expect(before).toBeGreaterThan(0);
+    const first = (await store.list(round))[0];
+    await store.assign(round, 2, [{ signupId: first.id, slot: 3 }], false);
+    expect(await store.removeRound(round)).toBe(before);
+    expect(await store.count(round)).toBe(0);
+    const roster = await store.roster(round);
+    expect(roster.appointments).toEqual([]);
+    expect(roster.assignedAt).toEqual({});
+    expect(await store.get(kept.id)).not.toBeNull();
+    expect(await store.removeRound(round)).toBe(0);
+    await store.remove(kept.id);
+  });
+
   it("keeps one entry per Governor ID and finds a browser's own", async () => {
     const store = memoryMinistryStore();
     const saved = await store.insert(entry);

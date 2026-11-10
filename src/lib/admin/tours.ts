@@ -266,7 +266,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "A deadline per buff day",
         "Until its deadline players sign up for a day and change their entry on the device they used. Left alone, it is a day before the day starts, which leaves the council a day to make the appointments in the game. It can't be later than 00:00 UTC of the day.",
       ),
-      step("ministry-admin-days", "One list per buff day", "Pick the round and the buff day. Each list shows only the players who take part on that day."),
+      step("ministry-admin-days", "One list per buff day", "Pick the round, then the buff day's tab. Everything below belongs to that day: each list shows only the players who take part on that day."),
       step(
         "ministry-admin-cover",
         "Where the day is thin",
@@ -302,7 +302,8 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Edit, set aside, remove",
         "Edit corrects a player's numbers or times, also after the deadline. Set aside keeps the entry but leaves it out of the lists, for one you want to check first. Remove deletes it; the player can sign up again. A player who lost their device asks you for the change.",
       ),
-      step("ministry-admin-add", "Add a sign-up by hand", "For a player who can't use the site, or a test entry to try the page: any Governor ID works here. Remove test entries before the deadline."),
+      step("ministry-admin-add", "Add a sign-up by hand", "For a player who can't use the site, or a test entry to try the page. A real Governor ID fills in the name and alliance from MightPulse and the entry gets the verified tick; any other number works too. Remove test entries before the deadline."),
+      step("ministry-admin-clean", "Start clean", "For administrators: removes every sign-up of the round picked above, with their appointments, after a test. Two taps, and it can't be undone, so check which round is picked."),
       step(null, "Good practice", "Set the buff days under Prep days, open the round a week before, and remind players a day before each deadline. To give the appointments out earlier, set the day's deadline to now. Every change you make here is listed under Recent changes on the Overview."),
     ],
   },

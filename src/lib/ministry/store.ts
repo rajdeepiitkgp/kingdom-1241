@@ -148,6 +148,14 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       if (error) throw error;
       return (data?.length ?? 0) > 0;
     },
+    async removeRound(round) {
+      // The appointments go with their sign-ups (foreign key); the marks have no sign-up to follow.
+      const { data, error } = await supabase.from(TABLE).delete().eq("round", round).select("id");
+      if (error) throw error;
+      const marks = await supabase.from(ROSTERS).delete().eq("round", round);
+      if (marks.error && !notMigrated(marks.error)) throw marks.error;
+      return data?.length ?? 0;
+    },
     async roster(round): Promise<RoundRoster> {
       const [held, marks] = await Promise.all([
         supabase.from(APPOINTMENTS).select("signup_id, day, slot, source").eq("round", round).order("day").order("slot").limit(500),

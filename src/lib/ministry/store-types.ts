@@ -52,6 +52,8 @@ export interface MinistryStore {
   /** The row after the change, or null when it is gone. */
   update(id: string, patch: SignupPatch): Promise<StoredSignup | null>;
   remove(id: string): Promise<boolean>;
+  /** Deletes every sign-up of a round with its appointments and the days' "assigned" marks (a clean start after a test); how many sign-ups went. */
+  removeRound(round: string): Promise<number>;
   roster(round: string): Promise<RoundRoster>;
   /** Replaces the day's `auto` appointments with `rows` and marks the day assigned, all or nothing. */
   assign(round: string, day: ScoringDay, rows: ReadonlyArray<{ signupId: string; slot: number }>, first: boolean): Promise<AssignOutcome>;

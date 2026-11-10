@@ -6,13 +6,14 @@ import { locale as rootLocale } from "next/root-params";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
-import { type AdminSection as SectionData, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
+import { type AdminSection as SectionData, ClearRound, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
 import { AdminSection } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { getMinistryAdmin } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, RESOURCE_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import { adminPath } from "@/lib/auth/paths";
+import { hasRole } from "@/lib/auth/roles";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
 import { dayStart, type PrepRound } from "@/lib/kvk/prep";
@@ -138,10 +139,23 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
             </Link>
           ))}
         </nav>
-        <nav className="mb-4 flex flex-wrap gap-x-2 gap-y-3" aria-label="Buff day" data-tour="ministry-admin-days">
+        {/* The buff days as tabs: everything below belongs to the day picked. Two lines each, so "Construction + Research" on one day still reads. */}
+        <nav className="mb-4 flex flex-wrap gap-2 rounded-2xl bg-card-soft p-1.5" aria-label="Buff day" data-tour="ministry-admin-days">
           {sections.map((entry) => (
-            <Link key={entry.day} href={href(selected.key, entry.day)} scroll={false} aria-current={entry.day === section.day ? "page" : undefined} className={clsx("btn-ghost btn-sm", entry.day === section.day && "border-primary text-primary-strong")}>
-              {sectionName(entry)} · Day {entry.day}
+            <Link
+              key={entry.day}
+              href={href(selected.key, entry.day)}
+              scroll={false}
+              aria-current={entry.day === section.day ? "page" : undefined}
+              className={clsx(
+                "min-w-0 flex-1 basis-36 rounded-xl px-3 py-2 text-center transition-colors",
+                entry.day === section.day ? "bg-primary text-primary-ink shadow-[0_3px_0_0_var(--primary-strong)]" : "text-ink-muted hover:bg-card hover:text-ink",
+              )}
+            >
+              <span className="block text-sm font-extrabold wrap-break-word">{sectionName(entry)}</span>
+              <span className="block text-xs font-bold opacity-80">
+                Day {entry.day} · {entry.date}
+              </span>
             </Link>
           ))}
         </nav>
@@ -201,6 +215,16 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
       >
         <EntryForm key={`${selected.key}-${signups.length}`} roundKey={selected.key} sections={sections} alliances={allianceList} locale={locale} />
       </AdminSection>
+
+      {hasRole(user.role, "admin") && (
+        <AdminSection
+          title="Start clean"
+          hint={`For administrators, after testing: removes every sign-up of the round ${roundSpan(selected.round)} (the entries set aside too) with their appointments, on all its buff days. The round's switch and deadlines stay. It can't be undone.`}
+          tour="ministry-admin-clean"
+        >
+          <ClearRound key={`${selected.key}-${signups.length}`} roundKey={selected.key} count={signups.length} locale={locale} />
+        </AdminSection>
+      )}
     </div>
   );
 }
