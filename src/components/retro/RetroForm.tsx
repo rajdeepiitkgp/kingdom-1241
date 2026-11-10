@@ -196,6 +196,11 @@ export function RetroForm({
                 onChange={(event) => {
                   if (normalizeGovernorId(event.target.value) !== currentId.current) {
                     currentId.current = "";
+                    // The name and alliance MightPulse gave belong to the ID that was just changed: they leave with it.
+                    if (lookup.status === "found") {
+                      setGameName("");
+                      setAlliance("");
+                    }
                     setLookup({ status: "idle" });
                   }
                 }}

@@ -211,3 +211,4 @@ Run through the ones that apply before each battle day, and after any change in 
 | MAN-09 | Admin: the editor's Preview shows a text as players will see it (formatting, a danger box, an image). | Manual |
 | MAN-10 | Admin: a moderator moves the construction buff to Day 5 under Prep days; the unlocked prep page shows Day 5 ✅ for Truegold on the next visit, and the change is listed under Recent changes. | Manual |
 | MAN-11 | Admin: a moderator opens the next round under Ministry sign-ups and sets a deadline; a player signs up on the Ministry page; the moderator sees the entry ranked on its buff day with its score, edits its numbers, sets it aside and puts it back, removes it, and each step is listed under Recent changes. | Manual |
+| MAN-12 | With MightPulse answering: a Governor ID typed on the Ministry page or the feedback form fills in the name and alliance; changing or emptying the ID empties both again, so a name never stays with another ID. | Manual |
