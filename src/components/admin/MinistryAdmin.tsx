@@ -386,7 +386,7 @@ export function RosterPanel({
     <div className="space-y-3" data-tour="ministry-admin-roster">
       <p className="text-sm font-bold text-ink">
         {mode === "preview" && `Players can sign up until ${deadline} UTC; the appointments are then given out by themselves. If that were now: ${filled} of 48 filled.`}
-        {mode === "assigned" && `${title}: ${filled} of the 48 appointments are filled${free > 0 ? `, ${free} are free (red). Players see the free ones on the Ministry page and can take one.` : "."}`}
+        {mode === "assigned" && `${title}: ${filled} of the 48 appointments are filled${free > 0 ? `, ${free} are free (red). Players see the free ones on the Ministry page and are told to message a moderator in the game.` : "."}`}
         {mode === "waiting" && `The deadline (${deadline} UTC) has passed, but the appointments aren't given out yet: that happens by itself only while the round is open for players. Press the button to do it now.`}
       </p>
       {mode !== "waiting" && (
@@ -417,7 +417,7 @@ export function RosterPanel({
           {unplaced.length > 0 && (
             <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink" dir="auto">
               {mode === "preview" ? "Would get no appointment" : "No appointment"} (every time they picked {mode === "preview" ? "would go" : "went"} to a higher score): {unplaced.join(", ")}.
-              {mode === "assigned" && free > 0 ? " Place them by hand in a free time below, or they take one themselves on the Ministry page." : ""}
+              {mode === "assigned" && free > 0 ? " The Ministry page tells them so and to message a moderator in the game; place them by hand in a free time below." : ""}
             </p>
           )}
         </>

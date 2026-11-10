@@ -122,9 +122,11 @@ test("MIN-06 after a day's deadline its roster shows: every player in a time the
   await expect(roster).toContainText(t("prep.council.training"));
   // Six demo players, 48 half-hours.
   await expect(roster).toContainText(t("ministry.roster.filled").replace("{filled}", "6").replace("{total}", "48"));
+  // One row per player; free neighbours share a row with how many they are.
   const rows = roster.locator("ol > li");
-  await expect(rows).toHaveCount(48);
-  await expect(rows.filter({ hasText: t("ministry.roster.free") })).toHaveCount(42);
+  await expect(rows.filter({ hasNotText: t("ministry.roster.free") })).toHaveCount(6);
+  const freeRows = await rows.filter({ hasText: t("ministry.roster.free") }).allInnerTexts();
+  expect(freeRows.reduce((sum, text) => sum + Number(/× (\d+)/.exec(text)?.[1] ?? 1), 0)).toBe(42);
   await expect(roster.getByText(t("ministry.roster.freeNote"))).toBeVisible();
   // The highest score has the first of her own times (12:00–20:00 UTC).
   await expect(rows.filter({ hasText: "Aurelia" })).toContainText("12:00");

@@ -89,7 +89,15 @@ export function MinistryRoster({
   const filled = shown.cells.filter(Boolean).length;
   const free = shown.cells.length - filled;
   const filtering = byId ? typeof idSlot === "number" : needle !== "";
-  const rows = shown.cells.map((name, slot) => ({ name, slot })).filter(({ name, slot }) => (onlyFree ? name === null : !filtering || matches(name, slot)));
+  // The whole day: free neighbours share one row ("00:30–04:00 · Free × 7"), so a thin day stays short on a phone. "Free times only" lists each.
+  const each = shown.cells.map((name, slot) => ({ name, slot, length: 1 }));
+  const grouped: typeof each = [];
+  for (const row of each) {
+    const last = grouped[grouped.length - 1];
+    if (row.name === null && last && last.name === null && last.slot + last.length === row.slot) last.length += 1;
+    else grouped.push({ ...row });
+  }
+  const rows = onlyFree ? each.filter(({ name }) => name === null) : filtering ? each.filter(({ name, slot }) => matches(name, slot)) : grouped;
   const nothing = (byId && lookup !== null && lookup.status !== "skipped" && typeof idSlot !== "number") || (!byId && needle !== "" && rows.length === 0 && !onlyFree);
 
   return (
@@ -165,7 +173,7 @@ export function MinistryRoster({
       )}
 
       <ol className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map(({ name, slot }) => {
+        {rows.map(({ name, slot, length }) => {
           const local = hydrated ? localStart(shown.start, slot, locale) : null;
           const isMine = mine.has(slot);
           return (
@@ -177,11 +185,19 @@ export function MinistryRoster({
               )}
             >
               <span className="shrink-0 text-start tabular" dir="ltr">
-                <span className="block text-sm font-black text-ink">{slotClock(slot)}</span>
+                <span className="block text-sm font-black text-ink">{length > 1 ? `${slotClock(slot)}–${slotClock(slot + length)}` : slotClock(slot)}</span>
                 {local && <span className="block text-xs font-semibold text-ink-faint">{local}</span>}
               </span>
               {name === null ? (
-                <span className="text-sm font-extrabold text-danger">{dict["ministry.roster.free"]}</span>
+                <span className="text-sm font-extrabold text-danger">
+                  {dict["ministry.roster.free"]}
+                  {length > 1 && (
+                    <span className="tabular" dir="ltr">
+                      {" "}
+                      × {length}
+                    </span>
+                  )}
+                </span>
               ) : (
                 <span className="min-w-0 text-sm font-bold wrap-break-word text-ink" dir="auto">
                   {name}
