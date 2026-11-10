@@ -15,8 +15,9 @@ import { lookupGovernor as fetchGovernor, mightPulseConfigured } from "@/lib/ret
 import { HOUR } from "@/lib/time";
 import { FIELD, isDeviceKey, parseSignupForm, type SignupErrors } from "./form";
 import { type Amounts, MAX_SIGNUPS_PER_ROUND, type SlotChoice } from "./ministry";
+import { rosterDays, rosterFor } from "./roster";
 import { type MinistryRound, ministryUnlocked, openDays, openMinistryRound } from "./state";
-import { ministryStore, type StoredSignup } from "./store";
+import { type MinistryStore, ministryStore, type StoredSignup } from "./store";
 
 /**
  * Server Actions of the ministry sign-up page. All are reachable by a direct
@@ -45,6 +46,15 @@ export interface MySignup {
   amounts: Amounts;
   slots: SlotChoice;
   disabled: boolean;
+  /** Per buff day whose appointments are given out: the player's half-hour slot, or null when they got none. A day not listed isn't assigned yet. */
+  appointments: Partial<Record<ScoringDay, number | null>>;
+}
+
+/** What "find me" on the roster answers: the appointments of one Governor ID, per assigned day. */
+export interface FindState {
+  status: "found" | "none" | "skipped";
+  name?: string;
+  appointments?: Partial<Record<ScoringDay, number | null>>;
 }
 
 export interface SubmitState {
@@ -73,7 +83,22 @@ const baseLog = createLogger("ministry");
 const deviceHash = (key: string): string => createHash("sha256").update(key).digest("hex");
 const tokenScope = (round: MinistryRound): string => `ministry:${round.key}`;
 
-function mine(rows: readonly StoredSignup[]): MySignup[] {
+/** Each entry's appointment on the days that are given out (none on a day the player sits out). */
+function appointmentsOf(row: StoredSignup, held: ReadonlyArray<{ signupId: string; day: ScoringDay; slot: number }>, days: readonly ScoringDay[]): MySignup["appointments"] {
+  const appointments: MySignup["appointments"] = {};
+  for (const day of days) {
+    if ((row.slots[day]?.length ?? 0) === 0 && !held.some((entry) => entry.signupId === row.id && entry.day === day)) continue;
+    appointments[day] = held.find((entry) => entry.signupId === row.id && entry.day === day)?.slot ?? null;
+  }
+  return appointments;
+}
+
+/** This browser's entries in the round, each with its appointments (reading the roster runs a due assignment). */
+async function mine(store: MinistryStore, round: MinistryRound, device: string, now: Date): Promise<MySignup[]> {
+  const rows = await store.byDevice(round.key, device);
+  if (rows.length === 0) return [];
+  const roster = await rosterFor(store, round, now);
+  const days = rosterDays(round, roster, now);
   return rows.map((row) => ({
     governorId: row.governorId,
     gameName: row.gameName,
@@ -82,6 +107,7 @@ function mine(rows: readonly StoredSignup[]): MySignup[] {
     amounts: row.amounts,
     slots: row.slots,
     disabled: row.disabled,
+    appointments: row.disabled ? {} : appointmentsOf(row, roster.appointments, days),
   }));
 }
 
@@ -127,11 +153,12 @@ export async function lookupMinistryGovernor(rawId: string): Promise<LookupState
 /** The sign-ups this browser made in the open round (its key never leaves it except to ask this). */
 export async function myMinistrySignups(deviceKey: string): Promise<MySignup[]> {
   if (!isDeviceKey(deviceKey)) return [];
-  const round = await roundForVisitor(new Date());
+  const now = new Date();
+  const round = await roundForVisitor(now);
   const store = ministryStore();
   if (!round || !store) return [];
   try {
-    return mine(await store.byDevice(round.key, deviceHash(deviceKey)));
+    return await mine(store, round, deviceHash(deviceKey), now);
   } catch (error) {
     baseLog.warn("Could not read a browser's sign-ups", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });
     return [];
@@ -232,7 +259,7 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
       log.info("Ministry sign-up recorded", { round: round.key, verified: verified !== null, days: Object.keys(entry.slots).length, locale: entry.locale });
     }
     await clearThrottle(submitScope);
-    return { status: "ok", saved: entry.governorId, mine: mine(await store.byDevice(round.key, device)) };
+    return { status: "ok", saved: entry.governorId, mine: await mine(store, round, device, new Date(now)) };
   } catch (error) {
     log.error("Saving a ministry sign-up failed", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });
     return { status: "unavailable" };
@@ -251,15 +278,37 @@ export async function withdrawMinistrySignup(deviceKey: string, rawGovernorId: s
   const device = deviceHash(deviceKey);
   try {
     const existing = await store.byGovernor(round.key, governorId);
-    if (!existing || existing.deviceHash !== device) return { status: "gone", mine: mine(await store.byDevice(round.key, device)) };
+    if (!existing || existing.deviceHash !== device) return { status: "gone", mine: await mine(store, round, device, now) };
     const open = openDays(round, now);
     const frozen = round.sections.some(({ day }) => (existing.slots[day]?.length ?? 0) > 0 && !open.includes(day));
     if (frozen) return { status: "locked" };
     await store.remove(existing.id);
     log.info("Ministry sign-up withdrawn by its browser", { round: round.key });
-    return { status: "ok", mine: mine(await store.byDevice(round.key, device)) };
+    return { status: "ok", mine: await mine(store, round, device, now) };
   } catch (error) {
     log.error("Withdrawing a ministry sign-up failed", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });
     return { status: "unavailable" };
+  }
+}
+
+/** "Find me" on the roster: the appointments of a Governor ID on the days that are given out. The roster never carries the IDs itself. */
+export async function findMinistryAppointments(rawId: string): Promise<FindState> {
+  const governorId = normalizeGovernorId(String(rawId ?? ""));
+  if (!isGovernorId(governorId)) return { status: "none" };
+  const requestHeaders = await headers();
+  const now = new Date();
+  const round = await roundForVisitor(now);
+  const store = ministryStore();
+  if (!round || !store) return { status: "skipped" };
+  const budget = await takeTry(`mp:ministry:find:${round.key}:${addressHash(requestHeaders)}`, now.getTime(), LOOKUP_POLICY);
+  if (!budget.allowed) return { status: "skipped" };
+  try {
+    const row = await store.byGovernor(round.key, governorId);
+    if (!row || row.disabled) return { status: "none" };
+    const roster = await rosterFor(store, round, now);
+    return { status: "found", name: `${row.allianceTag ? `[${row.allianceTag}] ` : ""}${row.gameName}`, appointments: appointmentsOf(row, roster.appointments, rosterDays(round, roster, now)) };
+  } catch (error) {
+    baseLog.warn("Could not look a Governor ID up on the roster", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });
+    return { status: "skipped" };
   }
 }

@@ -1,24 +1,30 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { randomUUID } from "node:crypto";
-import { nextRound, roundFor, SCORING_DAYS } from "@/lib/kvk/prep";
+import { nextRound, roundFor, SCORING_DAYS, type ScoringDay } from "@/lib/kvk/prep";
 import { roundKey } from "@/lib/kvk/prep-schedule";
-import { type Amounts, type MinistrySettings, NO_AMOUNTS, pickBlocks, type SlotChoice } from "./ministry";
-import type { MinistryStore, StoredSignup } from "./store-types";
+import type { Appointment } from "./assign";
+import { type Amounts, isScoringDay, type MinistrySettings, NO_AMOUNTS, pickBlocks, type SlotChoice } from "./ministry";
+import type { MinistryStore, RoundRoster, StoredSignup } from "./store-types";
 
 /**
  * The ministry sign-ups without a database, for reviewing the pages locally
  * and for the browser tests (MINISTRY_STORE=memory; ignored on Vercel).
  * Everything lives in this server process and vanishes on restart.
  *
- * The round after the current one is open from the start, with the default
- * deadlines (always weeks ahead, so the tests see the same page on any date),
- * and holds a handful of demo players so the moderators' list has something
- * to show.
+ * The round after the current one is open from the start and holds a handful
+ * of demo players, so the moderators' list has something to show.
+ * Construction and research keep the default deadlines (always weeks ahead, so
+ * the tests see the same page on any date); the training day's deadline has
+ * passed, so its appointments are given out on the first visit and the roster
+ * shows.
  */
 
 interface Memory {
   settings: MinistrySettings;
   signups: Map<string, StoredSignup>;
+  appointments: Array<Appointment & { round: string }>;
+  /** `<round>:<day>` → when the day's assignment ran. */
+  assigned: Map<string, string>;
 }
 
 // Server Actions and pages are separate bundles: one copy on globalThis.
@@ -62,8 +68,11 @@ function memory(): Memory {
   if (!holder.__ministryMemory) {
     const round = roundKey(nextRound(roundFor(new Date())));
     holder.__ministryMemory = {
-      settings: { [round]: { open: true, deadlines: {} } },
+      // The training day's deadline lies behind us, so its roster shows; the other days keep the default (weeks ahead).
+      settings: { [round]: { open: true, deadlines: { 4: "2026-11-01T00:00:00.000Z" } } },
       signups: new Map(demoSignups(round).map((signup) => [signup.id, signup])),
+      appointments: [],
+      assigned: new Map(),
     };
   }
   return holder.__ministryMemory;
@@ -113,7 +122,39 @@ export function memoryMinistryStore(): MinistryStore {
       return structuredClone(next);
     },
     async remove(id) {
+      state.appointments = state.appointments.filter((held) => held.signupId !== id);
       return state.signups.delete(id);
+    },
+    async roster(round) {
+      const assignedAt: RoundRoster["assignedAt"] = {};
+      for (const [key, at] of state.assigned) {
+        const [of, day] = key.split(":");
+        if (of === round && isScoringDay(Number(day))) assignedAt[Number(day) as ScoringDay] = at;
+      }
+      const appointments = state.appointments.filter((held) => held.round === round).map(({ signupId, day, slot, source }) => ({ signupId, day, slot, source }));
+      return { appointments: appointments.sort((a, b) => a.day - b.day || a.slot - b.slot), assignedAt, available: true };
+    },
+    async assign(round, day, rows, first) {
+      const key = `${round}:${day}`;
+      if (first && state.assigned.has(key)) return "skipped";
+      const kept = state.appointments.filter((held) => !(held.round === round && held.day === day && held.source === "auto"));
+      const fixed = kept.filter((held) => held.round === round && held.day === day);
+      if (rows.some((row) => fixed.some((held) => held.slot === row.slot || held.signupId === row.signupId))) return "clash";
+      state.appointments = [...kept, ...rows.map((row) => ({ round, day, slot: row.slot, signupId: row.signupId, source: "auto" as const }))];
+      state.assigned.set(key, new Date().toISOString());
+      return "done";
+    },
+    async place(round, day, signupId, slot, source) {
+      if (state.appointments.some((held) => held.round === round && held.day === day && held.slot === slot && held.signupId !== signupId)) return "slotTaken";
+      state.appointments = [...state.appointments.filter((held) => !(held.round === round && held.day === day && held.signupId === signupId)), { round, day, slot, signupId, source }];
+      return "ok";
+    },
+    async unplace(signupId, days) {
+      state.appointments = state.appointments.filter((held) => held.signupId !== signupId || (days !== undefined && !days.includes(held.day)));
+    },
+    async clearRoster(round, day) {
+      state.appointments = state.appointments.filter((held) => !(held.round === round && held.day === day));
+      state.assigned.delete(`${round}:${day}`);
     },
   };
 }

@@ -6,7 +6,7 @@ import { locale as rootLocale } from "next/root-params";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
-import { type AdminSection as SectionData, DisabledList, EntryForm, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
+import { type AdminSection as SectionData, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
 import { AdminSection } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { toUtcInputValue } from "@/lib/admin/forms";
@@ -16,6 +16,7 @@ import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
 import { dayStart, type PrepRound } from "@/lib/kvk/prep";
+import { assignDay, rosterChat, rosterOf } from "@/lib/ministry/assign";
 import { defaultDeadline, MAX_SIGNUPS_PER_ROUND, rankSection, sectionOn, slotDemand, slotLabel, SLOTS_PER_DAY } from "@/lib/ministry/ministry";
 import type { MinistryRound } from "@/lib/ministry/state";
 
@@ -57,7 +58,8 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
   const user = await requireEditor(locale);
   if (!user) return null;
   await connection();
-  const [data, alliances] = await Promise.all([getMinistryAdmin(first(query.round), new Date()), getAlliances()]);
+  const now = new Date();
+  const [data, alliances] = await Promise.all([getMinistryAdmin(first(query.round), now), getAlliances()]);
   if (!data) return null;
   const { rounds, selected, signups } = data;
   const titles = ["This round", "Next round"];
@@ -67,6 +69,28 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
   const demand = slotDemand(ranked, section.day);
   const uncovered = demand.filter((count) => count === 0).length;
   const disabled = signups.filter((signup) => signup.disabled);
+
+  // The day's roster: stored once its assignment has run, else (sign-ups still open) how it would come out right now.
+  const fullName = (signup: { allianceTag: string | null; gameName: string }) => `${signup.allianceTag ? `[${signup.allianceTag}] ` : ""}${signup.gameName}`;
+  const names = new Map(signups.map((signup) => [signup.id, fullName(signup)]));
+  const deadline = selected.deadlines[section.day] as Date;
+  const dayClosed = now.getTime() >= deadline.getTime();
+  const assigned = Boolean(data.roster.assignedAt[section.day]);
+  const mode = !dayClosed ? "preview" : assigned ? "assigned" : "waiting";
+  const stored = data.roster.appointments.filter((held) => held.day === section.day && names.has(held.signupId));
+  const plan = mode === "preview" ? assignDay(section.day, ranked).appointments : stored;
+  const cells: Array<RosterCell | null> = rosterOf(plan, section.day).map((held) => (held ? { name: names.get(held.signupId) ?? "", source: held.source } : null));
+  const placedIds = new Set(plan.map((held) => held.signupId));
+  const unplaced = mode === "waiting" ? [] : ranked.filter(({ signup }) => !placedIds.has(signup.id)).map(({ signup }) => fullName(signup));
+  const placement: Placement | undefined =
+    mode === "assigned"
+      ? {
+          day: section.day,
+          held: Object.fromEntries(stored.map((held) => [held.signupId, { slot: held.slot, source: held.source }])),
+          takenBy: Object.fromEntries(stored.map((held) => [held.slot, names.get(held.signupId) ?? ""])),
+        }
+      : undefined;
+  const chat = rosterChat(cells, `${sectionName(section)} · ${section.date} (UTC)`);
   const allianceList = alliances.filter((a) => a.published).map((a) => ({ tag: a.tag, name: a.name }));
   const href = (round: string, day?: number) => `${adminPath(locale, "/ministry")}?round=${round}${day ? `&day=${day}` : ""}`;
 
@@ -126,7 +150,26 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
           <p className="text-xs text-ink-faint">Green: two or more players can take the appointment. Gold: one. Red: none. Hover a cell for its time.</p>
         </div>
 
-        <SignupList rows={ranked} section={section} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} />
+        {data.roster.available ? (
+          <div className="mb-4 border-t border-line pt-4">
+            <h3 className="mb-2 text-base font-extrabold text-ink">Appointments</h3>
+            <RosterPanel
+              roundKey={selected.key}
+              day={section.day}
+              title={`${sectionName(section)} · ${section.date}`}
+              mode={mode}
+              deadline={DATE_TIME.format(deadline)}
+              cells={cells}
+              unplaced={unplaced}
+              chat={chat}
+              locale={locale}
+            />
+          </div>
+        ) : (
+          data.available && <p className="mb-4 rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink">The appointments need migration 0027, which isn&apos;t applied yet. The sign-ups work as before.</p>
+        )}
+
+        <SignupList rows={ranked} section={section} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} placement={placement} />
       </AdminSection>
 
       {disabled.length > 0 && (

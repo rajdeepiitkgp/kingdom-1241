@@ -3,9 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readConfig, writeConfig } from "@/lib/config/app-config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
+import { type Appointment, APPOINTMENT_SOURCES, type AppointmentSource } from "./assign";
+import { isScoringDay } from "./ministry";
 import { memoryMinistryStore } from "./memory-store";
 import { MAX_SIGNUPS_PER_ROUND, parseAmounts, parseMinistrySettings, parseSlotChoice } from "./ministry";
-import type { MinistryStore, NewSignup, SignupPatch, StoredSignup } from "./store-types";
+import { type MinistryStore, type NewSignup, NO_ROSTER, type RoundRoster, type SignupPatch, type StoredSignup } from "./store-types";
 
 export * from "./store-types";
 
@@ -48,6 +50,20 @@ export function mapSignupRow(row: Row): StoredSignup {
     createdAt: text(row.created_at),
     updatedAt: text(row.updated_at),
   };
+}
+
+const APPOINTMENTS = "ministry_appointments";
+const ROSTERS = "ministry_rosters";
+
+/** The table or the function isn't there yet (migration 0027 not applied). */
+const notMigrated = (error: { code?: string } | null): boolean => error?.code === "42P01" || error?.code === "PGRST205" || error?.code === "PGRST202" || error?.code === "42883";
+
+export function mapAppointmentRow(row: Row): Appointment | null {
+  const day = Number(row.day);
+  const slot = Number(row.slot);
+  const source = APPOINTMENT_SOURCES.includes(row.source as AppointmentSource) ? (row.source as AppointmentSource) : null;
+  if (!isScoringDay(day) || !Number.isInteger(slot) || slot < 0 || slot > 47 || !source || typeof row.signup_id !== "string") return null;
+  return { signupId: row.signup_id, day, slot, source };
 }
 
 function patchColumns(patch: SignupPatch): Row {
@@ -131,6 +147,60 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       const { data, error } = await supabase.from(TABLE).delete().eq("id", id).select("id");
       if (error) throw error;
       return (data?.length ?? 0) > 0;
+    },
+    async roster(round): Promise<RoundRoster> {
+      const [held, marks] = await Promise.all([
+        supabase.from(APPOINTMENTS).select("signup_id, day, slot, source").eq("round", round).order("day").order("slot").limit(500),
+        supabase.from(ROSTERS).select("day, assigned_at").eq("round", round),
+      ]);
+      if (notMigrated(held.error) || notMigrated(marks.error)) return NO_ROSTER;
+      if (held.error) throw held.error;
+      if (marks.error) throw marks.error;
+      const assignedAt: RoundRoster["assignedAt"] = {};
+      for (const row of marks.data ?? []) {
+        const day = Number((row as Row).day);
+        if (isScoringDay(day) && typeof (row as Row).assigned_at === "string") assignedAt[day] = (row as Row).assigned_at as string;
+      }
+      return { appointments: (held.data ?? []).flatMap((row) => mapAppointmentRow(row as Row) ?? []), assignedAt, available: true };
+    },
+    async assign(round, day, rows, first) {
+      const { data, error } = await supabase.rpc("ministry_assign", { p_round: round, p_day: day, p_rows: rows.map((row) => ({ signup_id: row.signupId, slot: row.slot })), p_first: first });
+      if (notMigrated(error)) return "unavailable";
+      if (error) {
+        // A free appointment taken in the same moment, or a sign-up removed: nothing was written.
+        if (error.code === "23505" || error.code === "23503") return "clash";
+        throw error;
+      }
+      return data === false ? "skipped" : "done";
+    },
+    async place(round, day, signupId, slot, source) {
+      const moved = await supabase.from(APPOINTMENTS).update({ slot, source }).eq("round", round).eq("day", day).eq("signup_id", signupId).select("id");
+      if (moved.error) {
+        if (moved.error.code === "23505") return "slotTaken";
+        throw moved.error;
+      }
+      if ((moved.data?.length ?? 0) > 0) return "ok";
+      const { error } = await supabase.from(APPOINTMENTS).insert({ round, day, slot, signup_id: signupId, source });
+      if (error) {
+        if (error.code === "23505") return "slotTaken";
+        throw error;
+      }
+      return "ok";
+    },
+    async unplace(signupId, days) {
+      let query = supabase.from(APPOINTMENTS).delete().eq("signup_id", signupId);
+      if (days) {
+        if (days.length === 0) return;
+        query = query.in("day", [...days]);
+      }
+      const { error } = await query;
+      if (error && !notMigrated(error)) throw error;
+    },
+    async clearRoster(round, day) {
+      const held = await supabase.from(APPOINTMENTS).delete().eq("round", round).eq("day", day);
+      if (held.error && !notMigrated(held.error)) throw held.error;
+      const mark = await supabase.from(ROSTERS).delete().eq("round", round).eq("day", day);
+      if (mark.error && !notMigrated(mark.error)) throw mark.error;
     },
   };
 }
