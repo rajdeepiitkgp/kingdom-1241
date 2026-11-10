@@ -260,7 +260,7 @@ export function parseMinistrySettings(value: unknown): MinistrySettings {
     }
     rounds[key] = { open: raw.open === true, deadlines };
   }
-  return rounds;
+  return onlyOneOpen(rounds);
 }
 
 export const CLOSED_ROUND: RoundSettings = { open: false, deadlines: {} };
@@ -278,10 +278,31 @@ export function deadlineFor(settings: RoundSettings, round: PrepRound, day: Scor
 /** The latest a deadline may be: when the day starts (the first appointment). */
 export const latestDeadline = (round: PrepRound, day: ScoringDay): Date => dayStart(round, day);
 
-/** The value to store after a save: the new entry, every round from the current one on, nothing older. */
+/**
+ * The value to store after a save: the new entry, every round from the
+ * current one on, nothing older. **One round is open at a time** (the owner's
+ * rule: two open rounds confuse): opening a round closes every other one,
+ * which keeps its deadlines and its entries.
+ */
 export function withRoundSettings(rounds: MinistrySettings, key: string, settings: RoundSettings, currentKey: string): { rounds: MinistrySettings } {
-  const kept = Object.fromEntries(Object.entries(rounds).filter(([k]) => k >= currentKey));
+  const kept = Object.fromEntries(
+    Object.entries(rounds)
+      .filter(([k]) => k >= currentKey && k !== key)
+      .map(([k, other]) => [k, settings.open && other.open ? { ...other, open: false } : other]),
+  );
   return { rounds: { ...kept, [key]: settings } };
+}
+
+/** The rounds other than `key` that a save opening it would close. */
+export function roundsClosedBy(rounds: MinistrySettings, key: string, settings: RoundSettings, currentKey: string): string[] {
+  if (!settings.open) return [];
+  return Object.keys(rounds).filter((k) => k >= currentKey && k !== key && rounds[k].open);
+}
+
+/** At most one round counts as open: of several stored as open (saved before the rule), the earliest. */
+export function onlyOneOpen(rounds: MinistrySettings): MinistrySettings {
+  const first = Object.keys(rounds).sort().find((k) => rounds[k].open);
+  return Object.fromEntries(Object.entries(rounds).map(([k, round]) => [k, round.open && k !== first ? { ...round, open: false } : round]));
 }
 
 export type SectionState = "open" | "closed";

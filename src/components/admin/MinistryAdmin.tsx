@@ -66,6 +66,7 @@ export function RoundForm({ roundKey, title, open, sections, locale }: { roundKe
         <input type="checkbox" name="open" defaultChecked={open} className="size-5 accent-(--primary)" />
         Players can sign up for this round
       </label>
+      <p className="text-xs text-ink-faint">Only one round is open at a time: opening this one closes the other, which keeps its entries and deadlines.</p>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" data-tour="ministry-admin-deadlines">
         {sections.map((section) => (
           <DateTimeField

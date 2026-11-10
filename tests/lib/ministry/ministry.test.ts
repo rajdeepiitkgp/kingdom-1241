@@ -7,6 +7,7 @@ import {
   cleanSlots,
   deadlineFor,
   latestDueRound,
+  onlyOneOpen,
   defaultDeadline,
   NO_AMOUNTS,
   parseAmounts,
@@ -18,6 +19,7 @@ import {
   rankSection,
   roundDue,
   roundOver,
+  roundsClosedBy,
   sectionScore,
   sectionsFor,
   sectionState,
@@ -183,6 +185,26 @@ describe("round settings", () => {
   it("a save keeps the rounds from the current one on", () => {
     const stored = { "2026-11-01": { open: true, deadlines: {} }, "2026-11-29": { open: false, deadlines: {} } };
     expect(Object.keys(withRoundSettings(stored, "2026-12-27", { open: true, deadlines: {} }, "2026-11-29").rounds)).toEqual(["2026-11-29", "2026-12-27"]);
+  });
+
+  it("only one round is open at a time: opening one closes the other, which keeps its deadlines", () => {
+    const stored = { "2026-11-29": { open: true, deadlines: { 1: "2026-11-28T12:00:00.000Z" } }, "2026-12-27": { open: false, deadlines: {} } };
+    const opening = { open: true, deadlines: {} };
+    expect(roundsClosedBy(stored, "2026-12-27", opening, "2026-11-29")).toEqual(["2026-11-29"]);
+    expect(withRoundSettings(stored, "2026-12-27", opening, "2026-11-29").rounds).toEqual({
+      "2026-11-29": { open: false, deadlines: { 1: "2026-11-28T12:00:00.000Z" } },
+      "2026-12-27": { open: true, deadlines: {} },
+    });
+    // Closing a round, or saving the open one again, touches nothing else.
+    expect(roundsClosedBy(stored, "2026-12-27", { open: false, deadlines: {} }, "2026-11-29")).toEqual([]);
+    expect(withRoundSettings(stored, "2026-11-29", { open: true, deadlines: {} }, "2026-11-29").rounds["2026-12-27"].open).toBe(false);
+    expect(withRoundSettings(stored, "2026-12-27", { open: false, deadlines: {} }, "2026-11-29").rounds["2026-11-29"].open).toBe(true);
+  });
+
+  it("two rounds stored as open (saved before the rule) read as the earlier one open", () => {
+    const both = { "2026-12-27": { open: true, deadlines: {} }, "2026-11-29": { open: true, deadlines: {} } };
+    expect(onlyOneOpen(both)).toEqual({ "2026-11-29": { open: true, deadlines: {} }, "2026-12-27": { open: false, deadlines: {} } });
+    expect(parseMinistrySettings({ rounds: both })["2026-12-27"].open).toBe(false);
   });
 
   it("a round's sign-ups are kept two weeks after its week", () => {
