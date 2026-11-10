@@ -3,7 +3,7 @@
 
 import clsx from "clsx";
 import { BadgeCheck } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPicker";
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
@@ -51,11 +51,40 @@ function powerLabel(power: number | null): string | null {
   return power >= 1_000_000 ? `${(power / 1_000_000).toFixed(1)}M` : number(power);
 }
 
-export function RoundForm({ roundKey, title, open, sections, locale }: { roundKey: string; title: string; open: boolean; sections: AdminSection[]; locale: string }) {
+type RoundFormProps = { roundKey: string; title: string; open: boolean; sections: AdminSection[]; locale: string };
+
+/** Everything a form would send, as one string: two of them differ when a field does. */
+function formValues(form: HTMLFormElement): string {
+  return JSON.stringify([...new FormData(form)].map(([name, value]) => [name, typeof value === "string" ? value : ""]));
+}
+
+/**
+ * One round's switch and deadlines. Its fields are drawn again after every save and whenever the stored
+ * values change (saving the other round closes this one), so they always show what is stored and Save
+ * wakes up only once something differs from it.
+ */
+export function RoundForm(props: RoundFormProps) {
   const [state, formAction] = useActionState<ActionState, FormData>(saveMinistryRound, IDLE_STATE);
+  const [seen, setSeen] = useState(state);
+  const [saves, setSaves] = useState(0);
+  if (state !== seen) {
+    setSeen(state);
+    if (state.status === "saved") setSaves(saves + 1);
+  }
+  const stored = `${props.open}|${props.sections.map((section) => section.deadline).join("|")}`;
+  return <RoundFields key={`${saves}|${stored}`} {...props} state={state} formAction={formAction} />;
+}
+
+function RoundFields({ roundKey, title, open, sections, locale, state, formAction }: RoundFormProps & { state: ActionState; formAction: (data: FormData) => void }) {
   const submit = useSubmitInTransition(formAction);
+  const baseline = useRef<string | null>(null);
+  const [changed, setChanged] = useState(false);
+  const remember = (form: HTMLFormElement | null) => {
+    if (form && baseline.current === null) baseline.current = formValues(form);
+  };
+  const compare = (form: HTMLFormElement) => setChanged(formValues(form) !== baseline.current);
   return (
-    <form action={formAction} onSubmit={submit} className="card space-y-4 p-5" data-tour="ministry-admin-round">
+    <form ref={remember} action={formAction} onSubmit={submit} onInput={(event) => compare(event.currentTarget)} onClick={(event) => compare(event.currentTarget)} className="card space-y-4 p-5" data-tour="ministry-admin-round">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="round" value={roundKey} />
       <div className="flex flex-wrap items-center gap-2">
@@ -82,7 +111,8 @@ export function RoundForm({ roundKey, title, open, sections, locale }: { roundKe
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
-        <SubmitButton>Save</SubmitButton>
+        <SubmitButton disabled={!changed}>Save</SubmitButton>
+        {!changed && state.status !== "saved" && <span className="text-xs font-semibold text-ink-faint">Nothing to save yet: change the switch or a deadline first.</span>}
         <Notice state={state} />
       </div>
     </form>
