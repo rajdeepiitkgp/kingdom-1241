@@ -8,7 +8,7 @@ import { createLogger, elapsedMs } from "@/lib/log";
 import { MIGHTPULSE_API, mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/env";
-import { type AllianceBoard, type MightPulseAlliance, parseAllianceInfo, parseBoard } from "./mightpulse-data";
+import { ALLIANCE_WAIT_SECONDS, type AllianceBoard, allianceInfoPath, type MightPulseAlliance, parseAllianceInfo, parseBoard } from "./mightpulse-data";
 import { type AllianceSyncState, battleHold, battleRows, lookupTag, parseAllianceSyncState, planSync, SYNC_COOLDOWN_MS, type StoredAlliance, syncState } from "./sync-plan";
 
 /**
@@ -25,8 +25,8 @@ import { type AllianceSyncState, battleHold, battleRows, lookupTag, parseAllianc
 const log = createLogger("alliances");
 
 const BOARD_TIMEOUT_MS = 30_000;
-/** MightPulse fetches an alliance older than an hour from the game first (up to 90 s on its side). */
-const DETAILS_TIMEOUT_MS = 60_000;
+/** Above the wait, as MightPulse advises (75 s). */
+const DETAILS_TIMEOUT_MS = (ALLIANCE_WAIT_SECONDS + 15) * 1000;
 
 export type AllianceSyncResult =
   | { status: "synced"; synced: number; missing: string[]; renamed: string[]; battleDay: boolean }
@@ -60,7 +60,7 @@ export async function fetchFromMightPulse(kingdom: number, rows: readonly Stored
   const ranking = board?.rows ?? [];
   const details = new Map<string, MightPulseAlliance | null>(
     await Promise.all(
-      rows.map(async (row) => [row.id, parseAllianceInfo(await mightPulse(`/alliances/${kingdom}/${encodeURIComponent(lookupTag(row, ranking))}?include=info`, DETAILS_TIMEOUT_MS))] as const),
+      rows.map(async (row) => [row.id, parseAllianceInfo(await mightPulse(allianceInfoPath(kingdom, lookupTag(row, ranking)), DETAILS_TIMEOUT_MS))] as const),
     ),
   );
   return { board, details };

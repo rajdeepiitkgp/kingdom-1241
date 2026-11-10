@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
-import { parseAllianceInfo, parseBoard, parseStoredBoard } from "@/lib/alliances/mightpulse-data";
+import { parseAllianceInfo, parseBoard, parseStoredBoard, ALLIANCE_WAIT_SECONDS, allianceInfoPath } from "@/lib/alliances/mightpulse-data";
 
 // Shapes as MightPulse answered on 28 Oct 2026 (values made up).
 const BOARD = {
@@ -43,5 +43,18 @@ describe("MightPulse alliance answers", () => {
     const rows = parseBoard(BOARD)!.rows;
     expect(parseStoredBoard(JSON.parse(JSON.stringify(rows)))).toEqual(rows);
     expect(parseStoredBoard("nonsense")).toEqual([]);
+  });
+});
+
+describe("allianceInfoPath", () => {
+  it("asks MightPulse to wait for the update from the game, within the 60 seconds it allows", () => {
+    expect(ALLIANCE_WAIT_SECONDS).toBeGreaterThan(0);
+    expect(ALLIANCE_WAIT_SECONDS).toBeLessThanOrEqual(60);
+    expect(allianceInfoPath(1241, "NAM")).toBe(`/alliances/1241/NAM?include=info&wait=${ALLIANCE_WAIT_SECONDS}`);
+  });
+
+  it("keeps the tag's case and encodes what an address can't carry", () => {
+    expect(allianceInfoPath(1241, "Nam")).toContain("/alliances/1241/Nam?");
+    expect(allianceInfoPath(1241, "A/B")).toContain("/alliances/1241/A%2FB?");
   });
 });

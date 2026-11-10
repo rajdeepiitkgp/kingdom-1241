@@ -66,3 +66,15 @@ export function parseAllianceInfo(json: unknown): MightPulseAlliance | null {
 export function parseStoredBoard(value: unknown): MightPulseAlliance[] {
   return rowsOf(value, OWN_FIELDS, "tag");
 }
+
+/**
+ * Since MightPulse's rebuild (Nov 2026) an alliance call answers at once with the stored copy, however old,
+ * and only queues an update. The sync asks once a day, so without `wait` Home would always show the day
+ * before: `wait` (60 at most) holds the call until the update from the game is done.
+ */
+export const ALLIANCE_WAIT_SECONDS = 60;
+
+/** The call for one listed alliance by its tag (case-sensitive, as the game writes it), fresh from the game. */
+export function allianceInfoPath(kingdom: number, tag: string): string {
+  return `/alliances/${kingdom}/${encodeURIComponent(tag)}?include=info&wait=${ALLIANCE_WAIT_SECONDS}`;
+}
