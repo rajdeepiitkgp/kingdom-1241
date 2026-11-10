@@ -260,7 +260,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "The rounds",
         "The current prep week and the next one. The buff days shown come from Prep days: set those first, because a player's times are for a date. If construction and research fall on the same day, players get one card for both and one list ranked by both together.",
       ),
-      step("ministry-admin-open", "Open the sign-ups", "Tick it and save, then tell players in Discord. Only one round is open at a time: opening one closes the other. Untick it to close the round's page again; the entries stay."),
+      step("ministry-admin-open", "Open the sign-ups", "Tick it and save, then tell players in Discord. Save wakes up once you change something. Only one round is open at a time: opening one closes the other. Untick it to close the round's page again; the entries stay."),
       step(
         "ministry-admin-deadlines",
         "A deadline per buff day",
