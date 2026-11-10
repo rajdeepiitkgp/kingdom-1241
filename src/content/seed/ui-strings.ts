@@ -1671,6 +1671,14 @@ export const UI_STRINGS = {
     ar: "موعدك: {time} UTC",
   },
   "ministry.mine.appointment.local": { en: "{time} your time", de: "{time} deine Zeit", ko: "내 시간 {time}", pl: "{time} twojego czasu", ar: "{time} بتوقيتك" },
+  "ministry.mine.times": { en: "Times you picked", de: "Deine gewählten Zeiten", ko: "내가 고른 시간", pl: "Wybrane przez ciebie pory", ar: "الأوقات التي اخترتها" },
+  "ministry.mine.pending": {
+    en: "Your appointment shows here once sign-ups for this day have closed.",
+    de: "Dein Termin erscheint hier, sobald die Anmeldung für diesen Tag geschlossen ist.",
+    ko: "이 날의 신청이 마감되면 배정된 시간이 여기에 표시됩니다.",
+    pl: "Twój termin pojawi się tutaj po zamknięciu zapisów na ten dzień.",
+    ar: "يظهر موعدك هنا بعد إغلاق التسجيل لهذا اليوم.",
+  },
   "ministry.mine.noAppointment": {
     en: "No appointment on this day: every time you picked went to a player with a higher score. Message a moderator in the game for one of the free times.",
     de: "Kein Termin an diesem Tag: Alle deine Zeiten gingen an Spieler mit mehr Punkten. Schreib einem Moderator im Spiel wegen einer freien Zeit.",

@@ -4,12 +4,15 @@
 import { revalidatePath } from "next/cache";
 import { adminPath } from "@/lib/auth/paths";
 import { checkAccess, type CurrentUser } from "@/lib/auth/server";
-import { getAlliances } from "@/lib/data";
+import { getAlliances, getSettings } from "@/lib/data";
 import { FIELD, parseSignupForm, type SignupErrorCode } from "@/lib/ministry/form";
 import { placementProblem } from "@/lib/ministry/assign";
 import { CLOSED_ROUND, deadlineFor, isScoringDay, joined, MAX_SIGNUPS_PER_ROUND, parseRoundSettingsForm, roundsClosedBy, sectionOn, slotLabel, SLOTS_PER_DAY, withRoundSettings } from "@/lib/ministry/ministry";
 import { closedDays, runAssignment } from "@/lib/ministry/roster";
 import { ministryRounds } from "@/lib/ministry/state";
+import { isGovernorId, normalizeGovernorId } from "@/lib/retro/form";
+import type { GovernorProfile } from "@/lib/retro/governor";
+import { lookupGovernor, mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { ministryMemory, ministryStore } from "@/lib/ministry/store";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
@@ -20,7 +23,7 @@ import { type FieldErrors, localeField, textField, uuidField } from "./forms";
  * Server Actions of the admin ministry page (moderators and up): open a
  * round's sign-ups and set each buff day's deadline; add an entry by hand,
  * change one, set it aside or remove it; run a buff day's assignment again and
- * place a player by hand. A moderator's change is not bound by the deadlines
+ * place a player by hand; administrators empty a round. A moderator's change is not bound by the deadlines
  * or by the browser that made the entry. Every one is audited (never with a
  * Governor ID).
  */
@@ -92,6 +95,33 @@ export async function saveMinistryRound(_previous: ActionState, formData: FormDa
   }
 }
 
+/** What MightPulse says about a Governor ID a moderator typed. `elsewhere`: a player of another kingdom. `unavailable`: no answer (or no key), so nothing is known. */
+export interface EntryLookup {
+  status: "found" | "unknown" | "elsewhere" | "unavailable";
+  name?: string;
+  allianceTag?: string | null;
+}
+
+/** The player behind a Governor ID in this kingdom, or why there is none to name. Never throws. */
+async function governorOfKingdom(governorId: string): Promise<{ status: EntryLookup["status"]; profile?: GovernorProfile }> {
+  if (!mightPulseConfigured()) return { status: "unavailable" };
+  const result = await lookupGovernor(governorId);
+  if (result.status !== "found") return { status: result.status };
+  const { kingdomNumber } = await getSettings();
+  if (result.profile.kingdom !== null && result.profile.kingdom !== kingdomNumber) return { status: "elsewhere" };
+  return { status: "found", profile: result.profile };
+}
+
+/** The add form's help: the name and alliance of a typed Governor ID. It never blocks an entry: a moderator may add any number (a test entry, a player MightPulse hasn't seen). */
+export async function lookupMinistryEntryGovernor(rawId: string): Promise<EntryLookup> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return { status: "unavailable" };
+  const governorId = normalizeGovernorId(String(rawId ?? ""));
+  if (!isGovernorId(governorId)) return { status: "unavailable" };
+  const { status, profile } = await governorOfKingdom(governorId);
+  return profile ? { status, name: profile.name, allianceTag: profile.allianceTag } : { status };
+}
+
 /** Add an entry by hand (no `id`) or change one. The Governor ID of an existing entry stays. */
 export async function saveMinistryEntry(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
@@ -125,13 +155,16 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
       return { status: "saved", message: `Saved ${entry.gameName}.` };
     }
     if ((await store.count(round.key)) >= MAX_SIGNUPS_PER_ROUND) return { status: "error", message: `The round has ${MAX_SIGNUPS_PER_ROUND} sign-ups, the most it takes. Remove one first.` };
+    // Confirmed like a player's own sign-up when the name and alliance are the ones MightPulse has for the ID; anything else is stored as typed.
+    const { profile } = await governorOfKingdom(entry.governorId);
+    const confirmed = profile !== undefined && profile.name === entry.gameName && profile.allianceTag === entry.allianceTag;
     const saved = await store.insert({
       round: round.key,
       governorId: entry.governorId,
       gameName: entry.gameName,
       allianceTag: entry.allianceTag,
-      verified: false,
-      power: null,
+      verified: confirmed,
+      power: confirmed ? (profile.power ?? null) : null,
       amounts: entry.amounts,
       slots: entry.slots,
       locale: "en",
@@ -184,6 +217,27 @@ export async function removeMinistryEntry(_previous: ActionState, formData: Form
     return { status: "saved", message: `${existing.gameName} is removed. The player can sign up again.` };
   } catch (error) {
     return failed(log, "Removing the ministry sign-up", problem(error));
+  }
+}
+
+/** Administrators: every sign-up of a round goes, with its appointments (a clean start after testing). The round's switch and deadlines stay. */
+export async function removeAllMinistryEntries(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("admin");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const store = ministryStore();
+  if (!store) return NO_STORE;
+  try {
+    const { rounds } = await ministryRounds(new Date(), store);
+    const round = rounds.find((entry) => entry.key === textField(formData, "round"));
+    if (!round) return { status: "error", message: "Pick one of the rounds shown. Reload the page." };
+    const count = await store.removeRound(round.key);
+    await record(access.user, "ministry.signup_remove_all", null, { round: round.key, count });
+    log.info("Ministry round emptied", { round: round.key, count });
+    changed(formData);
+    return { status: "saved", message: count === 0 ? "The round had no sign-ups." : `Removed ${count} sign-up${count === 1 ? "" : "s"} and their appointments. The round's switch and deadlines are as they were.` };
+  } catch (error) {
+    return failed(log, "Removing the round's ministry sign-ups", problem(error));
   }
 }
 

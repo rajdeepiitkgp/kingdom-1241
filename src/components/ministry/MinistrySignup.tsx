@@ -8,10 +8,10 @@ import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { Buff, ScoringDay } from "@/lib/kvk/prep";
 import { lookupMinistryGovernor, myMinistrySignups, submitMinistrySignup, withdrawMinistrySignup, type LookupState, type MySignup, type SubmitState } from "@/lib/ministry/actions";
 import { FIELD, type SignupErrorCode } from "@/lib/ministry/form";
-import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, scoredInPoints, sectionScore, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
+import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, scoredInPoints, sectionScore, SLOT_MINUTES, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { GAME_NAME_MAX } from "@/lib/retro/config";
 import { isGovernorId, NO_ALLIANCE, normalizeGovernorId } from "@/lib/retro/form";
-import { formatLocalDateTime, formatUtcTime } from "@/lib/time";
+import { formatLocalDateTime, formatUtcTime, MINUTE, splitDuration } from "@/lib/time";
 import { ItemIcon } from "../kvk/ItemIcon";
 import { formatDuration } from "../time/DurationLabel";
 import { useNow } from "../time/useNow";
@@ -100,7 +100,7 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
                 row={row}
                 round={round}
                 canChange={open.length > 0}
-                hydrated={now !== null}
+                now={now}
                 locale={props.locale}
                 deviceKey={deviceKey}
                 dict={dict}
@@ -161,7 +161,7 @@ function MineRow({
   row,
   round,
   canChange,
-  hydrated,
+  now,
   locale,
   deviceKey,
   dict,
@@ -171,7 +171,8 @@ function MineRow({
   row: MySignup;
   round: RoundView;
   canChange: boolean;
-  hydrated: boolean;
+  /** The browser's clock, null until the page runs there. */
+  now: Date | null;
   locale: string;
   deviceKey: string | null;
   dict: Dictionary;
@@ -198,7 +199,7 @@ function MineRow({
     });
   };
   return (
-    <li className="space-y-2 py-4 first:pt-0 last:pb-0">
+    <li className="space-y-3 py-4 first:pt-0 last:pb-0">
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-base font-extrabold wrap-break-word text-ink" dir="auto">
           {row.allianceTag ? `[${row.allianceTag}] ` : ""}
@@ -210,20 +211,39 @@ function MineRow({
         </span>
         {row.disabled && <span className="chip bg-gold-soft text-gold-ink">{dict["ministry.mine.disabled"]}</span>}
       </p>
-      <ul className="space-y-1">
+      {/* One tile per buff day the account takes part in: the buff's picture, the day, the times picked and, once the day's roster is out, the appointment with its countdown. */}
+      <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-3">
         {round.sections
           .filter((section) => (row.slots[section.day]?.length ?? 0) > 0)
           .map((section) => (
-            <li key={section.day} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold text-ink-muted">
-              <span className="font-extrabold text-ink">{section.buffs.map((buff) => dict[`prep.council.${buff}`]).join(" + ")}</span>
-              <span>{section.date}</span>
-              <span className="wrap-break-word tabular" dir="ltr">
-                {slotRuns(row.slots[section.day] ?? [])
-                  .map(([first, length]) => slotLabel(first, length))
-                  .join(", ")}{" "}
-                UTC
-              </span>
-              {row.appointments[section.day] !== undefined && <Appointment slot={row.appointments[section.day] ?? null} dayStart={section.start} hydrated={hydrated} locale={locale} dict={dict} />}
+            <li key={section.day} className="flex min-w-0 flex-col gap-3 rounded-2xl bg-card-soft p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex shrink-0 items-center gap-1">
+                  {section.buffs.map((buff) => (
+                    <ItemIcon key={buff} image={BUFF_IMAGES[buff]} emoji={BUFF_ICON[buff]} className="size-9" />
+                  ))}
+                </span>
+                <p className="min-w-0">
+                  <span className="block text-base/tight font-extrabold wrap-break-word text-ink">{section.buffs.map((buff) => dict[`prep.council.${buff}`]).join(" + ")}</span>
+                  <span className="block text-sm font-semibold text-ink-muted">
+                    {format(dict["prep.day"], { n: section.day })} · {section.date}
+                  </span>
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-ink-muted">
+                <span className="block text-xs font-extrabold">{dict["ministry.mine.times"]}</span>
+                <span className="wrap-break-word text-ink tabular" dir="ltr">
+                  {slotRuns(row.slots[section.day] ?? [])
+                    .map(([first, length]) => slotLabel(first, length))
+                    .join(", ")}{" "}
+                  UTC
+                </span>
+              </p>
+              {row.appointments[section.day] !== undefined ? (
+                <Appointment slot={row.appointments[section.day] ?? null} dayStart={section.start} now={now} locale={locale} dict={dict} />
+              ) : (
+                <p className="mt-auto text-xs font-semibold text-ink-faint">{dict["ministry.mine.pending"]}</p>
+              )}
             </li>
           ))}
       </ul>
@@ -247,22 +267,46 @@ function MineRow({
     </li>
   );
 }
-/** The player's appointment on a day whose roster is out: its half-hour in UTC and in their own time, or that they got none. */
-function Appointment({ slot, dayStart, hydrated, locale, dict }: { slot: number | null; dayStart: number; hydrated: boolean; locale: string; dict: Dictionary }) {
-  if (slot === null) return <span className="w-full rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["ministry.mine.noAppointment"]}</span>;
+/** "2 days 5 hrs", "5 hrs 13 min", "13 min": how long until something starts, in the words the countdowns of the site use. */
+function untilLabel(ms: number, dict: Dictionary): string {
+  const { days, hours, minutes } = splitDuration(ms);
+  if (days > 0) return `${days} ${dict[days === 1 ? "common.day" : "common.days"]} ${hours} ${dict["common.hours"]}`;
+  if (hours > 0) return `${hours} ${dict["common.hours"]} ${minutes} ${dict["common.minutes"]}`;
+  return `${Math.max(1, minutes)} ${dict["common.minutes"]}`;
+}
+
+/** The player's appointment on a day whose roster is out: its half-hour in UTC and in their own time with a countdown, or that they got none. */
+function Appointment({ slot, dayStart, now, locale, dict }: { slot: number | null; dayStart: number; now: Date | null; locale: string; dict: Dictionary }) {
+  if (slot === null) return <p className="mt-auto rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["ministry.mine.noAppointment"]}</p>;
+  const from = dayStart + slot * SLOT_MINUTES * MINUTE;
+  const to = from + SLOT_MINUTES * MINUTE;
   let local: string | null = null;
-  if (hydrated) {
+  if (now) {
     try {
-      local = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", numberingSystem: "latn" }).format(new Date(dayStart + slot * 30 * 60_000));
+      const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", numberingSystem: "latn" });
+      local = `${new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(from))} \u2066${time.format(new Date(from))}\u2060–\u2060${time.format(new Date(to))}\u2069`;
     } catch {
       local = null;
     }
   }
+  // Inside a sentence of any direction the half-hour stays left to right and in one piece (Arabic showed "12:30–12:00").
+  const whole = (range: string) => `\u2066${range.replace("–", "\u2060–\u2060")}\u2069`;
+  const at = now?.getTime();
+  const over = at !== undefined && at >= to;
   return (
-    <span className="w-full rounded-xl bg-success-soft px-3 py-2 text-sm font-extrabold text-success" data-appointment={slot}>
-      {format(dict["ministry.mine.appointment"], { time: slotLabel(slot) })}
-      {local && <span className="font-bold"> · {format(dict["ministry.mine.appointment.local"], { time: local })}</span>}
-    </span>
+    <div className={clsx("mt-auto space-y-1 rounded-xl px-3 py-2", over ? "bg-card text-ink-muted" : "bg-success-soft text-success")} data-appointment={slot}>
+      <p className="text-sm font-extrabold wrap-break-word">{format(dict["ministry.mine.appointment"], { time: whole(slotLabel(slot)) })}</p>
+      {local && (
+        <p className="text-xs font-bold wrap-break-word">
+          {format(dict["ministry.mine.appointment.local"], { time: local })}
+        </p>
+      )}
+      {at !== undefined && (
+        <p className="text-sm font-black tabular" role="timer">
+          {over ? dict["time.ended"] : at >= from ? dict["time.live"] : `${dict["time.startsIn"]} ${untilLabel(from - at, dict)}`}
+        </p>
+      )}
+    </div>
   );
 }
 

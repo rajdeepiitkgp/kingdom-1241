@@ -56,6 +56,9 @@ test("MIN-01 a player signs up for a buff day behind the battle plan's password,
   await expect(mine).toContainText(id);
   // Two two-hour blocks, shown as their UTC times.
   await expect(mine).toContainText("04:00–06:00, 10:00–12:00 UTC");
+  // A tile per buff day taken, with the day and, until its sign-ups close, where the appointment will show.
+  await expect(mine).toContainText(t("ministry.mine.times"));
+  await expect(mine).toContainText(t("ministry.mine.pending"));
   await expect(mine.getByRole("status")).toBeVisible();
   await expectHealthyPage(page, "en");
   // The device remembers its sign-up; the form makes way for it.

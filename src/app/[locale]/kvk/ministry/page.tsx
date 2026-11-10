@@ -9,7 +9,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { KVK_MINISTRY_TOUR } from "@/lib/kvk/tours/ministry";
 
 /** The interface strings this page and its components use; tests/architecture/page-strings.test.ts keeps the list right. */
-const PAGE_STRINGS = ["checklist", "common", "kvk", "leaders", "ministry", "prep.council", "prep.day", "prep.item", "retro", "tour.*", "tour.kvk", "tour.ministry"];
+const PAGE_STRINGS = ["checklist", "common", "kvk", "leaders", "ministry", "prep.council", "prep.day", "prep.item", "retro", "time.ended", "time.live", "time.startsIn", "tour.*", "tour.kvk", "tour.ministry"];
 
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary(await rootLocale(), PAGE_STRINGS);
