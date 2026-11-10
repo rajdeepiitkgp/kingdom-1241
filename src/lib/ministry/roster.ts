@@ -7,6 +7,8 @@ import { rankSection, sectionOn, sectionState } from "./ministry";
 import type { MinistryRound } from "./state";
 import { type AssignOutcome, type MinistryStore, ministryMemory, NO_ROSTER, type RoundRoster } from "./store";
 
+export { publishedRoster } from "./store";
+
 /**
  * The rosters of a round (server only): who holds which appointment, and the
  * run that decides it (assign.ts has the rules).
@@ -18,6 +20,12 @@ import { type AssignOutcome, type MinistryStore, ministryMemory, NO_ROSTER, type
  * roster without reading the round, so no visitor ever meets an unassigned day
  * past its deadline. From then on moderators run it again with their button,
  * which keeps everyone placed by hand and everyone who took a free appointment.
+ *
+ * **Draft and published.** The run at the deadline is published at once. What
+ * moderators change afterwards (a new run, a move, an added or removed player)
+ * changes only the working appointments, a draft they alone see; players keep
+ * seeing the published copy (`publishedRoster`) until a moderator presses
+ * Publish, and Discard takes the draft back to it.
  */
 
 const log = createLogger("ministry");
@@ -71,6 +79,8 @@ export async function rosterFor(store: MinistryStore, round: MinistryRound, now:
       const run = await runAssignment(store, round, day, true);
       if (run.outcome === "done") {
         ran = true;
+        // The run at the deadline goes live by itself; whatever moderators change afterwards waits for their Publish.
+        await store.publish(round.key, day);
         log.info("Ministry assignment ran at the deadline", { round: round.key, day, placed: run.placed, unplaced: run.unplaced });
         if (!ministryMemory()) await systemAudit("ministry.assign", "ministry_rosters", null, { round: round.key, day, placed: run.placed, unplaced: run.unplaced, at: "deadline" });
       } else if (run.outcome === "skipped") ran = true; // another visitor's request ran it a moment ago
@@ -87,7 +97,7 @@ export async function rosterFor(store: MinistryStore, round: MinistryRound, now:
   }
 }
 
-/** The days whose roster players see: past the deadline and assigned. */
+/** The days whose roster players see: past the deadline and assigned (hand it `publishedRoster(...)` for the players' pages: then assigned means published). */
 export function rosterDays(round: MinistryRound, roster: RoundRoster, now: Date): ScoringDay[] {
   return closedDays(round, now).filter((day) => Boolean(roster.assignedAt[day]));
 }

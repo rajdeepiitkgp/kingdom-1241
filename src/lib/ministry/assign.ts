@@ -124,6 +124,22 @@ export function freeSlots(appointments: readonly Pick<Appointment, "day" | "slot
   return free;
 }
 
+/**
+ * The slots of a day where the moderators' working roster differs from the one players see (another player, newly
+ * filled, newly free): what a Publish would change. How a player came to a slot (`source`) is no difference.
+ */
+export function draftChanges(working: readonly Pick<Appointment, "day" | "slot" | "signupId">[], published: readonly Pick<Appointment, "day" | "slot" | "signupId">[], day: ScoringDay): number[] {
+  const now = rosterOf(working, day);
+  const live = rosterOf(published, day);
+  return now.flatMap((held, slot) => ((held?.signupId ?? null) === (live[slot]?.signupId ?? null) ? [] : [slot]));
+}
+
+/** The earliest free slot among a player's own times, or null: where someone who joins a day after its appointments were given out goes, without anyone else moving. */
+export function firstFreeOwn(appointments: readonly Pick<Appointment, "day" | "slot">[], day: ScoringDay, own: readonly number[]): number | null {
+  const free = new Set(freeSlots(appointments, day));
+  return [...own].sort((a, b) => a - b).find((slot) => free.has(slot)) ?? null;
+}
+
 /** A moderator's or a late player's place: the reason it can't be given, or null. */
 export function placementProblem(appointments: readonly Appointment[], day: ScoringDay, signupId: string, slot: number): "badSlot" | "slotTaken" | null {
   if (!Number.isInteger(slot) || slot < 0 || slot >= SLOTS_PER_DAY) return "badSlot";

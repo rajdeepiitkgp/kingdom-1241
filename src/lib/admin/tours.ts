@@ -278,9 +278,19 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Until the deadline: how the day would come out right now. At the deadline the site gives the appointments out by itself: as many of the 48 filled as possible, each player only in a time they picked, one per player, the higher score first. Red times are free; players see them on the Ministry page.",
       ),
       step(
+        "ministry-admin-draft",
+        "Draft or published",
+        "The run at the deadline is published by itself. Whatever you change afterwards is a draft only moderators see, its half-hours marked Draft; players keep their list. Publish to players makes it live, Discard the draft goes back. Green means players see the day exactly as it is here.",
+      ),
+      step(
         "ministry-admin-assign",
-        "Assign again",
-        "After you changed, added or set aside entries, this places everyone anew. Players you placed by hand keep their time. It needs a second tap, because it may move players.",
+        "Assign this day again",
+        "For the buff day of the open tab only: places everyone on its list anew. Players you placed or moved by hand keep their time. It needs a second tap, because it may move players. The other days have the same button on their tabs.",
+      ),
+      step(
+        "ministry-admin-fresh",
+        "Start this day from scratch",
+        "Like Assign this day again, but it also forgets every time you placed or moved by hand, so the whole day is given out by the rules alone. To let go of one hand placing only, pick the player in the move form below with No appointment, then assign again.",
       ),
       step(
         "ministry-admin-table",

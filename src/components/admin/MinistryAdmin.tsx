@@ -8,7 +8,7 @@ import { SlotPicker, type SlotPickerLabels } from "@/components/ministry/SlotPic
 import { useNow } from "@/components/time/useNow";
 import { useSubmitInTransition } from "@/components/ui/useSubmitInTransition";
 import { type ActionState, IDLE_STATE } from "@/lib/admin/action-state";
-import { assignMinistryDay, type EntryLookup, lookupMinistryEntryGovernor, placeMinistryEntry, shiftMinistryEntry, removeAllMinistryEntries, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
+import { assignMinistryDay, type EntryLookup, lookupMinistryEntryGovernor, placeMinistryEntry, publishMinistryDay, shiftMinistryEntry, removeAllMinistryEntries, removeMinistryEntry, saveMinistryEntry, saveMinistryRound, setMinistryEntryDisabled } from "@/lib/admin/ministry-actions";
 import type { AdminSignup } from "@/lib/admin/ministry-data";
 import { BUFF_NAME, RESOURCE_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import type { ScoringDay } from "@/lib/kvk/prep";
@@ -407,6 +407,7 @@ export function RosterPanel({
   locale,
   placement,
   players,
+  draft,
 }: {
   roundKey: string;
   day: ScoringDay;
@@ -424,7 +425,10 @@ export function RosterPanel({
   /** With the stored roster: who holds what, and the day's players, for the move form. */
   placement?: Placement;
   players?: RosterPlayer[];
+  /** With the stored roster (and migration 0028): whether players see it as it is here. */
+  draft?: DraftState;
 }) {
+  const draftSlots = new Set(draft?.slots ?? []);
   const filled = cells.filter(Boolean).length;
   const free = cells.length - filled;
   // The arrows of every row share one answer line, shown above the table.
@@ -454,9 +458,10 @@ export function RosterPanel({
     <div className="space-y-3" data-tour="ministry-admin-roster">
       <p className="text-sm font-bold text-ink">
         {mode === "preview" && `Players can sign up until ${deadline} UTC; the appointments are then given out by themselves. If that were now: ${filled} of 48 filled.`}
-        {mode === "assigned" && `${title}: ${filled} of the 48 appointments are filled${free > 0 ? `, ${free} are free (red). Players see the free ones on the Ministry page and are told to message a moderator in the game.` : "."}`}
+        {mode === "assigned" && `${title}: ${filled} of the 48 appointments are filled${free > 0 ? `, ${free} are free (red). ${draft && draft.state !== "live" ? "Once published, players" : "Players"} see the free ones on the Ministry page and are told to message a moderator in the game.` : "."}`}
         {mode === "waiting" && `The deadline (${deadline} UTC) has passed, but the appointments aren't given out yet: that happens by itself only while the round is open for players. Press the button to do it now.`}
       </p>
+      {draft && <DraftBar roundKey={roundKey} day={day} draft={draft} locale={locale} />}
       {mode !== "waiting" && (
         <>
           <div className="grid grid-cols-48 gap-px overflow-hidden rounded-lg" role="img" aria-label={`${filled} of 48 appointments filled`}>
@@ -492,7 +497,7 @@ export function RosterPanel({
             <tbody>
               {cells.map((cell, slot) => (
                 <tr key={slot} className={clsx("border-b border-line/60 align-top", !cell && "bg-danger-soft")}>
-                  <td className="py-1.5 ps-2 pe-3 font-black whitespace-nowrap text-ink tabular">
+                  <td className={clsx("py-1.5 ps-2 pe-3 font-black whitespace-nowrap text-ink tabular", draftSlots.has(slot) && "border-s-4 border-gold")}>
                     <span dir="ltr">{slotLabel(slot)}</span>
                     {/* On a phone the arrows sit under the time, so the name keeps the width. */}
                     {movable && cell?.id && <span className="block md:hidden">{arrows(cell.id, cell.name, slot)}</span>}
@@ -505,6 +510,7 @@ export function RosterPanel({
                           {cell.name}
                         </span>
                         {SOURCE_NOTE[cell.source] && <span className="chip ms-2 bg-gold-soft whitespace-nowrap text-gold-ink">{SOURCE_NOTE[cell.source]}</span>}
+                        {draftSlots.has(slot) && <span className="chip ms-2 bg-gold whitespace-nowrap text-gold-ink">Draft</span>}
                         <span className="block text-xs text-ink-muted md:hidden">{cell.score}</span>
                       </td>
                       <td className="hidden py-1.5 pe-3 text-ink-muted md:table-cell">{cell.brings}</td>
@@ -518,6 +524,7 @@ export function RosterPanel({
                   ) : (
                     <td colSpan={4} className="py-1.5 pe-2 font-extrabold text-danger">
                       Free
+                      {draftSlots.has(slot) && <span className="chip ms-2 bg-gold whitespace-nowrap text-gold-ink">Draft</span>}
                     </td>
                   )}
                 </tr>
@@ -535,7 +542,7 @@ export function RosterPanel({
       {mode !== "preview" && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
           <AssignButton roundKey={roundKey} day={day} first={mode === "waiting"} locale={locale} />
-          {mode === "assigned" && filled > 0 && <CopyText text={chat} label="Copy for game chat" />}
+          {mode === "assigned" && filled > 0 && <CopyText text={chat} label={draft && draft.state !== "live" ? "Copy the draft for game chat" : "Copy for game chat"} />}
         </div>
       )}
       {mode === "assigned" && placement && players && players.length > 0 && <MoveForm placement={placement} players={players} locale={locale} />}
@@ -543,31 +550,101 @@ export function RosterPanel({
   );
 }
 
-/** Runs the day's assignment; a second tap within a few seconds confirms, since it moves players who were placed by it. */
-function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day: ScoringDay; first: boolean; locale: string }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(assignMinistryDay, IDLE_STATE);
-  const [armed, setArmed] = useState(false);
+/** `live`: players see the day as it is here. `changed`: the listed half-hours differ from what they see. `unpublished`: they see no list for the day yet. */
+export interface DraftState {
+  state: "live" | "changed" | "unpublished";
+  /** The half-hours a Publish would change for players. */
+  slots: number[];
+  /** "Mon 9 Nov, 14:05" UTC, when players' list was last set. */
+  publishedAt: string | null;
+}
+
+/** Says, above the day's table, whether players see it as it is here, and holds Publish and Discard (two taps each). */
+function DraftBar({ roundKey, day, draft, locale }: { roundKey: string; day: ScoringDay; draft: DraftState; locale: string }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(publishMinistryDay, IDLE_STATE);
+  const [armed, setArmed] = useState<"publish" | "discard" | null>(null);
+  if (draft.state === "live") {
+    return (
+      <div className="space-y-2" data-tour="ministry-admin-draft">
+        <p className="rounded-xl bg-success-soft px-3 py-2 text-sm font-bold text-success">
+          Published{draft.publishedAt ? ` (${draft.publishedAt} UTC)` : ""}: players see this day exactly as it is here. Anything you change now is a draft until you publish it.
+        </p>
+        <Notice state={state} />
+      </div>
+    );
+  }
+  const count = draft.slots.length;
   return (
     <form
       action={formAction}
-      className="contents"
+      className="space-y-3 rounded-xl border-2 border-gold bg-gold-soft p-3"
+      data-tour="ministry-admin-draft"
       onSubmit={(event) => {
-        if (first || armed) {
-          setArmed(false);
-          return;
-        }
+        const pressed = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-run") === "discard" ? "discard" : "publish";
+        if (armed === pressed) return;
         event.preventDefault();
-        setArmed(true);
-        window.setTimeout(() => setArmed(false), 4000);
+        setArmed(pressed);
+        window.setTimeout(() => setArmed((now) => (now === pressed ? null : now)), 4000);
       }}
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="round" value={roundKey} />
       <input type="hidden" name="day" value={day} />
-      <button type="submit" className={clsx("btn-sm", armed ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
-        {pending ? "Assigning…" : first ? "Assign now" : armed ? "Tap again to assign anew" : "Assign again"}
+      <input type="hidden" name="discard" value={armed === "discard" ? "1" : ""} />
+      <p className="text-sm font-extrabold text-gold-ink">
+        {draft.state === "unpublished"
+          ? "Draft, not published: players see no list for this day yet."
+          : `Draft: ${count} half-hour${count === 1 ? "" : "s"} differ${count === 1 ? "s" : ""} from what players see (marked Draft below). Players still see the list as it was published${draft.publishedAt ? ` on ${draft.publishedAt} UTC` : ""}.`}
+      </p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
+        <button type="submit" data-run="publish" className="btn-primary btn-sm" disabled={pending}>
+          {pending ? "Working…" : armed === "publish" ? "Tap again to publish" : "Publish to players"}
+        </button>
+        {draft.state === "changed" && (
+          <button type="submit" data-run="discard" className={clsx("btn-ghost btn-sm text-danger", armed === "discard" && "border-danger")} disabled={pending}>
+            {armed === "discard" ? "Tap again to drop the draft" : "Discard the draft"}
+          </button>
+        )}
+      </div>
+      <Notice state={state} />
+    </form>
+  );
+}
+
+/** Runs the day's assignment; a second tap within a few seconds confirms, since it moves players who were placed by it. */
+function AssignButton({ roundKey, day, first, locale }: { roundKey: string; day: ScoringDay; first: boolean; locale: string }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(assignMinistryDay, IDLE_STATE);
+  // Which of the two buttons waits for its second tap: "again" keeps the times placed by hand, "fresh" forgets them too.
+  const [armed, setArmed] = useState<"again" | "fresh" | null>(null);
+  return (
+    <form
+      action={formAction}
+      className="contents"
+      onSubmit={(event) => {
+        const pressed = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-run") === "fresh" ? "fresh" : "again";
+        if (first || armed === pressed) return;
+        event.preventDefault();
+        setArmed(pressed);
+        window.setTimeout(() => setArmed((now) => (now === pressed ? null : now)), 4000);
+      }}
+    >
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="round" value={roundKey} />
+      <input type="hidden" name="day" value={day} />
+      <input type="hidden" name="fresh" value={armed === "fresh" ? "1" : ""} />
+      <button type="submit" data-run="again" className={clsx("btn-sm", armed === "again" ? "btn-primary" : "btn-ghost")} disabled={pending} data-tour="ministry-admin-assign">
+        {pending ? "Assigning…" : first ? "Assign this day now" : armed === "again" ? "Tap again to assign this day anew" : "Assign this day again"}
       </button>
-      {!first && !armed && state.status === "idle" && <span className="text-xs font-semibold text-ink-faint">Keeps players placed by hand and players who took a free time; places everyone else anew.</span>}
+      {!first && (
+        <button type="submit" data-run="fresh" className={clsx("btn-ghost btn-sm text-danger", armed === "fresh" && "border-danger")} disabled={pending} data-tour="ministry-admin-fresh">
+          {armed === "fresh" ? "Tap again: forget every placing" : "Start this day from scratch"}
+        </button>
+      )}
+      {!first && armed === null && state.status === "idle" && (
+        <span className="w-full text-xs font-semibold text-ink-faint">
+          Both are for this day only (the other buff days have their own buttons on their tabs) and place everyone on its list now. Assign this day again keeps the players you placed or moved by hand; Start this day from scratch forgets those too.
+        </span>
+      )}
       <Notice state={state} />
     </form>
   );

@@ -30,9 +30,24 @@ export interface RoundRoster {
   assignedAt: Partial<Record<ScoringDay, string>>;
   /** False before migration 0027: no roster anywhere, the sign-ups work as before. */
   available: boolean;
+  /**
+   * Per day, the roster players see: the appointments as they were when the day was last published (the run at the
+   * deadline publishes by itself; what moderators change afterwards waits for their Publish). A day not listed was
+   * never published.
+   */
+  published: Partial<Record<ScoringDay, Appointment[]>>;
+  publishedAt: Partial<Record<ScoringDay, string>>;
+  /** False before migration 0028: no drafts, players see `appointments` as they are. */
+  drafts: boolean;
 }
 
-export const NO_ROSTER: RoundRoster = { appointments: [], assignedAt: {}, available: false };
+export const NO_ROSTER: RoundRoster = { appointments: [], assignedAt: {}, available: false, published: {}, publishedAt: {}, drafts: false };
+
+/** The roster as players see it: the published appointments of the published days. */
+export function publishedRoster(roster: RoundRoster): RoundRoster {
+  if (!roster.drafts) return roster;
+  return { ...roster, appointments: Object.values(roster.published).flat(), assignedAt: roster.publishedAt };
+}
 
 /** `skipped`: the run at the deadline found the day assigned already. `clash`: a free appointment was taken at the same moment; run again. */
 export type AssignOutcome = "done" | "skipped" | "clash" | "unavailable";
@@ -63,6 +78,12 @@ export interface MinistryStore {
   swap(round: string, day: ScoringDay, firstId: string, secondId: string): Promise<boolean>;
   /** Takes a player's appointments away: of one day, of some days, or all of them. */
   unplace(signupId: string, days?: readonly ScoringDay[]): Promise<void>;
+  /** Players see the day's appointments as they are now. */
+  publish(round: string, day: ScoringDay): Promise<void>;
+  /** The day's appointments go back to what players see (a draft is dropped); false when the day was never published. */
+  restore(round: string, day: ScoringDay): Promise<boolean>;
+  /** Every appointment of the day goes, the day stays assigned and what players see stays (a run from scratch follows). */
+  clearAppointments(round: string, day: ScoringDay): Promise<void>;
   /** Back to "not assigned": the day's appointments and its mark go (sign-ups were opened again). */
   clearRoster(round: string, day: ScoringDay): Promise<void>;
 }

@@ -57,6 +57,8 @@ const ROSTERS = "ministry_rosters";
 
 /** The table or the function isn't there yet (migration 0027 not applied). */
 const notMigrated = (error: { code?: string } | null): boolean => error?.code === "42P01" || error?.code === "PGRST205" || error?.code === "PGRST202" || error?.code === "42883";
+/** A column of a later migration is missing (0028: the published copy of a roster). */
+const noColumn = (error: { code?: string } | null): boolean => error?.code === "42703" || error?.code === "PGRST204";
 
 export function mapAppointmentRow(row: Row): Appointment | null {
   const day = Number(row.day);
@@ -157,19 +159,58 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       return data?.length ?? 0;
     },
     async roster(round): Promise<RoundRoster> {
-      const [held, marks] = await Promise.all([
+      const [held, withDrafts] = await Promise.all([
         supabase.from(APPOINTMENTS).select("signup_id, day, slot, source").eq("round", round).order("day").order("slot").limit(500),
-        supabase.from(ROSTERS).select("day, assigned_at").eq("round", round),
+        supabase.from(ROSTERS).select("day, assigned_at, published, published_at").eq("round", round),
       ]);
+      // Before migration 0028 the marks have no published copy: players see the appointments as they are.
+      const drafts = !noColumn(withDrafts.error);
+      const marks = drafts ? withDrafts : await supabase.from(ROSTERS).select("day, assigned_at").eq("round", round);
       if (notMigrated(held.error) || notMigrated(marks.error)) return NO_ROSTER;
       if (held.error) throw held.error;
       if (marks.error) throw marks.error;
       const assignedAt: RoundRoster["assignedAt"] = {};
-      for (const row of marks.data ?? []) {
-        const day = Number((row as Row).day);
-        if (isScoringDay(day) && typeof (row as Row).assigned_at === "string") assignedAt[day] = (row as Row).assigned_at as string;
+      const published: RoundRoster["published"] = {};
+      const publishedAt: RoundRoster["publishedAt"] = {};
+      for (const row of (marks.data ?? []) as Row[]) {
+        const day = Number(row.day);
+        if (!isScoringDay(day) || typeof row.assigned_at !== "string") continue;
+        assignedAt[day] = row.assigned_at;
+        if (Array.isArray(row.published)) {
+          published[day] = (row.published as Row[]).flatMap((entry) => mapAppointmentRow({ ...entry, day }) ?? []);
+          publishedAt[day] = typeof row.published_at === "string" ? row.published_at : row.assigned_at;
+        }
       }
-      return { appointments: (held.data ?? []).flatMap((row) => mapAppointmentRow(row as Row) ?? []), assignedAt, available: true };
+      return { appointments: (held.data ?? []).flatMap((row) => mapAppointmentRow(row as Row) ?? []), assignedAt, available: true, published, publishedAt, drafts };
+    },
+    async publish(round, day) {
+      const held = await supabase.from(APPOINTMENTS).select("signup_id, slot, source").eq("round", round).eq("day", day).order("slot");
+      if (held.error) throw held.error;
+      const { error } = await supabase.from(ROSTERS).update({ published: held.data ?? [], published_at: new Date().toISOString() }).eq("round", round).eq("day", day);
+      if (error && !noColumn(error)) throw error;
+    },
+    async restore(round, day) {
+      const mark = await supabase.from(ROSTERS).select("published").eq("round", round).eq("day", day).maybeSingle();
+      if (mark.error) throw mark.error;
+      const snapshot = (mark.data as Row | null)?.published;
+      if (!Array.isArray(snapshot)) return false;
+      const rows = (snapshot as Row[]).flatMap((entry) => mapAppointmentRow({ ...entry, day }) ?? []);
+      // A player removed since the publish has no sign-up to hang an appointment on.
+      const known = rows.length === 0 ? { data: [], error: null } : await supabase.from(TABLE).select("id").in("id", rows.map((row) => row.signupId));
+      if (known.error) throw known.error;
+      const ids = new Set((known.data ?? []).map((row) => row.id as string));
+      const out = await supabase.from(APPOINTMENTS).delete().eq("round", round).eq("day", day);
+      if (out.error) throw out.error;
+      const back = rows.filter((row) => ids.has(row.signupId)).map((row) => ({ round, day, slot: row.slot, signup_id: row.signupId, source: row.source }));
+      if (back.length > 0) {
+        const { error } = await supabase.from(APPOINTMENTS).insert(back);
+        if (error) throw error;
+      }
+      return true;
+    },
+    async clearAppointments(round, day) {
+      const { error } = await supabase.from(APPOINTMENTS).delete().eq("round", round).eq("day", day);
+      if (error && !notMigrated(error)) throw error;
     },
     async assign(round, day, rows, first) {
       const { data, error } = await supabase.rpc("ministry_assign", { p_round: round, p_day: day, p_rows: rows.map((row) => ({ signup_id: row.signupId, slot: row.slot })), p_first: first });

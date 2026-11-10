@@ -6,14 +6,14 @@ import { adminPath } from "@/lib/auth/paths";
 import { checkAccess, type CurrentUser } from "@/lib/auth/server";
 import { getAlliances, getSettings } from "@/lib/data";
 import { FIELD, parseSignupForm, type SignupErrorCode } from "@/lib/ministry/form";
-import { placementProblem } from "@/lib/ministry/assign";
+import { draftChanges, firstFreeOwn, placementProblem } from "@/lib/ministry/assign";
 import { CLOSED_ROUND, deadlineFor, isScoringDay, joined, MAX_SIGNUPS_PER_ROUND, parseRoundSettingsForm, roundsClosedBy, sectionOn, slotLabel, SLOTS_PER_DAY, withRoundSettings } from "@/lib/ministry/ministry";
 import { closedDays, runAssignment } from "@/lib/ministry/roster";
 import { ministryRounds } from "@/lib/ministry/state";
 import { isGovernorId, normalizeGovernorId } from "@/lib/retro/form";
 import type { GovernorProfile } from "@/lib/retro/governor";
 import { lookupGovernor, mightPulseConfigured } from "@/lib/retro/mightpulse";
-import { ministryMemory, ministryStore } from "@/lib/ministry/store";
+import { ministryMemory, type MinistryStore, ministryStore, type StoredSignup } from "@/lib/ministry/store";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
@@ -23,7 +23,7 @@ import { type FieldErrors, localeField, textField, uuidField } from "./forms";
  * Server Actions of the admin ministry page (moderators and up): open a
  * round's sign-ups and set each buff day's deadline; add an entry by hand,
  * change one, set it aside or remove it; run a buff day's assignment again and
- * place a player by hand; administrators empty a round. A moderator's change is not bound by the deadlines
+ * place a player by hand, publish the day's draft or drop it; administrators empty a round. A moderator's change is not bound by the deadlines
  * or by the browser that made the entry. Every one is audited (never with a
  * Governor ID).
  */
@@ -122,6 +122,31 @@ export async function lookupMinistryEntryGovernor(rawId: string): Promise<EntryL
   return profile ? { status, name: profile.name, allianceTag: profile.allianceTag } : { status };
 }
 
+/**
+ * An entry a moderator added, changed or put back after a day's appointments were given out: on every such day the
+ * player takes part in and holds no appointment, they get the earliest free time among their own. Nobody else moves
+ * (the roster is out), so a day without a free time of theirs is named for the moderator to settle by hand.
+ * Returns the sentence for the notice ("" when no day is given out yet). Never throws.
+ */
+async function placeAfterwards(store: MinistryStore, signup: StoredSignup, days: readonly number[]): Promise<string> {
+  try {
+    if (signup.disabled) return "";
+    const roster = await store.roster(signup.round);
+    const placed: string[] = [];
+    const none: number[] = [];
+    for (const day of days) {
+      if (!isScoringDay(day) || !roster.assignedAt[day] || (signup.slots[day]?.length ?? 0) === 0) continue;
+      if (roster.appointments.some((held) => held.day === day && held.signupId === signup.id)) continue;
+      const slot = firstFreeOwn(roster.appointments, day, signup.slots[day] ?? []);
+      if (slot !== null && (await store.place(signup.round, day, signup.id, slot, "auto")) === "ok") placed.push(`Day ${day} ${slotLabel(slot)} UTC`);
+      else none.push(day);
+    }
+    return `${placed.length > 0 ? ` The appointments of ${placed.length === 1 ? "that day are" : "those days are"} given out already, so the player got the earliest free time among their own: ${placed.join(", ")}.` : ""}${none.length > 0 ? ` On Day ${none.join(" and Day ")} none of their times is free: move them by hand in that day's table.` : ""}`;
+  } catch {
+    return " Their appointment could not be set; use Assign again on the day's tab.";
+  }
+}
+
 /** Add an entry by hand (no `id`) or change one. The Governor ID of an existing entry stays. */
 export async function saveMinistryEntry(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
@@ -151,8 +176,10 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
       // A day the player no longer takes part in gives its appointment back.
       await store.unplace(existing.id, round.sections.map((section) => section.day).filter((day) => (entry.slots[day]?.length ?? 0) === 0));
       await record(access.user, "ministry.signup_edit", existing.id, { round: round.key, name: entry.gameName, before: { amounts: existing.amounts, slots: existing.slots }, after: { amounts: entry.amounts, slots: entry.slots } });
+      const after = await store.get(existing.id);
+      const note = after ? await placeAfterwards(store, after, round.sections.map((section) => section.day)) : "";
       changed(formData);
-      return { status: "saved", message: `Saved ${entry.gameName}.` };
+      return { status: "saved", message: `Saved ${entry.gameName}.${note}` };
     }
     if ((await store.count(round.key)) >= MAX_SIGNUPS_PER_ROUND) return { status: "error", message: `The round has ${MAX_SIGNUPS_PER_ROUND} sign-ups, the most it takes. Remove one first.` };
     // Confirmed like a player's own sign-up when the name and alliance are the ones MightPulse has for the ID; anything else is stored as typed.
@@ -172,8 +199,9 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
     });
     if (saved === "duplicate") return invalid({ [FIELD.governorId]: "That Governor ID is signed up already. Change its entry in the list." });
     await record(access.user, "ministry.signup_add", saved.id, { round: round.key, name: entry.gameName });
+    const note = await placeAfterwards(store, saved, round.sections.map((section) => section.day));
     changed(formData);
-    return { status: "saved", message: `${entry.gameName} is on the list.` };
+    return { status: "saved", message: `${entry.gameName} is on the list.${note}` };
   } catch (error) {
     return failed(log, "Saving the ministry sign-up", problem(error));
   }
@@ -193,9 +221,10 @@ export async function setMinistryEntryDisabled(_previous: ActionState, formData:
     if (!saved) return NOT_FOUND;
     // Set aside = off the lists and the rosters: the appointments are free again.
     if (disabled) await store.unplace(id);
+    const note = disabled ? "" : await placeAfterwards(store, saved, [1, 2, 3, 4, 5]);
     await record(access.user, disabled ? "ministry.signup_disable" : "ministry.signup_enable", id, { round: saved.round, name: saved.gameName });
     changed(formData);
-    return { status: "saved", message: disabled ? `${saved.gameName} is set aside: kept, but left out of the lists, and any appointment is free again.` : `${saved.gameName} is back on the lists.` };
+    return { status: "saved", message: disabled ? `${saved.gameName} is set aside: kept, but left out of the lists, and any appointment is free again.` : `${saved.gameName} is back on the lists.${note}` };
   } catch (error) {
     return failed(log, "Setting the ministry sign-up aside", problem(error));
   }
@@ -243,7 +272,7 @@ export async function removeAllMinistryEntries(_previous: ActionState, formData:
 
 const dayField = (formData: FormData): number => Number(textField(formData, "day"));
 
-/** Runs a buff day's assignment again (after its deadline): players placed by hand and late players stay, the rest is placed anew. */
+/** Runs a buff day's assignment again (after its deadline): players placed by hand and late players stay, the rest is placed anew. With `fresh` those are forgotten too. */
 export async function assignMinistryDay(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const access = await checkAccess("moderator");
   if ("denied" in access) return denied(access.denied);
@@ -259,18 +288,60 @@ export async function assignMinistryDay(_previous: ActionState, formData: FormDa
     if (!closedDays(round, now).includes(day)) {
       return { status: "error", message: "Players can still sign up for this day. The appointments are given out by themselves at the deadline; to do it now, set the day's deadline to a time that has passed." };
     }
+    // From scratch: the times placed by hand (and those of players who took a free one) are forgotten first, so everyone is placed by the rules alone.
+    const fresh = textField(formData, "fresh") === "1";
+    if (fresh) await store.clearAppointments(round.key, day);
     const run = await runAssignment(store, round, day, false);
     if (run.outcome === "unavailable") return NO_ROSTER_TABLE;
     if (run.outcome === "clash") return { status: "error", message: "A player took a free appointment at the same moment, so nothing was changed. Press the button again." };
-    await record(access.user, "ministry.assign", null, { round: round.key, day, placed: run.placed, unplaced: run.unplaced, at: "button" });
+    await record(access.user, "ministry.assign", null, { round: round.key, day, placed: run.placed, unplaced: run.unplaced, at: "button", ...(fresh ? { fresh: true } : {}) });
     log.info("Ministry assignment ran", { round: round.key, day, placed: run.placed, unplaced: run.unplaced });
     changed(formData);
     return {
       status: "saved",
-      message: `Done. The assignment gave out ${run.placed} appointment${run.placed === 1 ? "" : "s"}; players placed by hand and players who took a free appointment kept theirs.${run.unplaced > 0 ? ` ${run.unplaced} player${run.unplaced === 1 ? " has" : "s have"} no appointment: every time they picked went to a higher score.` : ""}`,
+      message: `Done for Day ${day}. The assignment gave out ${run.placed} appointment${run.placed === 1 ? "" : "s"}${fresh ? " from scratch: every earlier placing of this day, also by hand, is forgotten" : "; players placed by hand and players who took a free appointment kept theirs"}.${run.unplaced > 0 ? ` ${run.unplaced} player${run.unplaced === 1 ? " has" : "s have"} no appointment: every time they picked went to a higher score.` : ""}`,
     };
   } catch (error) {
     return failed(log, "Running the ministry assignment", problem(error));
+  }
+}
+
+/**
+ * Publish: players see the day's appointments as the moderators have them now. Discard (`discard` = 1): the
+ * moderators' draft goes back to what players see. Until one of them, every change after the deadline's own run
+ * (a new run, a move, an added or removed player) is the moderators' draft only.
+ */
+export async function publishMinistryDay(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const access = await checkAccess("moderator");
+  if ("denied" in access) return denied(access.denied);
+  const log = await actionLogger();
+  const store = ministryStore();
+  if (!store) return NO_STORE;
+  try {
+    const { rounds } = await ministryRounds(new Date(), store);
+    const round = rounds.find((entry) => entry.key === textField(formData, "round"));
+    const day = dayField(formData);
+    if (!round || !isScoringDay(day) || !sectionOn(round.sections, day)) return { status: "error", message: "Pick one of the buff days shown. Reload the page." };
+    const roster = await store.roster(round.key);
+    if (!roster.available) return NO_ROSTER_TABLE;
+    if (!roster.drafts) return { status: "error", message: "Drafts need migration 0028, which isn't applied yet. Until then players see every change at once." };
+    if (!roster.assignedAt[day]) return { status: "error", message: "This day's appointments aren't given out yet." };
+    const changes = draftChanges(roster.appointments, roster.published[day] ?? [], day).length;
+    const discard = textField(formData, "discard") === "1";
+    if (discard) {
+      if (!(await store.restore(round.key, day))) return { status: "error", message: "This day was never published, so there is nothing to go back to." };
+      await record(access.user, "ministry.discard", null, { round: round.key, day, changes });
+      log.info("Ministry draft discarded", { round: round.key, day, changes });
+      changed(formData);
+      return { status: "saved", message: `The draft of Day ${day} is dropped: the appointments are again as players see them.` };
+    }
+    await store.publish(round.key, day);
+    await record(access.user, "ministry.publish", null, { round: round.key, day, changes });
+    log.info("Ministry roster published", { round: round.key, day, changes });
+    changed(formData);
+    return { status: "saved", message: `Published. Players see Day ${day} as it is here now.` };
+  } catch (error) {
+    return failed(log, "Publishing the ministry roster", problem(error));
   }
 }
 

@@ -6,7 +6,7 @@ import { locale as rootLocale } from "next/root-params";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
-import { type AdminSection as SectionData, ClearRound, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
+import { type AdminSection as SectionData, ClearRound, DisabledList, type DraftState, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
 import { AdminSection } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { toUtcInputValue } from "@/lib/admin/forms";
@@ -17,7 +17,7 @@ import { hasRole } from "@/lib/auth/roles";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
 import { dayStart, type PrepRound } from "@/lib/kvk/prep";
-import { assignDay, rosterChat, rosterOf } from "@/lib/ministry/assign";
+import { assignDay, draftChanges, rosterChat, rosterOf } from "@/lib/ministry/assign";
 import { BUFF_FIELDS, defaultDeadline, MAX_SIGNUPS_PER_ROUND, rankSection, scoredInPoints, sectionOn, slotDemand, slotLabel, SLOTS_PER_DAY, speedupLabel } from "@/lib/ministry/ministry";
 import type { MinistryRound } from "@/lib/ministry/state";
 
@@ -105,6 +105,13 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
           takenBy: Object.fromEntries(stored.map((held) => [held.slot, names.get(held.signupId) ?? ""])),
         }
       : undefined;
+  // Draft or live: what a Publish would change for players on this day (the deadline's own run is published by itself).
+  const live = data.roster.published[section.day];
+  const changedSlots = mode === "assigned" && data.roster.drafts ? draftChanges(stored, (live ?? []).filter((held) => names.has(held.signupId)), section.day) : [];
+  const draft: DraftState | undefined =
+    mode === "assigned" && data.roster.drafts
+      ? { state: live === undefined ? "unpublished" : changedSlots.length > 0 ? "changed" : "live", slots: changedSlots, publishedAt: data.roster.publishedAt[section.day] ? DATE_TIME.format(new Date(data.roster.publishedAt[section.day] as string)) : null }
+      : undefined;
   const chat = rosterChat(cells, `${sectionName(section)} · ${section.date} (UTC)`);
   const allianceList = alliances.filter((a) => a.published).map((a) => ({ tag: a.tag, name: a.name }));
   const href = (round: string, day?: number) => `${adminPath(locale, "/ministry")}?round=${round}${day ? `&day=${day}` : ""}`;
@@ -182,6 +189,7 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
           <div className="mb-4 border-t border-line pt-4">
             <h3 className="mb-2 text-base font-extrabold text-ink">Appointments</h3>
             <RosterPanel
+              key={`${selected.key}-${section.day}`}
               roundKey={selected.key}
               day={section.day}
               title={`${sectionName(section)} · ${section.date}`}
@@ -193,6 +201,7 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
               locale={locale}
               placement={placement}
               players={players}
+              draft={draft}
             />
           </div>
         ) : (
