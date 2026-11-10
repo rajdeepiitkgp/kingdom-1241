@@ -10,10 +10,13 @@ import { type GovernorProfile, parseMightPulsePlayer } from "./governor";
  * (MIGHTPULSE_API_KEY, created there with a Discord sign-in) never leaves the
  * server, and the id is never logged.
  *
- * A player MightPulse hasn't refreshed for an hour makes their API wait while
- * it fetches from the game (up to 90 seconds on their side; concurrent requests
- * for the same player share that fetch), so the default timeout is generous and
- * the form retries a timed-out lookup a few seconds later.
+ * Since MightPulse's rebuild (Nov 2026) the call answers at once with the copy
+ * it has stored, even an old one (`"fresh": false`, an update queued in the
+ * background): name, alliance and kingdom are all the forms need, so that copy
+ * is taken as it is and no `wait` is sent. Only a player MightPulse has never
+ * seen takes longer: after 10 seconds it answers 202 (`"pending": true`) while
+ * it asks the game, which counts as "not yet" here and the form tries again a
+ * few seconds later (the follow-up call is free on their side).
  *
  * Fail-open by design: no key, a timeout, a rate limit or any other error is
  * reported as `unavailable`, and the form then simply lets the player type
@@ -47,6 +50,11 @@ export async function lookupGovernor(governorId: string, options: { fetchImpl?: 
     if (response.status === 404) {
       log.debug("MightPulse: unknown governor", { elapsedMs: elapsedMs(started) });
       return { status: "unknown" };
+    }
+    if (response.status === 202) {
+      // A player MightPulse is seeing for the first time: still asking the game. The form's retry picks the answer up.
+      log.debug("MightPulse: governor lookup still pending", { elapsedMs: elapsedMs(started) });
+      return { status: "unavailable" };
     }
     if (!response.ok) {
       // 401 = key problem, 429 = over the per-minute or daily budget, 5xx = their side. All fail open.
