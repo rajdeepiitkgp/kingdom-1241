@@ -283,6 +283,16 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "After you changed, added or set aside entries, this places everyone anew. Players you placed by hand keep their time. It needs a second tap, because it may move players.",
       ),
       step(
+        "ministry-admin-table",
+        "The day as a table",
+        "Every half-hour from 00:00 to 24:00 UTC with its player, what they bring and their score; free times are red. This is the list to make the appointments from in the game. Copy for game chat gives the times and names only.",
+      ),
+      step(
+        "ministry-admin-place",
+        "Move a player by hand",
+        "The arrows in the table move a player half an hour earlier or later; onto a time someone holds, the two trade places. For a bigger jump, or a player without an appointment, use this form: the player, then any free time or none. Assign again keeps a player you moved.",
+      ),
+      step(
         "ministry-admin-list",
         "The ranking",
         "Highest first. Construction and research: the KvK points the numbers are worth (Truegold 2,000, Tempered Truegold 30,000, Truegold Dust 1,000, a minute of speedups 30). Training: the speedups alone, since the game scores the troops trained. Power is MightPulse's figure at sign-up, so an odd number stands out.",
@@ -291,11 +301,6 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "ministry-admin-actions",
         "Edit, set aside, remove",
         "Edit corrects a player's numbers or times, also after the deadline. Set aside keeps the entry but leaves it out of the lists, for one you want to check first. Remove deletes it; the player can sign up again. A player who lost their device asks you for the change.",
-      ),
-      step(
-        "ministry-admin-place",
-        "Place a player by hand",
-        "Once the day's appointments are out, each player has this dropdown: any free time, also one outside the times they picked, or none. Use it for what players arrange with you in the game. Then copy the day for the game chat and make the appointments in the game.",
       ),
       step("ministry-admin-add", "Add a sign-up by hand", "For a player who can't use the site, or a test entry to try the page: any Governor ID works here. Remove test entries before the deadline."),
       step(null, "Good practice", "Set the buff days under Prep days, open the round a week before, and remind players a day before each deadline. To give the appointments out earlier, set the day's deadline to now. Every change you make here is listed under Recent changes on the Overview."),

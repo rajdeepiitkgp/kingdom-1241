@@ -149,6 +149,16 @@ export function memoryMinistryStore(): MinistryStore {
       state.appointments = [...state.appointments.filter((held) => !(held.round === round && held.day === day && held.signupId === signupId)), { round, day, slot, signupId, source }];
       return "ok";
     },
+    async swap(round, day, firstId, secondId) {
+      const of = (id: string) => state.appointments.find((held) => held.round === round && held.day === day && held.signupId === id);
+      const first = of(firstId);
+      const second = of(secondId);
+      if (!first || !second) return false;
+      [first.slot, second.slot] = [second.slot, first.slot];
+      first.source = "moderator";
+      second.source = "moderator";
+      return true;
+    },
     async unplace(signupId, days) {
       state.appointments = state.appointments.filter((held) => held.signupId !== signupId || (days !== undefined && !days.includes(held.day)));
     },

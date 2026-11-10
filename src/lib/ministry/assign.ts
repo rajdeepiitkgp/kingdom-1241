@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import type { ScoringDay } from "@/lib/kvk/prep";
-import { type RankedSignup, type Signup, slotClock, SLOTS_PER_DAY } from "./ministry";
+import { type RankedSignup, type Signup, slotLabel, SLOTS_PER_DAY } from "./ministry";
 
 /**
  * Who gets which appointment on a buff day (pure, unit-tested).
@@ -131,8 +131,8 @@ export function placementProblem(appointments: readonly Appointment[], day: Scor
   return holder && holder.signupId !== signupId ? "slotTaken" : null;
 }
 
-/** The day's roster as lines for the game chat: `14:30 [TAG] Name`, free appointments as `14:30 —` when `withFree`. */
+/** The day's roster as lines for the game chat: `14:30–15:00 [TAG] Name` (UTC, start and end), free appointments as `14:30–15:00 —` when `withFree`. */
 export function rosterChat(roster: ReadonlyArray<{ name: string } | null>, heading: string, withFree = false): string {
-  const lines = roster.flatMap((held, slot) => (held ? [`${slotClock(slot)} ${held.name}`] : withFree ? [`${slotClock(slot)} —`] : []));
+  const lines = roster.flatMap((held, slot) => (held ? [`${slotLabel(slot)} ${held.name}`] : withFree ? [`${slotLabel(slot)} —`] : []));
   return [heading, ...lines].join("\n");
 }

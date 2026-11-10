@@ -187,6 +187,21 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       }
       return "ok";
     },
+    async swap(round, day, firstId, secondId) {
+      const { data, error } = await supabase.from(APPOINTMENTS).select("signup_id, slot").eq("round", round).eq("day", day).in("signup_id", [firstId, secondId]);
+      if (error) throw error;
+      const first = data?.find((row) => row.signup_id === firstId);
+      const second = data?.find((row) => row.signup_id === secondId);
+      if (!first || !second) return false;
+      // The table allows one player per slot at every moment, so the second steps out while the first moves over.
+      const out = await supabase.from(APPOINTMENTS).delete().eq("round", round).eq("day", day).eq("signup_id", secondId);
+      if (out.error) throw out.error;
+      const moved = await supabase.from(APPOINTMENTS).update({ slot: second.slot, source: "moderator" }).eq("round", round).eq("day", day).eq("signup_id", firstId);
+      const back = await supabase.from(APPOINTMENTS).insert({ round, day, slot: moved.error ? second.slot : first.slot, signup_id: secondId, source: "moderator" });
+      if (moved.error) throw moved.error;
+      if (back.error) throw back.error;
+      return true;
+    },
     async unplace(signupId, days) {
       let query = supabase.from(APPOINTMENTS).delete().eq("signup_id", signupId);
       if (days) {

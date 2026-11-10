@@ -73,6 +73,14 @@ describe("the memory store", () => {
       { signupId: b.id, day: 2, slot: 21, source: "moderator" },
     ]);
 
+    // ▲ ▼ onto a neighbour: the two trade places, both placed by hand from then on.
+    expect(await store.swap(round, 2, b.id, c.id)).toBe(true);
+    expect((await store.roster(round)).appointments.filter((held) => held.day === 2)).toEqual([
+      { signupId: b.id, day: 2, slot: 5, source: "moderator" },
+      { signupId: c.id, day: 2, slot: 21, source: "moderator" },
+    ]);
+    expect(await store.swap(round, 2, a.id, c.id)).toBe(false);
+
     await store.unplace(b.id, [2]);
     await store.clearRoster(round, 2);
     const cleared = await store.roster(round);

@@ -6,18 +6,18 @@ import { locale as rootLocale } from "next/root-params";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
-import { type AdminSection as SectionData, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
+import { type AdminSection as SectionData, DisabledList, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
 import { AdminSection } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { toUtcInputValue } from "@/lib/admin/forms";
 import { getMinistryAdmin } from "@/lib/admin/ministry-data";
-import { sectionName } from "@/lib/admin/ministry-labels";
+import { BUFF_NAME, RESOURCE_NAME, sectionName } from "@/lib/admin/ministry-labels";
 import { adminPath } from "@/lib/auth/paths";
 import { requireEditor } from "@/lib/auth/server";
 import { getAlliances } from "@/lib/data";
 import { dayStart, type PrepRound } from "@/lib/kvk/prep";
 import { assignDay, rosterChat, rosterOf } from "@/lib/ministry/assign";
-import { defaultDeadline, MAX_SIGNUPS_PER_ROUND, rankSection, sectionOn, slotDemand, slotLabel, SLOTS_PER_DAY } from "@/lib/ministry/ministry";
+import { BUFF_FIELDS, defaultDeadline, MAX_SIGNUPS_PER_ROUND, rankSection, scoredInPoints, sectionOn, slotDemand, slotLabel, SLOTS_PER_DAY, speedupLabel } from "@/lib/ministry/ministry";
 import type { MinistryRound } from "@/lib/ministry/state";
 
 export const metadata: Metadata = { title: "Ministry sign-ups" };
@@ -79,7 +79,21 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
   const mode = !dayClosed ? "preview" : assigned ? "assigned" : "waiting";
   const stored = data.roster.appointments.filter((held) => held.day === section.day && names.has(held.signupId));
   const plan = mode === "preview" ? assignDay(section.day, ranked).appointments : stored;
-  const cells: Array<RosterCell | null> = rosterOf(plan, section.day).map((held) => (held ? { name: names.get(held.signupId) ?? "", source: held.source } : null));
+  const number = new Intl.NumberFormat("en-GB");
+  const byId = new Map(ranked.map((row) => [row.signup.id, row]));
+  const inPoints = scoredInPoints(section);
+  // What a player brings on this day, as the moderators' table shows it next to their time.
+  const brings = (id: string): Pick<RosterCell, "brings" | "score"> => {
+    const row = byId.get(id);
+    if (!row) return { brings: "", score: "" };
+    const parts = section.buffs.flatMap((buff) => [
+      ...BUFF_FIELDS[buff].resources.map((resource) => `${RESOURCE_NAME[resource]} ${number.format(row.signup.amounts[resource])}`),
+      `${BUFF_NAME[buff]} speedups ${speedupLabel(row.signup.amounts[BUFF_FIELDS[buff].speedups])}`,
+    ]);
+    return { brings: parts.join(" · "), score: inPoints ? `${number.format(row.score)} points` : speedupLabel(row.signup.amounts.trainingMinutes) };
+  };
+  const cells: Array<RosterCell | null> = rosterOf(plan, section.day).map((held) => (held ? { name: names.get(held.signupId) ?? "", source: held.source, id: held.signupId, ...brings(held.signupId) } : null));
+  const players: RosterPlayer[] = ranked.map(({ signup }) => ({ id: signup.id, name: fullName(signup), own: signup.slots[section.day] ?? [] }));
   const placedIds = new Set(plan.map((held) => held.signupId));
   const unplaced = mode === "waiting" ? [] : ranked.filter(({ signup }) => !placedIds.has(signup.id)).map(({ signup }) => fullName(signup));
   const placement: Placement | undefined =
@@ -163,6 +177,8 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
               unplaced={unplaced}
               chat={chat}
               locale={locale}
+              placement={placement}
+              players={players}
             />
           </div>
         ) : (
