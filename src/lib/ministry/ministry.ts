@@ -58,6 +58,9 @@ export function slotStart(round: PrepRound, day: ScoringDay, slot: number): Date
   return new Date(dayStart(round, day).getTime() + slot * SLOT_MINUTES * MINUTE);
 }
 
+/** A buff day's number as stored (1–5). */
+export const isScoringDay = (value: unknown): value is ScoringDay => typeof value === "number" && (SCORING_DAYS as readonly number[]).includes(value);
+
 /** The chosen slots as runs of neighbours: `[4,5,6,7,20]` → `[[4,4],[20,1]]` (first slot, length). */
 export function slotRuns(slots: readonly number[]): Array<[first: number, length: number]> {
   const runs: Array<[number, number]> = [];

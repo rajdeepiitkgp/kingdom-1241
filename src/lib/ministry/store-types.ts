@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
+import type { ScoringDay } from "@/lib/kvk/prep";
+import type { Appointment, AppointmentSource } from "./assign";
 import type { Amounts, MinistrySettings, Signup, SlotChoice } from "./ministry";
 
 /** A sign-up as the store holds it: with the hash of the key of the browser that may change it. */
@@ -21,6 +23,20 @@ export interface NewSignup {
 
 export type SignupPatch = Partial<Pick<StoredSignup, "gameName" | "allianceTag" | "verified" | "power" | "amounts" | "slots" | "disabled" | "locale" | "deviceHash">>;
 
+/** A round's appointments and the buff days whose assignment has run (the day's roster is shown from then on). */
+export interface RoundRoster {
+  appointments: Appointment[];
+  /** Per assigned day, when its assignment last ran (ISO). */
+  assignedAt: Partial<Record<ScoringDay, string>>;
+  /** False before migration 0027: no roster anywhere, the sign-ups work as before. */
+  available: boolean;
+}
+
+export const NO_ROSTER: RoundRoster = { appointments: [], assignedAt: {}, available: false };
+
+/** `skipped`: the run at the deadline found the day assigned already. `clash`: a free appointment was taken at the same moment; run again. */
+export type AssignOutcome = "done" | "skipped" | "clash" | "unavailable";
+
 /** Storage of the ministry sign-ups and the rounds' settings. Methods throw on a database problem; the callers decide what the page says. */
 export interface MinistryStore {
   settings(): Promise<MinistrySettings>;
@@ -36,4 +52,13 @@ export interface MinistryStore {
   /** The row after the change, or null when it is gone. */
   update(id: string, patch: SignupPatch): Promise<StoredSignup | null>;
   remove(id: string): Promise<boolean>;
+  roster(round: string): Promise<RoundRoster>;
+  /** Replaces the day's `auto` appointments with `rows` and marks the day assigned, all or nothing. */
+  assign(round: string, day: ScoringDay, rows: ReadonlyArray<{ signupId: string; slot: number }>, first: boolean): Promise<AssignOutcome>;
+  /** Puts a player into a slot (moving them when they had another one that day); `slotTaken` when someone else holds it. */
+  place(round: string, day: ScoringDay, signupId: string, slot: number, source: AppointmentSource): Promise<"ok" | "slotTaken">;
+  /** Takes a player's appointments away: of one day, of some days, or all of them. */
+  unplace(signupId: string, days?: readonly ScoringDay[]): Promise<void>;
+  /** Back to "not assigned": the day's appointments and its mark go (sign-ups were opened again). */
+  clearRoster(round: string, day: ScoringDay): Promise<void>;
 }

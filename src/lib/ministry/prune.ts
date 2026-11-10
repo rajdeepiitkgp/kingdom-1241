@@ -18,6 +18,9 @@ export async function pruneOldSignups(admin: SupabaseClient, now: Date, options:
   }
   const { data, error } = await admin.from("ministry_signups").delete().lte("round", round).select("id");
   if (error) return missingTable(error) ? 0 : fail(error);
+  // The appointments went with their sign-ups; the days' "assigned" marks have no sign-up to follow (migration 0027).
+  const marks = await admin.from("ministry_rosters").delete().lte("round", round);
+  if (marks.error && !missingTable(marks.error)) fail(marks.error);
   return data?.length ?? 0;
 }
 

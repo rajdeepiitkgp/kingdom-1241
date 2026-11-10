@@ -58,6 +58,8 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { table: "kvk_retrospectives", primaryKey: "id", restore: "upsert" },
   { table: "kvk_retro_responses", primaryKey: "id", restore: "upsert" },
   { table: "ministry_signups", primaryKey: "id", restore: "upsert" },
+  { table: "ministry_appointments", primaryKey: "id", restore: "upsert" },
+  { table: "ministry_rosters", primaryKey: "id", restore: "upsert" },
   { table: "profiles", primaryKey: "id", restore: "upsert" },
   { table: "role_grants", primaryKey: "id", restore: "insert-missing" },
   { table: "audit_log", primaryKey: "id", restore: "append-if-empty" },
