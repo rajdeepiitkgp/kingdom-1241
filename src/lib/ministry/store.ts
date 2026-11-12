@@ -183,7 +183,21 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       }
       return { appointments: (held.data ?? []).flatMap((row) => mapAppointmentRow(row as Row) ?? []), assignedAt, available: true, published, publishedAt, drafts };
     },
+    async takeLate(round, day, signupId, slot) {
+      const { data, error } = await supabase.rpc("ministry_take_late", { p_round: round, p_day: day, p_slot: slot, p_signup: signupId });
+      if (notMigrated(error)) return "unavailable";
+      if (error) {
+        // The same half-hour taken in the same moment by a moderator's placing.
+        if (error.code === "23505") return "slotTaken";
+        throw error;
+      }
+      return data === "ok" ? "ok" : data === "taken" ? "slotTaken" : data === "held" ? "held" : "unavailable";
+    },
     async publish(round, day) {
+      // One step in the database (0029), so a free time taken in the same moment is never left out of the copy.
+      const atomic = await supabase.rpc("ministry_publish", { p_round: round, p_day: day });
+      if (!atomic.error) return;
+      if (!notMigrated(atomic.error)) throw atomic.error;
       const held = await supabase.from(APPOINTMENTS).select("signup_id, slot, source").eq("round", round).eq("day", day).order("slot");
       if (held.error) throw held.error;
       const { error } = await supabase.from(ROSTERS).update({ published: held.data ?? [], published_at: new Date().toISOString() }).eq("round", round).eq("day", day);

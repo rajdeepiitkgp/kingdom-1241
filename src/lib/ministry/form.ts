@@ -11,7 +11,8 @@ import { AMOUNT_MAX, type Amounts, BUFF_FIELDS, cleanSlots, NO_AMOUNTS, type Res
  * sentences: the player's form shows them in their language.
  */
 
-export type SignupErrorCode = "required" | "invalid" | "tooLong" | "tooMuch" | "noSlots" | "noAmount";
+/** `lateTaken`: the free appointments in the times picked went to someone else a moment ago. */
+export type SignupErrorCode = "required" | "invalid" | "tooLong" | "tooMuch" | "noSlots" | "noAmount" | "lateTaken";
 export type SignupErrors = Record<string, SignupErrorCode>;
 
 /** Field names of the form. */
@@ -44,6 +45,8 @@ export interface SignupSubmission {
   amounts: Amounts;
   slots: SlotChoice;
   locale: string;
+  /** The days past their deadline the player joins now, for one of the free appointments. */
+  lateDays: ScoringDay[];
 }
 
 type Form = { get(name: string): unknown; getAll(name: string): unknown[] };
@@ -82,6 +85,11 @@ export interface ParseSignupOptions {
   sections: readonly Section[];
   /** The days that can still be changed; the others keep what `existing` holds. */
   openDays: readonly ScoringDay[];
+  /**
+   * Days past their deadline that still have free appointments this player may take: joined in the form, such a day is
+   * read like an open one (what they bring, the times picked); left alone, it keeps what was stored.
+   */
+  lateDays?: readonly ScoringDay[];
   /** The stored entry when this is a change. */
   existing?: { amounts: Amounts; slots: SlotChoice } | null;
 }
@@ -114,9 +122,11 @@ export function parseSignupForm(form: Form, allianceTags: readonly string[], opt
 
   const amounts: Amounts = { ...NO_AMOUNTS };
   const slots: SlotChoice = {};
+  const lateDays: ScoringDay[] = [];
   for (const section of options.sections) {
     const fields = section.buffs.flatMap((buff) => [...BUFF_FIELDS[buff].resources, BUFF_FIELDS[buff].speedups]);
-    if (!options.openDays.includes(section.day)) {
+    const late = !options.openDays.includes(section.day) && Boolean(options.lateDays?.includes(section.day)) && text(form, FIELD.join(section.day)) === "on";
+    if (!options.openDays.includes(section.day) && !late) {
       // Past its deadline: what was stored stays, whatever the form says.
       const kept = options.existing?.slots[section.day];
       if (kept && kept.length > 0) slots[section.day] = kept;
@@ -133,6 +143,7 @@ export function parseSignupForm(form: Form, allianceTags: readonly string[], opt
     const picked = postedSlots(form, section.day);
     if (picked.length === 0) errors[FIELD.slots(section.day)] = "noSlots";
     else slots[section.day] = picked;
+    if (late) lateDays.push(section.day);
     const fieldError = fields.some((field) => field in errors) || section.buffs.some((buff) => FIELD.days(buff) in errors || FIELD.hours(buff) in errors);
     if (!fieldError && sectionScore(section, amounts) === 0) errors[FIELD.join(section.day)] = "noAmount";
   }
@@ -140,7 +151,7 @@ export function parseSignupForm(form: Form, allianceTags: readonly string[], opt
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   const locale = text(form, FIELD.locale);
-  return { ok: true, value: { governorId, gameName, allianceTag, amounts, slots, locale: isLocaleCode(locale) ? locale : "en" } };
+  return { ok: true, value: { governorId, gameName, allianceTag, amounts, slots, locale: isLocaleCode(locale) ? locale : "en", lateDays } };
 }
 
 /** A device key as the form sends it: 32 to 64 hex characters, made by the browser. */

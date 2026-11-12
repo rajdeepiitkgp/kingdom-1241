@@ -157,6 +157,17 @@ export function memoryMinistryStore(): MinistryStore {
       const rows = state.appointments.filter((held) => held.round === round && held.day === day).map(({ signupId, slot, source }) => ({ signupId, day, slot, source }));
       state.published.set(`${round}:${day}`, { at: new Date().toISOString(), rows: rows.sort((a, b) => a.slot - b.slot) });
     },
+    async takeLate(round, day, signupId, slot) {
+      const key = `${round}:${day}`;
+      const live = state.published.get(key);
+      if (!live) return "unavailable";
+      const working = state.appointments.filter((held) => held.round === round && held.day === day);
+      if ([...working, ...live.rows].some((held) => held.signupId === signupId)) return "held";
+      if ([...working, ...live.rows].some((held) => held.slot === slot)) return "slotTaken";
+      state.appointments = [...state.appointments, { round, day, slot, signupId, source: "late" }];
+      live.rows = [...live.rows, { signupId, day, slot, source: "late" as const }].sort((a, b) => a.slot - b.slot);
+      return "ok";
+    },
     async restore(round, day) {
       const live = state.published.get(`${round}:${day}`);
       if (!live) return false;

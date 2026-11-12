@@ -3,9 +3,11 @@
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
+import { systemAudit } from "@/lib/admin/audit";
+import { notifyCouncil } from "@/lib/alerts";
 import { getAlliances, getSettings } from "@/lib/data";
 import { kvkSessionSecret } from "@/lib/kvk/access";
-import type { ScoringDay } from "@/lib/kvk/prep";
+import { dayStart, type ScoringDay } from "@/lib/kvk/prep";
 import type { LockoutPolicy } from "@/lib/kvk/throttle";
 import { addressHash, clearThrottle, takeTry } from "@/lib/kvk/throttle-store";
 import { createLogger, requestId } from "@/lib/log";
@@ -13,17 +15,26 @@ import { isGovernorId, isHoneypotFilled, normalizeGovernorId } from "@/lib/retro
 import { type GovernorProfile, signGovernor, verifyGovernor } from "@/lib/retro/governor";
 import { lookupGovernor as fetchGovernor, mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { HOUR } from "@/lib/time";
+import { holdsAppointment, lateCandidates, lateNotice } from "./assign";
 import { FIELD, isDeviceKey, parseSignupForm, type SignupErrors } from "./form";
-import { type Amounts, MAX_SIGNUPS_PER_ROUND, type SlotChoice } from "./ministry";
-import { publishedRoster, rosterDays, rosterFor } from "./roster";
+import { type Amounts, MAX_SIGNUPS_PER_ROUND, sectionOn, type SlotChoice } from "./ministry";
+import { type LateOffer, lateOffer, publishedRoster, rosterDays, rosterFor } from "./roster";
 import { type MinistryRound, ministryUnlocked, openDays, openMinistryRound } from "./state";
-import { type MinistryStore, ministryStore, type StoredSignup } from "./store";
+import { ministryMemory, type MinistryStore, ministryStore, type StoredSignup } from "./store";
 
 /**
  * Server Actions of the ministry sign-up page. All are reachable by a direct
  * POST, so every check happens here: the battle-plan cookie, the open round,
  * each day's deadline, the per-address budget, the Governor ID and the key of
  * the browser that owns an entry. Names and ids are never logged.
+ *
+ * **Late sign-ups.** A day past its deadline whose roster is out still takes
+ * players for the appointments nobody holds: they pick times as before, and
+ * the earliest free half-hour inside them is theirs at once (source `late`).
+ * It must be free for players and in the moderators' draft, and it is written
+ * to both, so a draft is never rejected or rearranged by a late player. The
+ * site appoints nobody in the game: the player is told to message a moderator,
+ * and the council's Discord webhook (alerts.ts) gets a line for each one.
  */
 
 export interface LookupState {
@@ -48,6 +59,8 @@ export interface MySignup {
   disabled: boolean;
   /** Per buff day whose appointments are given out: the player's half-hour slot, or null when they got none. A day not listed isn't assigned yet. */
   appointments: Partial<Record<ScoringDay, number | null>>;
+  /** The days whose appointment the player took themselves after the deadline (they tell a moderator in the game). */
+  late: ScoringDay[];
 }
 
 /** What "find me" on the roster answers: the appointments of one Governor ID, per assigned day. */
@@ -66,6 +79,10 @@ export interface SubmitState {
   mine?: MySignup[];
   /** `ok`: the Governor ID that was saved. */
   saved?: string;
+  /** `ok`: the save gave the player a free appointment of a day past its deadline. */
+  tookLate?: boolean;
+  /** With a `lateTaken` error: the free appointments as they are now, for the picker. */
+  free?: LateOffer;
 }
 
 export interface WithdrawState {
@@ -108,6 +125,7 @@ async function mine(store: MinistryStore, round: MinistryRound, device: string, 
     slots: row.slots,
     disabled: row.disabled,
     appointments: row.disabled ? {} : appointmentsOf(row, roster.appointments, days),
+    late: row.disabled ? [] : roster.appointments.filter((held) => held.signupId === row.id && held.source === "late" && days.includes(held.day)).map((held) => held.day),
   }));
 }
 
@@ -178,7 +196,11 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
   const round = await openMinistryRound(new Date(now));
   if (!store || !round || formData.get(FIELD.round) !== round.key) return { status: "closed" };
   const open: ScoringDay[] = openDays(round, new Date(now));
-  if (open.length === 0) return { status: "closed" };
+  // Days past their deadline that still have free appointments (reading the roster runs a due assignment).
+  const roster = await rosterFor(store, round, new Date(now));
+  const free = lateOffer(round, roster, new Date(now));
+  const freeDays = round.sections.map((section) => section.day).filter((day) => (free[day]?.length ?? 0) > 0);
+  if (open.length === 0 && freeDays.length === 0) return { status: "closed" };
   if (isHoneypotFilled(formData)) {
     log.info("Ministry sign-up dropped: honeypot filled", { round: round.key });
     return { status: "ok", mine: [] }; // a bot learns nothing from a success message
@@ -221,11 +243,18 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
     const known = verified ? { name: verified.name, allianceTag: verified.allianceTag } : existing?.verified ? { name: existing.gameName, allianceTag: existing.allianceTag } : null;
 
     const alliances = await getAlliances();
-    const parsed = parseSignupForm(formData, alliances.map((a) => a.tag), { verified: known, sections: round.sections, openDays: open, existing });
+    // A free appointment is for a player who holds none that day (and whom no moderator set aside).
+    const lateDays = existing?.disabled ? [] : freeDays.filter((day) => !existing || !holdsAppointment(roster.appointments, roster.published[day] ?? [], day, existing.id));
+    const parsed = parseSignupForm(formData, alliances.map((a) => a.tag), { verified: known, sections: round.sections, openDays: open, lateDays, existing });
     if (!parsed.ok) return { status: "invalid", errors: parsed.errors };
     const entry = parsed.value;
+    // Nothing is saved for a late day whose picked times have no free half-hour left.
+    const gone = entry.lateDays.filter((day) => lateCandidates(free[day] ?? [], entry.slots[day] ?? []).length === 0);
+    if (gone.length > 0) return { status: "invalid", errors: Object.fromEntries(gone.map((day) => [FIELD.slots(day), "lateTaken" as const])), free };
 
+    let signupId: string;
     if (existing) {
+      signupId = existing.id;
       const saved = await store.update(existing.id, {
         gameName: entry.gameName,
         allianceTag: entry.allianceTag,
@@ -256,10 +285,43 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
       });
       // Two posts for one Governor ID at the same instant: the second one lost.
       if (saved === "duplicate") return { status: "taken" };
+      signupId = saved.id;
       log.info("Ministry sign-up recorded", { round: round.key, verified: verified !== null, days: Object.keys(entry.slots).length, locale: entry.locale });
     }
     await clearThrottle(submitScope);
-    return { status: "ok", saved: entry.governorId, mine: await mine(store, round, device, new Date(now)) };
+
+    // The late days: the earliest free half-hour inside the times picked, the next one when someone was quicker.
+    const missed: ScoringDay[] = [];
+    let tookLate = false;
+    for (const day of entry.lateDays) {
+      let taken: number | null = null;
+      for (const slot of lateCandidates(free[day] ?? [], entry.slots[day] ?? [])) {
+        const outcome = await store.takeLate(round.key, day, signupId, slot);
+        if (outcome === "slotTaken") continue;
+        if (outcome === "ok") taken = slot;
+        if (outcome === "held") taken = -1; // placed by a moderator in the same moment: they have their appointment
+        break;
+      }
+      if (taken === null) {
+        missed.push(day);
+        continue;
+      }
+      if (taken < 0) continue;
+      tookLate = true;
+      log.info("Ministry appointment taken after the deadline", { round: round.key, day, slot: taken });
+      if (!ministryMemory()) await systemAudit("ministry.late", "ministry_signups", signupId, { round: round.key, day, slot: taken, name: entry.gameName });
+      // The appointment is held, but a moderator makes it in the game: the council's Discord hears of it (when the webhook is set; never throws).
+      const buffs = (sectionOn(round.sections, day)?.buffs ?? []).map((buff) => `${buff[0].toUpperCase()}${buff.slice(1)}`).join(" + ");
+      const date = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(dayStart(round.round, day));
+      await notifyCouncil(lateNotice(entry, buffs, day, date, taken));
+    }
+    const rows = await mine(store, round, device, new Date(now));
+    if (missed.length > 0) {
+      // The entry is stored without an appointment on those days; the picker gets the times that are free now.
+      const fresh = lateOffer(round, await rosterFor(store, round, new Date()), new Date());
+      return { status: "invalid", errors: Object.fromEntries(missed.map((day) => [FIELD.slots(day), "lateTaken" as const])), free: fresh, mine: rows };
+    }
+    return { status: "ok", saved: entry.governorId, mine: rows, tookLate };
   } catch (error) {
     log.error("Saving a ministry sign-up failed", { round: round.key, error: error instanceof Error ? error.message : String((error as { message?: string })?.message ?? error) });
     return { status: "unavailable" };

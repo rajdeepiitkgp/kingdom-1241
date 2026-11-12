@@ -3,11 +3,13 @@
 
 import clsx from "clsx";
 import { BadgeCheck, CircleCheck, LoaderCircle, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { Buff, ScoringDay } from "@/lib/kvk/prep";
 import { lookupMinistryGovernor, myMinistrySignups, submitMinistrySignup, withdrawMinistrySignup, type LookupState, type MySignup, type SubmitState } from "@/lib/ministry/actions";
 import { FIELD, type SignupErrorCode } from "@/lib/ministry/form";
+import type { LateOffer } from "@/lib/ministry/roster";
 import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, scoredInPoints, sectionScore, SLOT_MINUTES, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { GAME_NAME_MAX } from "@/lib/retro/config";
 import { isGovernorId, NO_ALLIANCE, normalizeGovernorId } from "@/lib/retro/form";
@@ -24,6 +26,10 @@ import { SlotPicker } from "./SlotPicker";
  * The player's side of the ministry sign-ups: the entries this browser made
  * (changed or withdrawn here until each day's deadline) and the form, one
  * card per buff day. The browser's key travels with its own sign-ups only.
+ *
+ * A day past its deadline whose roster still has free appointments stays in
+ * the form for players without one that day (`late`): the same card, the
+ * picker showing what is left, and the appointment is theirs on Save.
  */
 
 /** One buff day as the gate hands it over: plain values, dates as milliseconds. */
@@ -48,15 +54,31 @@ const IDLE: SubmitState = { status: "idle" };
 
 type Common = { round: RoundView; alliances: Array<{ tag: string; name: string }>; kingdom: number; lookupEnabled: boolean; dict: Dictionary; locale: string };
 
-export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters: RosterDay[] }) {
+/** The days on which this entry (or a new one) can still take a free appointment. */
+function lateDaysFor(row: MySignup | undefined, free: LateOffer, sections: readonly SectionView[]): ScoringDay[] {
+  if (row?.disabled) return [];
+  return sections.map((section) => section.day).filter((day) => (free[day]?.length ?? 0) > 0 && typeof row?.appointments[day] !== "number");
+}
+
+export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters: RosterDay[]; late: LateOffer }) {
   const { round, dict, rosters } = props;
   const deviceKey = useDeviceKey();
   const now = useNow(15_000);
   // The server's answer until the browser's clock takes over.
   const open = now ? round.sections.filter((section) => now.getTime() < section.deadline).map((section) => section.day) : props.openDays;
+  // The free appointments of the days past their deadline: the server's list, less the half-hours that have started since.
+  // A newer list from a save that found a time gone stands in until the page's own data is read again.
+  const router = useRouter();
+  const [newer, setNewer] = useState<LateOffer | null>(null);
+  const offer = newer ?? props.late;
+  const free: LateOffer = {};
+  for (const section of round.sections) {
+    const left = (offer[section.day] ?? []).filter((slot) => !now || section.start + slot * SLOT_MINUTES * MINUTE > now.getTime());
+    if (left.length > 0) free[section.day] = left;
+  }
   const [mine, setMine] = useState<MySignup[] | null>(null);
   const [editing, setEditing] = useState<string | "new" | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
+  const [saved, setSaved] = useState<{ name: string; late: boolean } | null>(null);
   const [, startLoad] = useTransition();
   useEffect(() => {
     if (!deviceKey) return;
@@ -67,8 +89,10 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
   }, [deviceKey]);
 
   const entries = mine ?? [];
-  const showForm = open.length > 0 && (editing !== null || (mine !== null && entries.length === 0));
   const entry = editing && editing !== "new" ? entries.find((row) => row.governorId === editing) : undefined;
+  const lateDays = lateDaysFor(entry, free, round.sections);
+  const takesSignups = open.length > 0 || lateDaysFor(undefined, free, round.sections).length > 0;
+  const showForm = (open.length > 0 || lateDays.length > 0) && (editing !== null || (mine !== null && entries.length === 0));
 
   // This browser's own appointments, to mark them on the roster.
   const own: Partial<Record<ScoringDay, number[]>> = {};
@@ -90,7 +114,7 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
           {saved && (
             <p className="flex items-start gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm font-bold text-success" role="status">
               <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span dir="auto">{format(dict["ministry.saved"], { name: saved })}</span>
+              <span dir="auto">{format(dict[saved.late ? "ministry.saved.late" : "ministry.saved"], { name: saved.name })}</span>
             </p>
           )}
           <ul className="divide-y divide-line">
@@ -99,7 +123,9 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
                 key={row.governorId}
                 row={row}
                 round={round}
-                canChange={open.length > 0}
+                canChange={open.length > 0 || lateDaysFor(row, free, round.sections).length > 0}
+                canWithdraw={open.length > 0 && !round.sections.some((section) => (row.slots[section.day]?.length ?? 0) > 0 && !open.includes(section.day))}
+                freeDays={lateDaysFor(row, free, round.sections)}
                 now={now}
                 locale={props.locale}
                 deviceKey={deviceKey}
@@ -112,7 +138,7 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
               />
             ))}
           </ul>
-          {open.length > 0 && editing === null && (
+          {takesSignups && editing === null && (
             <button
               type="button"
               className="btn-ghost btn-sm"
@@ -133,14 +159,24 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
           key={entry?.governorId ?? "new"}
           {...props}
           openDays={open}
+          lateDays={lateDays}
+          rosterDays={rosters.map((roster) => roster.day)}
+          free={free}
+          onOffer={setNewer}
+          onMine={setMine}
           hydrated={now !== null}
           now={now}
           deviceKey={deviceKey}
           entry={entry}
           onCancel={entries.length > 0 ? () => setEditing(null) : undefined}
-          onSaved={(rows, name) => {
+          onSaved={(rows, name, late) => {
             setMine(rows);
-            setSaved(name);
+            setSaved({ name, late });
+            if (late) {
+              // The roster below and the free times come with the page: read them again, so the new appointment shows without a reload.
+              setNewer(null);
+              router.refresh();
+            }
             setEditing(null);
           }}
         />
@@ -148,9 +184,9 @@ export function MinistrySignup(props: Common & { openDays: ScoringDay[]; rosters
       {mine === null && (
         <div className="card h-40 animate-pulse bg-card-soft" aria-hidden />
       )}
-      {rosters.length > 0 && <MinistryRoster days={rosters} own={own} hydrated={now !== null} dict={dict} locale={props.locale} />}
-      {open.length === 0 && entries.length === 0 && mine !== null && (
-        <p className="card px-5 py-8 text-center font-semibold text-ink-muted">{dict["ministry.error.closed"]}</p>
+      {rosters.length > 0 && <MinistryRoster days={rosters} own={own} lateDays={Object.keys(free).map(Number)} hydrated={now !== null} dict={dict} locale={props.locale} />}
+      {!takesSignups && entries.length === 0 && mine !== null && (
+        <p className="card px-5 py-8 text-center font-semibold text-ink-muted">{rosters.length > 0 ? dict["ministry.late.none.all"] : dict["ministry.error.closed"]}</p>
       )}
     </div>
   );
@@ -161,6 +197,8 @@ function MineRow({
   row,
   round,
   canChange,
+  canWithdraw,
+  freeDays,
   now,
   locale,
   deviceKey,
@@ -171,6 +209,10 @@ function MineRow({
   row: MySignup;
   round: RoundView;
   canChange: boolean;
+  /** Only while none of the entry's days is past its deadline: after that a moderator removes it (the server says the same). */
+  canWithdraw: boolean;
+  /** The days past their deadline on which this entry can still take a free appointment. */
+  freeDays: ScoringDay[];
   /** The browser's clock, null until the page runs there. */
   now: Date | null;
   locale: string;
@@ -240,7 +282,15 @@ function MineRow({
                 </span>
               </p>
               {row.appointments[section.day] !== undefined ? (
-                <Appointment slot={row.appointments[section.day] ?? null} dayStart={section.start} now={now} locale={locale} dict={dict} />
+                <Appointment
+                  slot={row.appointments[section.day] ?? null}
+                  late={row.late.includes(section.day)}
+                  canTake={freeDays.includes(section.day)}
+                  dayStart={section.start}
+                  now={now}
+                  locale={locale}
+                  dict={dict}
+                />
               ) : (
                 <p className="mt-auto text-xs font-semibold text-ink-faint">{dict["ministry.mine.pending"]}</p>
               )}
@@ -253,10 +303,12 @@ function MineRow({
             <Pencil className="size-4" aria-hidden />
             <span>{dict["ministry.mine.edit"]}</span>
           </button>
-          <button type="button" className={clsx("btn-ghost btn-sm", armed ? "border-danger text-danger" : "text-danger")} onClick={withdraw} disabled={busy}>
-            <Trash2 className="size-4" aria-hidden />
-            <span>{armed ? dict["ministry.mine.withdraw.confirm"] : dict["ministry.mine.withdraw"]}</span>
-          </button>
+          {canWithdraw && (
+            <button type="button" className={clsx("btn-ghost btn-sm", armed ? "border-danger text-danger" : "text-danger")} onClick={withdraw} disabled={busy}>
+              <Trash2 className="size-4" aria-hidden />
+              <span>{armed ? dict["ministry.mine.withdraw.confirm"] : dict["ministry.mine.withdraw"]}</span>
+            </button>
+          )}
         </div>
       )}
       {locked && (
@@ -276,8 +328,32 @@ function untilLabel(ms: number, dict: Dictionary): string {
 }
 
 /** The player's appointment on a day whose roster is out: its half-hour in UTC and in their own time with a countdown, or that they got none. */
-function Appointment({ slot, dayStart, now, locale, dict }: { slot: number | null; dayStart: number; now: Date | null; locale: string; dict: Dictionary }) {
-  if (slot === null) return <p className="mt-auto rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">{dict["ministry.mine.noAppointment"]}</p>;
+function Appointment({
+  slot,
+  late,
+  canTake,
+  dayStart,
+  now,
+  locale,
+  dict,
+}: {
+  slot: number | null;
+  /** The player took this one themselves after the deadline. */
+  late: boolean;
+  /** No appointment, and the day still has free ones to take. */
+  canTake: boolean;
+  dayStart: number;
+  now: Date | null;
+  locale: string;
+  dict: Dictionary;
+}) {
+  if (slot === null) {
+    return (
+      <p className="mt-auto rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">
+        {canTake ? format(dict["ministry.mine.noAppointment.free"], { button: dict["ministry.mine.edit"] }) : dict["ministry.mine.noAppointment"]}
+      </p>
+    );
+  }
   const from = dayStart + slot * SLOT_MINUTES * MINUTE;
   const to = from + SLOT_MINUTES * MINUTE;
   let local: string | null = null;
@@ -306,6 +382,7 @@ function Appointment({ slot, dayStart, now, locale, dict }: { slot: number | nul
           {over ? dict["time.ended"] : at >= from ? dict["time.live"] : `${dict["time.startsIn"]} ${untilLabel(from - at, dict)}`}
         </p>
       )}
+      {late && !over && <p className="text-xs font-bold wrap-break-word">{dict["ministry.mine.late"]}</p>}
     </div>
   );
 }
@@ -336,6 +413,11 @@ function SignupForm({
   dict,
   locale,
   openDays,
+  lateDays,
+  rosterDays,
+  free,
+  onOffer,
+  onMine,
   hydrated,
   now,
   deviceKey,
@@ -344,24 +426,74 @@ function SignupForm({
   onSaved,
 }: Common & {
   openDays: ScoringDay[];
+  /** Days past their deadline on which this entry can take one of the free appointments. */
+  lateDays: ScoringDay[];
+  /** The days whose roster is out. */
+  rosterDays: ScoringDay[];
+  /** The free half-hours of those days. */
+  free: LateOffer;
+  /** The server's newer list of free appointments (someone was quicker). */
+  onOffer: (offer: LateOffer) => void;
+  /** This browser's entries after a save that stored the entry but found the appointment gone. */
+  onMine: (rows: MySignup[]) => void;
   hydrated: boolean;
   now: Date | null;
   deviceKey: string;
   /** The sign-up being changed; none for a new one. */
   entry?: MySignup;
   onCancel?: () => void;
-  onSaved: (rows: MySignup[], name: string) => void;
+  onSaved: (rows: MySignup[], name: string, late: boolean) => void;
 }) {
   const [state, setState] = useState<SubmitState>(IDLE);
   const [pending, startSubmit] = useTransition();
+  // A time taken after the deadline can't be given back here, so that save asks first: a popup with what it means and
+  // Yes or Cancel. Where the browser has no `<dialog>` with `showModal`, the warning shows above the button and a second
+  // tap takes the time (`confirmed`: the late days and times it was shown for; another pick asks again).
+  const dialog = useRef<HTMLDialogElement>(null);
+  const waitingData = useRef<FormData | null>(null);
+  const [confirmed, setConfirmed] = useState<string | null>(null);
+  const closeDialog = () => {
+    try {
+      dialog.current?.close();
+    } catch {
+      // Nothing to close.
+    }
+  };
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const taking = lateDays.filter((day) => data.get(FIELD.join(day)) === "on").map((day) => `${day}:${data.getAll(FIELD.slots(day)).join(",")}`).join("|");
+    if (taking && taking !== confirmed) {
+      const element = dialog.current;
+      if (element && typeof element.showModal === "function") {
+        try {
+          waitingData.current = data;
+          element.showModal();
+          return;
+        } catch {
+          // Falls through to the warning above the button.
+        }
+      }
+      setConfirmed(taking);
+      return;
+    }
+    send(data);
+  };
+  const send = (data: FormData) => {
+    setConfirmed(null);
     startSubmit(async () => {
       const result = await submitMinistrySignup(IDLE, data);
       setState(result);
-      if (result.status === "ok") onSaved(result.mine ?? [], String(data.get(FIELD.gameName) ?? ""));
+      if (result.free) onOffer(result.free);
+      if (result.status !== "ok" && result.mine) onMine(result.mine);
+      if (result.status === "ok") onSaved(result.mine ?? [], String(data.get(FIELD.gameName) ?? ""), result.tookLate === true);
     });
+  };
+  const confirmLate = () => {
+    const data = waitingData.current;
+    waitingData.current = null;
+    closeDialog();
+    if (data) send(data);
   };
 
   // Governor ID check while typing, as on the feedback form: silent when MightPulse can't answer, retried when it is still fetching.
@@ -396,9 +528,12 @@ function SignupForm({
   const allianceLocked = (found && knownAlliance(lookup.allianceTag) !== null) || Boolean(entry?.verified && knownAlliance(entry.allianceTag));
 
   const [values, setValues] = useState<Record<string, string>>(() => initialValues(entry));
-  const [joinedDays, setJoinedDays] = useState<ReadonlySet<ScoringDay>>(() => new Set(round.sections.filter((section) => (entry?.slots[section.day]?.length ?? 0) > 0).map((section) => section.day)));
+  // A day past its deadline starts switched off and without times: the player joins it for a free appointment on purpose.
+  const [joinedDays, setJoinedDays] = useState<ReadonlySet<ScoringDay>>(
+    () => new Set(round.sections.filter((section) => openDays.includes(section.day) && (entry?.slots[section.day]?.length ?? 0) > 0).map((section) => section.day)),
+  );
   const [slots, setSlots] = useState<Partial<Record<ScoringDay, ReadonlySet<number>>>>(() =>
-    Object.fromEntries(round.sections.map((section) => [section.day, new Set(entry?.slots[section.day] ?? [])])),
+    Object.fromEntries(round.sections.map((section) => [section.day, new Set(openDays.includes(section.day) ? (entry?.slots[section.day] ?? []) : [])])),
   );
   const amounts: Amounts = {
     ...NO_AMOUNTS,
@@ -422,6 +557,13 @@ function SignupForm({
     const { days, hours } = splitSpeedup(minutes);
     return `${number(days)} ${dict[days === 1 ? "common.day" : "common.days"]} ${hours} ${dict["common.hours"]}`;
   };
+
+  // What the form would take late right now, in the form the submit reads it: the warning stands while it is the one that was shown.
+  const takingNow = lateDays
+    .filter((day) => joinedDays.has(day))
+    .map((day) => `${day}:${[...(slots[day] ?? [])].sort((a, b) => a - b).join(",")}`)
+    .join("|");
+  const confirming = confirmed !== null && confirmed === takingNow;
 
   const waitMs = state.status === "throttled" && state.retryAt && now ? Math.max(0, state.retryAt - now.getTime()) : 0;
   const waiting = state.status === "throttled" && (now === null || waitMs > 0);
@@ -581,7 +723,11 @@ function SignupForm({
       </section>
 
       {round.sections.map((section) => {
-        const open = openDays.includes(section.day);
+        const takes = openDays.includes(section.day);
+        // Past its deadline, with appointments nobody holds: the card stays, for one of those.
+        const late = !takes && lateDays.includes(section.day);
+        const open = takes || late;
+        const left = late ? new Set(free[section.day] ?? []) : undefined;
         const on = joinedDays.has(section.day);
         const picked = slots[section.day] ?? new Set<number>();
         const id = `ministry-day-${section.day}`;
@@ -624,9 +770,19 @@ function SignupForm({
                 </button>
               )}
             </div>
-            <DeadlineLine deadline={section.deadline} open={open} hydrated={hydrated} dict={dict} locale={locale} />
+            <DeadlineLine deadline={section.deadline} open={takes} hydrated={hydrated} dict={dict} locale={locale} />
+            {late && (
+              <p className="rounded-2xl bg-success-soft px-4 py-3 text-sm font-bold text-success" data-tour="ministry-late">
+                {dict["ministry.late.note"]}
+              </p>
+            )}
 
-            {!open && <p className="rounded-2xl bg-card-soft px-4 py-3 text-sm font-semibold text-ink-muted">{dict["ministry.closedDay"]}</p>}
+            {!open && (
+              <p className="rounded-2xl bg-card-soft px-4 py-3 text-sm font-semibold text-ink-muted" data-day-closed>
+                {/* The roster is out, this account has no appointment on it and nothing is left to pick: say so, and whom to ask. */}
+                {rosterDays.includes(section.day) && !entry?.disabled && typeof entry?.appointments[section.day] !== "number" ? dict["ministry.late.none"] : dict["ministry.closedDay"]}
+              </p>
+            )}
 
             {open && on && (
               <>
@@ -677,9 +833,11 @@ function SignupForm({
                   onChange={(next) => setSlots((previous) => ({ ...previous, [section.day]: next }))}
                   hydrated={hydrated}
                   error={errorText(errors[FIELD.slots(section.day)])}
+                  free={left}
+                  freeLabel={(count) => format(dict["ministry.late.free"], { count })}
                   labels={{
                     title: dict["ministry.slots.title"],
-                    hint: dict["ministry.slots.hint"],
+                    hint: late ? dict["ministry.late.hint"] : dict["ministry.slots.hint"],
                     utc: dict["ministry.slots.utc"],
                     local: dict["ministry.slots.local"],
                     all: dict["ministry.slots.all"],
@@ -700,6 +858,12 @@ function SignupForm({
         </p>
       )}
 
+      {confirming && !pending && (
+        <p role="alert" className="rounded-2xl bg-gold-soft px-4 py-3 text-sm font-bold text-gold-ink" data-late-confirm>
+          {dict["ministry.late.confirm"]}
+        </p>
+      )}
+
       <div className="flex flex-col items-stretch gap-x-2 gap-y-3 sm:flex-row sm:items-center sm:justify-end" data-tour="ministry-send">
         {onCancel && (
           <button type="button" className="btn-ghost" onClick={onCancel} disabled={pending}>
@@ -708,9 +872,34 @@ function SignupForm({
         )}
         <button type="submit" className="btn-primary" disabled={pending || waiting || state.status === "closed" || state.status === "full"}>
           {pending ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Send className="size-5 rtl:-scale-x-100" aria-hidden />}
-          <span>{pending ? dict["ministry.sending"] : entry ? dict["ministry.save"] : dict["ministry.submit"]}</span>
+          <span>{pending ? dict["ministry.sending"] : confirming ? dict["ministry.late.confirm.button"] : entry ? dict["ministry.save"] : dict["ministry.submit"]}</span>
         </button>
       </div>
+
+      {/* A click on the backdrop (the dialog itself, outside the card) closes it; Escape does by itself. */}
+      <dialog
+        ref={dialog}
+        className="m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl border-0 bg-transparent p-0 text-ink backdrop:bg-black/60"
+        aria-labelledby="ministry-late-confirm-title"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeDialog();
+        }}
+      >
+        <div className="card space-y-4 p-5">
+          <h3 id="ministry-late-confirm-title" className="text-lg font-extrabold wrap-break-word text-ink">
+            {dict["ministry.late.confirm.title"]}
+          </h3>
+          <p className="text-sm font-semibold wrap-break-word text-ink-muted">{dict["ministry.late.confirm"]}</p>
+          <div className="flex flex-col-reverse items-stretch gap-x-2 gap-y-3 sm:flex-row sm:justify-end">
+            <button type="button" className="btn-ghost" onClick={closeDialog}>
+              {dict["ministry.cancel"]}
+            </button>
+            <button type="button" className="btn-primary" onClick={confirmLate}>
+              {dict["ministry.late.confirm.yes"]}
+            </button>
+          </div>
+        </div>
+      </dialog>
     </form>
   );
 }

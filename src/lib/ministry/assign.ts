@@ -140,11 +140,46 @@ export function firstFreeOwn(appointments: readonly Pick<Appointment, "day" | "s
   return [...own].sort((a, b) => a - b).find((slot) => free.has(slot)) ?? null;
 }
 
+/**
+ * The half-hours a player may still take after a day's deadline: free in the moderators' working roster **and** in the
+ * one players see, and not started yet. Taking one never touches a draft: a time the draft has filled isn't offered,
+ * and a time the draft has freed waits for its Publish.
+ */
+export function lateSlots(
+  working: readonly Pick<Appointment, "day" | "slot">[],
+  published: readonly Pick<Appointment, "day" | "slot">[],
+  day: ScoringDay,
+  upcoming: { dayStart: number; now: number },
+): number[] {
+  const live = new Set(freeSlots(published, day));
+  return freeSlots(working, day, upcoming).filter((slot) => live.has(slot));
+}
+
+/** The free half-hours inside the times a late player picked, earliest first: the first one is theirs, the next ones are tried when someone was quicker. */
+export function lateCandidates(free: readonly number[], picked: readonly number[]): number[] {
+  const own = new Set(picked);
+  return free.filter((slot) => own.has(slot)).sort((a, b) => a - b);
+}
+
+/** The player holds an appointment on the day, in the working roster or in the one players see: no free time for them to take. */
+export function holdsAppointment(working: readonly Pick<Appointment, "day" | "signupId">[], published: readonly Pick<Appointment, "day" | "signupId">[], day: ScoringDay, signupId: string): boolean {
+  return [...working, ...published].some((held) => held.day === day && held.signupId === signupId);
+}
+
 /** A moderator's or a late player's place: the reason it can't be given, or null. */
 export function placementProblem(appointments: readonly Appointment[], day: ScoringDay, signupId: string, slot: number): "badSlot" | "slotTaken" | null {
   if (!Number.isInteger(slot) || slot < 0 || slot >= SLOTS_PER_DAY) return "badSlot";
   const holder = appointments.find((appointment) => appointment.day === day && appointment.slot === slot);
   return holder && holder.signupId !== signupId ? "slotTaken" : null;
+}
+
+/**
+ * The council's Discord message when a player took a free appointment after the deadline: nobody is appointed by the
+ * site, so a moderator has to know whom to appoint when. `date` is the buff day as text ("Thu 31 Dec").
+ */
+export function lateNotice(player: { gameName: string; allianceTag: string | null }, buffs: string, day: ScoringDay, date: string, slot: number): string {
+  const name = `${player.allianceTag ? `[${player.allianceTag}] ` : ""}${player.gameName}`;
+  return `👑 Ministry: **${name}** took a free appointment after the deadline. ${buffs}, Day ${day} (${date}), ${slotLabel(slot)} UTC. It is on the roster already; appoint them in the game at that time.`;
 }
 
 /** The day's roster as lines for the game chat: `14:30–15:00 [TAG] Name` (UTC, start and end), free appointments as `14:30–15:00 —` when `withFree`. */

@@ -4,7 +4,7 @@ import { getAlliances, getSettings } from "@/lib/data";
 import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import { dayStart } from "@/lib/kvk/prep";
 import { rosterOf } from "@/lib/ministry/assign";
-import { publishedRoster, rosterDays, rosterFor } from "@/lib/ministry/roster";
+import { type LateOffer, lateOffer, publishedRoster, rosterDays, rosterFor } from "@/lib/ministry/roster";
 import { ministryUnlocked, openDays, openMinistryRound } from "@/lib/ministry/state";
 import { ministryStore } from "@/lib/ministry/store";
 import { mightPulseConfigured } from "@/lib/retro/mightpulse";
@@ -56,10 +56,14 @@ export async function MinistryGate({ dict, locale }: { dict: Dictionary; locale:
 
   // The rosters of the days past their deadline (this read runs a due assignment). Names only: no Governor ID goes to the browser.
   const rosters: RosterDay[] = [];
+  // The half-hours a player can still take on those days (free for players and in the moderators' draft): numbers only.
+  let late: LateOffer = {};
   const store = ministryStore();
   if (store) {
     // What players see is the published copy; a moderator's draft stays on the admin page.
-    const roster = publishedRoster(await rosterFor(store, round, now));
+    const whole = await rosterFor(store, round, now);
+    late = lateOffer(round, whole, now);
+    const roster = publishedRoster(whole);
     const days = rosterDays(round, roster, now);
     if (days.length > 0) {
       try {
@@ -110,6 +114,7 @@ export async function MinistryGate({ dict, locale }: { dict: Dictionary; locale:
         round={view}
         openDays={openDays(round, now)}
         rosters={rosters}
+        late={late}
         alliances={alliances.filter((a) => a.published).map((a) => ({ tag: a.tag, name: a.name }))}
         kingdom={settings.kingdomNumber}
         lookupEnabled={mightPulseConfigured()}

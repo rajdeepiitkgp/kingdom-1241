@@ -46,12 +46,15 @@ function localRange(dayStart: number, slot: number, locale: string): string | nu
 
 export function MinistryRoster({
   days,
+  lateDays,
   own,
   hydrated,
   dict,
   locale,
 }: {
   days: RosterDay[];
+  /** The days whose free appointments players can still take themselves in the form above. */
+  lateDays: number[];
   /** Per day, the slots of this browser's own entries. */
   own: Partial<Record<ScoringDay, number[]>>;
   /** The page runs in the browser: the visitor's own time may be shown. */
@@ -222,7 +225,7 @@ export function MinistryRoster({
         </table>
       )}
 
-      {free > 0 && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm font-bold text-danger">{dict["ministry.roster.freeNote"]}</p>}
+      {free > 0 && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm font-bold text-danger">{lateDays.includes(shown.day) ? dict["ministry.roster.freeNote.take"] : dict["ministry.roster.freeNote"]}</p>}
     </section>
   );
 }

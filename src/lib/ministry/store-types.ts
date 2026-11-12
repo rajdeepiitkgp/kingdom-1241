@@ -78,6 +78,12 @@ export interface MinistryStore {
   swap(round: string, day: ScoringDay, firstId: string, secondId: string): Promise<boolean>;
   /** Takes a player's appointments away: of one day, of some days, or all of them. */
   unplace(signupId: string, days?: readonly ScoringDay[]): Promise<void>;
+  /**
+   * A player takes a free appointment after the deadline: it goes into the working roster and into the one players see
+   * in one step (source `late`), so no draft is touched. `slotTaken`: someone holds that time in either of them.
+   * `held`: the player has an appointment that day already. `unavailable`: the day isn't published, or before migration 0029.
+   */
+  takeLate(round: string, day: ScoringDay, signupId: string, slot: number): Promise<"ok" | "slotTaken" | "held" | "unavailable">;
   /** Players see the day's appointments as they are now. */
   publish(round: string, day: ScoringDay): Promise<void>;
   /** The day's appointments go back to what players see (a draft is dropped); false when the day was never published. */
