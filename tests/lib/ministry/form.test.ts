@@ -28,6 +28,7 @@ describe("parseSignupForm", () => {
         amounts: { ...NO_AMOUNTS, truegold: 1200, temperedTruegold: 30, constructionMinutes: 4 * 1440 + 360, trainingMinutes: 14_400 },
         slots: { 1: [0, 1, 2, 3, 20, 21, 22, 23], 4: [8, 9] },
         locale: "de",
+        lateDays: [],
       },
     });
   });
@@ -73,6 +74,25 @@ describe("parseSignupForm", () => {
     // Without a stored entry, a closed day can't be joined at all.
     const fresh = parse({ "join.1": "on", truegold: "5", "slots.1": "40" }, { openDays: [2, 4] });
     expect(!fresh.ok && fresh.errors).toEqual({ sections: "required" });
+  });
+
+  it("a day past its deadline with free appointments is joined like an open one, and named as late", () => {
+    const existing = { amounts: { ...NO_AMOUNTS, truegold: 700, trainingMinutes: 600 }, slots: { 1: [4, 5], 4: [9] } };
+    const late = parse({ "join.4": "on", "training.hours": "20", "slots.4": "24,25,26,27" }, { openDays: [2], lateDays: [4], existing });
+    expect(late.ok && late.value.slots).toEqual({ 1: [4, 5], 4: [24, 25, 26, 27] });
+    expect(late.ok && late.value.amounts).toEqual({ ...NO_AMOUNTS, truegold: 700, trainingMinutes: 1200 });
+    expect(late.ok && late.value.lateDays).toEqual([4]);
+    // A new player with nothing but the late day.
+    const fresh = parse({ "join.4": "on", "training.days": "2", "slots.4": "30" }, { openDays: [], lateDays: [4] });
+    expect(fresh.ok && [fresh.value.slots, fresh.value.lateDays]).toEqual([{ 4: [30] }, [4]]);
+    // It needs a time and an amount like any day.
+    const empty = parse({ "join.4": "on" }, { openDays: [], lateDays: [4] });
+    expect(!empty.ok && empty.errors).toEqual({ "slots.4": "noSlots", "join.4": "noAmount" });
+    // Left alone, it keeps what was stored; an open day is never a late one.
+    const kept = parse({ "join.2": "on", tgDust: "80", "slots.2": "10" }, { openDays: [2], lateDays: [4], existing });
+    expect(kept.ok && [kept.value.slots, kept.value.amounts.trainingMinutes, kept.value.lateDays]).toEqual([{ 1: [4, 5], 2: [10], 4: [9] }, 600, []]);
+    const open = parse({ "join.4": "on", "training.hours": "1", "slots.4": "3" }, { openDays: [4], lateDays: [4] });
+    expect(open.ok && open.value.lateDays).toEqual([]);
   });
 
   it("a shared construction and research day is one section", () => {

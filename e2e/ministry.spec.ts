@@ -9,7 +9,9 @@ import { expect, test } from "./support/test";
  * the buff days follow the template (construction Day 1, research Day 2,
  * training Day 4). Construction and research take sign-ups (deadlines weeks
  * ahead on any date); the training day is past its deadline, so its six demo
- * players have their appointments and the roster shows.
+ * players have their appointments and the roster shows. Its other half-hours
+ * are free, and MIN-08 takes some of them on every device, so the roster's
+ * counts are read from the page, never fixed numbers.
  */
 
 /** A Governor ID no other test uses (tests run side by side on one server). */
@@ -123,15 +125,18 @@ test("MIN-06 after a day's deadline its roster shows: every player in a time the
   await open(page);
   const roster = page.locator('[data-tour="ministry-roster"]');
   await expect(roster).toContainText(t("prep.council.training"));
-  // Six demo players, 48 half-hours.
-  await expect(roster).toContainText(t("ministry.roster.filled").replace("{filled}", "6").replace("{total}", "48"));
   // A table from 00:00 to 24:00 UTC: every half-hour with its start and end, its player or "Free".
   const rows = roster.locator("tbody tr");
   await expect(rows).toHaveCount(48);
   await expect(rows.first()).toContainText("00:00–00:30");
   await expect(rows.last()).toContainText("23:30–24:00");
-  await expect(rows.filter({ hasText: t("ministry.roster.free") })).toHaveCount(42);
-  await expect(roster.getByText(t("ministry.roster.freeNote"))).toBeVisible();
+  // Six demo players (and whoever took a free time since, MIN-08): the count above the table is the table's own.
+  const free = await rows.filter({ hasText: t("ministry.roster.free") }).count();
+  expect(free).toBeLessThanOrEqual(42);
+  expect(free).toBeGreaterThan(30);
+  await expect(roster).toContainText(t("ministry.roster.filled").replace("{filled}", String(48 - free)).replace("{total}", "48"));
+  // The free ones can still be taken in the form on the page.
+  await expect(roster.getByText(t("ministry.roster.freeNote.take"))).toBeVisible();
   // The visitor's own time has a column of its own, named.
   await expect(roster.getByRole("columnheader", { name: t("ministry.roster.col.utc") })).toBeVisible();
   await expect(roster.getByRole("columnheader", { name: t("ministry.roster.col.local") })).toBeVisible();
@@ -158,6 +163,73 @@ test("MIN-06 after a day's deadline its roster shows: every player in a time the
   // The free times alone.
   await find.fill("");
   await roster.getByRole("button", { name: t("ministry.roster.onlyFree") }).click();
-  await expect(rows).toHaveCount(42);
+  await expect(rows).toHaveCount(free);
   await expectHealthyPage(page, "en");
+});
+
+test("MIN-08 after a day's deadline a player takes one of its free appointments: the earliest free half-hour in the time picked, theirs and on the roster at once", async ({ page }) => {
+  await open(page);
+  // The training day (the third card) is past its deadline: no sign-ups, but its free appointments are offered.
+  const card = dayCard(page, 2);
+  await expect(card.getByText(t("ministry.deadline.passed"))).toBeVisible();
+  await expect(card.locator('[data-tour="ministry-late"]')).toHaveText(t("ministry.late.note"));
+
+  const id = governorId();
+  const name = `Late ${id}`;
+  const idField = page.getByLabel(t("retro.governorId"));
+  await hydrated(idField);
+  await idField.fill(id);
+  await page.getByLabel(t("retro.name")).fill(name);
+  await page.getByLabel(t("retro.alliance")).selectOption({ index: 1 });
+  await card.getByRole("switch").click();
+  await card.locator('input[name="training.days"]').fill("12");
+  // Every two-hour button says how many of its four half-hours are left: Aurelia holds 12:00–12:30.
+  const noon = slotButtons(page, 2).nth(6);
+  await expect(noon).toContainText("12:00–14:00");
+  await expect(noon).toHaveAttribute("data-free", "3");
+  await expect(noon).toContainText(t("ministry.late.free").replace("{count}", "3"));
+  // After the deadline there is no "All day": a time is picked on purpose.
+  await expect(card.getByRole("button", { name: t("ministry.slots.all") })).toHaveCount(0);
+  await expect(card.getByText(t("ministry.late.hint"))).toBeVisible();
+  // 14:00–16:00 has nobody (the tests on the other devices take theirs here too, so which half-hour it is depends on who was first).
+  await slotButtons(page, 2).nth(7).click();
+  // It can't be given back here, so a popup asks first: Cancel saves nothing, Yes takes the time.
+  const send = page.getByRole("button", { name: t("ministry.submit"), exact: true });
+  await send.click();
+  const popup = page.getByRole("dialog", { name: t("ministry.late.confirm.title") });
+  await expect(popup).toContainText(t("ministry.late.confirm"));
+  await popup.getByRole("button", { name: t("ministry.cancel") }).click();
+  await expect(popup).toBeHidden();
+  await expect(page.locator('[data-tour="ministry-mine"]')).toHaveCount(0);
+  await send.click();
+  await popup.getByRole("button", { name: t("ministry.late.confirm.yes") }).click();
+
+  // The appointment is theirs at once: a half-hour inside the time picked, with the note to tell a moderator.
+  const mine = page.locator('[data-tour="ministry-mine"]');
+  await expect(mine).toContainText(name);
+  const appointment = mine.locator("[data-appointment]");
+  await expect(appointment).toHaveCount(1);
+  const slot = Number(await appointment.getAttribute("data-appointment"));
+  expect(slot).toBeGreaterThanOrEqual(28);
+  expect(slot).toBeLessThan(32);
+  await expect(appointment).toContainText(t("ministry.mine.late"));
+  await expect(mine.getByRole("status")).toHaveText(t("ministry.saved.late").replace("{name}", name));
+  await expectHealthyPage(page, "en");
+
+  // The roster on the page has it at once, in that half-hour, and finds the player by name.
+  const rows = page.locator('[data-tour="ministry-roster"] tbody tr');
+  await expect(rows.nth(slot)).toContainText(name);
+  const find = page.locator('[data-tour="ministry-roster"]').getByLabel(t("ministry.roster.find"));
+  await find.fill(name);
+  await expect(rows).toHaveCount(1);
+  await find.fill("");
+  // Everyone else sees it too (a fresh load); the account can't take a second one on the day.
+  await page.reload();
+  await expect(rows.nth(slot)).toContainText(name);
+  await expect(rows.filter({ hasText: name })).toHaveCount(1);
+  const again = page.locator('[data-tour="ministry-mine"]');
+  await hydrated(again.getByRole("button", { name: t("ministry.mine.edit") }));
+  await again.getByRole("button", { name: t("ministry.mine.edit") }).click();
+  await expect(dayCard(page, 2).locator('[data-tour="ministry-late"]')).toHaveCount(0);
+  await expect(dayCard(page, 2).getByText(t("ministry.closedDay"))).toBeVisible();
 });

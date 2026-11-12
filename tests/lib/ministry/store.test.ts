@@ -119,6 +119,47 @@ describe("the memory store", () => {
     expect(await store.restore(round, 5)).toBe(false);
   });
 
+  it("a late player's appointment goes to players and into the draft at once, and neither is disturbed", async () => {
+    const store = memoryMinistryStore();
+    const [a, b, c, d] = await store.list(round);
+    await store.clearRoster(round, 5);
+    await store.assign(round, 5, [{ signupId: a.id, slot: 4 }], false);
+    // Not published yet: nothing to take.
+    expect(await store.takeLate(round, 5, d.id, 10)).toBe("unavailable");
+    await store.publish(round, 5);
+    // The moderators' draft: a moves to 03:00, b comes in at 05:00. Players still see a at 02:00.
+    await store.place(round, 5, a.id, 6, "moderator");
+    await store.place(round, 5, b.id, 10, "moderator");
+
+    // Taken for players (02:00) or in the draft (03:00, 05:00): refused. A player with an appointment gets no second one.
+    expect(await store.takeLate(round, 5, d.id, 4)).toBe("slotTaken");
+    expect(await store.takeLate(round, 5, d.id, 6)).toBe("slotTaken");
+    expect(await store.takeLate(round, 5, d.id, 10)).toBe("slotTaken");
+    expect(await store.takeLate(round, 5, b.id, 20)).toBe("held");
+    expect(await store.takeLate(round, 5, a.id, 20)).toBe("held");
+
+    expect(await store.takeLate(round, 5, d.id, 20)).toBe("ok");
+    expect(await store.takeLate(round, 5, c.id, 20)).toBe("slotTaken");
+    expect(await store.takeLate(round, 5, d.id, 21)).toBe("held");
+    const late = { signupId: d.id, day: 5, slot: 20, source: "late" };
+    const after = await store.roster(round);
+    // Players see it at once, next to what they saw before; the draft has it too, with its own changes untouched.
+    expect(after.published[5]).toEqual([{ signupId: a.id, day: 5, slot: 4, source: "auto" }, late]);
+    expect(after.appointments.filter((held) => held.day === 5)).toEqual([
+      { signupId: a.id, day: 5, slot: 6, source: "moderator" },
+      { signupId: b.id, day: 5, slot: 10, source: "moderator" },
+      late,
+    ]);
+
+    // Discarding the draft keeps the late player; so does publishing it.
+    expect(await store.restore(round, 5)).toBe(true);
+    expect((await store.roster(round)).appointments.filter((held) => held.day === 5)).toEqual([{ signupId: a.id, day: 5, slot: 4, source: "auto" }, late]);
+    await store.place(round, 5, a.id, 6, "moderator");
+    await store.publish(round, 5);
+    expect((await store.roster(round)).published[5]).toEqual([{ signupId: a.id, day: 5, slot: 6, source: "moderator" }, late]);
+    await store.clearRoster(round, 5);
+  });
+
   it("empties a round: its sign-ups, appointments and marks go, another round stays", async () => {
     const store = memoryMinistryStore();
     const other = "2099-01-04";

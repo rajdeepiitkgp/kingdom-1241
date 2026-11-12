@@ -39,6 +39,7 @@ const ERROR_TEXT: Record<SignupErrorCode, string> = {
   tooMuch: "That number is too large.",
   noSlots: "Pick at least one time for this day.",
   noAmount: "Enter what the player will use on this day.",
+  lateTaken: "That time was taken a moment ago.",
 };
 
 /** The local review store keeps nothing in the database, so it writes no audit entry either. */

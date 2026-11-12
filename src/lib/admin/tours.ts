@@ -278,6 +278,11 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
         "Until the deadline: how the day would come out right now. At the deadline the site gives the appointments out by itself: as many of the 48 filled as possible, each player only in a time they picked, one per player, the higher score first. Red times are free; players see them on the Ministry page.",
       ),
       step(
+        "ministry-admin-roster",
+        "Late sign-ups",
+        "After a deadline a player without an appointment can take a free half-hour on the Ministry page. It is held at once and marked \"took a free time\" here; appoint them in the game. Only half-hours free for players and in your draft are offered, so a draft never changes. The alert channel in Discord gets a line.",
+      ),
+      step(
         "ministry-admin-draft",
         "Draft or published",
         "The run at the deadline is published by itself. Whatever you change afterwards is a draft only moderators see, its half-hours marked Draft; players keep their list. Publish to players makes it live, Discard the draft goes back. Green means players see the day exactly as it is here.",

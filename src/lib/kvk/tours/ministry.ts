@@ -6,7 +6,7 @@ import { lock } from "./shared";
 /** The ministry sign-ups (/kvk/ministry), behind the battle plan's password: locked, the tour is the password step; unlocked, it walks through the round and the form. */
 export const KVK_MINISTRY_TOUR: Tour<UiKey> = {
   id: "kvk-ministry",
-  version: 2,
+  version: 3,
   steps: [
     uiStep("kvk-unlock", "kvk.unlock"),
     uiStep("ministry-round", "ministry.round"),
@@ -15,6 +15,7 @@ export const KVK_MINISTRY_TOUR: Tour<UiKey> = {
     uiStep("ministry-roster", "ministry.roster", "ministry.roster.title"),
     uiStep("ministry-you", "ministry.you", "ministry.you"),
     uiStep("ministry-day", "ministry.day"),
+    uiStep("ministry-late", "ministry.late"),
     uiStep("ministry-slots", "ministry.slots", "ministry.slots.title"),
     uiStep("ministry-send", "ministry.send", "ministry.submit"),
   ],

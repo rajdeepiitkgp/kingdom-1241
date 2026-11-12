@@ -12,6 +12,10 @@ import { localTimeZone, MINUTE } from "@/lib/time";
  * block of the day (`pickBlocks`: two hours each, or one per half-hour slot),
  * in UTC or, once the page runs in the browser, on the visitor's own clock.
  * The parent holds the picked half-hour slots; the form posts them.
+ *
+ * After a day's deadline (`free`) the same buttons offer what is left: each
+ * says how many of its half-hours are still free, and one with none can't be
+ * picked. With one button per half-hour the count is left out: free or not.
  */
 
 /** The picker's words: the player's page passes its language, the admin page English. */
@@ -47,6 +51,8 @@ export function SlotPicker({
   labels,
   locale,
   tour,
+  free,
+  freeLabel,
 }: {
   id: string;
   /** 00:00 UTC of the buff day, ms. */
@@ -60,6 +66,10 @@ export function SlotPicker({
   locale: string;
   /** Its guided-tour marker. */
   tour?: string;
+  /** After the deadline: the half-hours nobody holds. Only blocks with one of them can be picked. */
+  free?: ReadonlySet<number>;
+  /** "3 free", in the page's language. */
+  freeLabel?: (count: number) => string;
 }) {
   const [zone, setZone] = useState<"utc" | "local">("utc");
   const blocks = pickBlocks();
@@ -103,9 +113,11 @@ export function SlotPicker({
           </span>
         )}
         <span className="ms-auto flex flex-wrap gap-x-2 gap-y-3">
-          <button type="button" className="btn-ghost btn-sm" onClick={() => onChange(new Set(blocks.flat()))}>
-            {labels.all}
-          </button>
+          {!free && (
+            <button type="button" className="btn-ghost btn-sm" onClick={() => onChange(new Set(blocks.flat()))}>
+              {labels.all}
+            </button>
+          )}
           <button type="button" className="btn-ghost btn-sm" onClick={() => onChange(new Set())} disabled={picked.size === 0}>
             {labels.clear}
           </button>
@@ -113,22 +125,32 @@ export function SlotPicker({
       </div>
       <div className={clsx("grid gap-2", blocks.length > 24 ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")} role="group" aria-labelledby={`${id}-title`}>
         {blocks.map((slots) => {
-          const on = slots.every((slot) => picked.has(slot));
+          const left = free ? slots.filter((slot) => free.has(slot)).length : slots.length;
+          const on = left > 0 && slots.every((slot) => picked.has(slot));
           return (
             <button
               key={slots[0]}
               type="button"
               aria-pressed={on}
+              disabled={left === 0}
+              data-free={free ? left : undefined}
               onClick={() => toggle(slots)}
               className={clsx(
-                "flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border-2 p-2 text-sm font-extrabold tabular transition-colors",
-                on ? "border-primary bg-primary-soft text-primary-strong" : "border-line bg-card text-ink-muted hover:border-primary/50 hover:text-ink",
+                "flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-2 text-sm font-extrabold tabular transition-colors",
+                left === 0
+                  ? "border-line bg-card-soft text-ink-faint line-through decoration-1"
+                  : on
+                    ? "border-primary bg-primary-soft text-primary-strong"
+                    : "border-line bg-card text-ink-muted hover:border-primary/50 hover:text-ink",
               )}
             >
-              {on && <Check className="size-4 shrink-0" aria-hidden />}
-              <span dir="ltr" className="wrap-break-word">
-                {local ? localRange(dayStart, slots[0], slots.length, locale) : slotLabel(slots[0], slots.length)}
+              <span className="flex min-w-0 items-center justify-center gap-1.5">
+                {on && <Check className="size-4 shrink-0" aria-hidden />}
+                <span dir="ltr" className="wrap-break-word">
+                  {local ? localRange(dayStart, slots[0], slots.length, locale) : slotLabel(slots[0], slots.length)}
+                </span>
               </span>
+              {free && freeLabel && slots.length > 1 && left > 0 && <span className={clsx("text-xs font-bold", on ? "text-primary-strong" : "text-success")}>{freeLabel(left)}</span>}
             </button>
           );
         })}

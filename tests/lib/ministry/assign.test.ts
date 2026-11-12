@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Rajdeep Biswas. All rights reserved. Not open source: no copying, reuse or AI re-creation; see LICENSE.
 import { describe, expect, it } from "vitest";
-import { type Appointment, assignDay, assignSlots, type Candidate, draftChanges, firstFreeOwn, freeSlots, isFixed, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
+import { type Appointment, assignDay, assignSlots, type Candidate, draftChanges, firstFreeOwn, freeSlots, holdsAppointment, isFixed, lateCandidates, lateNotice, lateSlots, placementProblem, rosterChat, rosterOf } from "@/lib/ministry/assign";
 import { NO_AMOUNTS, rankSection, type Section, type Signup, SLOTS_PER_DAY } from "@/lib/ministry/ministry";
 
 const c = (id: string, ...slots: number[]): Candidate => ({ id, slots });
@@ -209,6 +209,63 @@ describe("firstFreeOwn", () => {
     expect(firstFreeOwn(held, 2, [8, 9])).toBeNull();
     expect(firstFreeOwn(held, 2, [])).toBeNull();
     expect(firstFreeOwn(held, 1, [8])).toBe(8);
+  });
+});
+
+describe("late sign-ups", () => {
+  const dayStart = Date.UTC(2026, 10, 30);
+  const early = { dayStart, now: dayStart - 60_000 };
+  // What players see: a at 00:00, b at 00:30. The moderators' draft moved b to 01:00 and added c at 02:00.
+  const published: Appointment[] = [
+    { signupId: "a", day: 1, slot: 0, source: "auto" },
+    { signupId: "b", day: 1, slot: 1, source: "auto" },
+  ];
+  const working: Appointment[] = [
+    { signupId: "a", day: 1, slot: 0, source: "auto" },
+    { signupId: "b", day: 1, slot: 2, source: "moderator" },
+    { signupId: "c", day: 1, slot: 4, source: "moderator" },
+    { signupId: "d", day: 4, slot: 9, source: "auto" },
+  ];
+
+  it("offers only half-hours that are free for players and in the moderators' draft", () => {
+    const free = lateSlots(working, published, 1, early);
+    // 00:30 is free in the draft but players see b there; 01:00 and 02:00 are the draft's; another day's place doesn't count.
+    expect(free.slice(0, 4)).toEqual([3, 5, 6, 7]);
+    expect(free).toHaveLength(48 - 4);
+    expect(free).toContain(9);
+  });
+
+  it("offers nothing that has started", () => {
+    // 12:10 UTC: 12:00 has started, 12:30 is the first one left.
+    expect(lateSlots(working, published, 1, { dayStart, now: dayStart + (12 * 60 + 10) * 60_000 })[0]).toBe(25);
+    expect(lateSlots(working, published, 1, { dayStart, now: dayStart + 24 * 3_600_000 })).toEqual([]);
+  });
+
+  it("without a draft, every half-hour players see as free is offered", () => {
+    expect(lateSlots(published, published, 1, early)).toHaveLength(46);
+  });
+
+  it("tries the free half-hours inside the times picked, earliest first", () => {
+    // A two-hour block 00:00–02:00 (slots 0–3) with one half-hour left, and a later block.
+    expect(lateCandidates([3, 5, 6, 7, 8], [8, 9, 10, 11, 0, 1, 2, 3])).toEqual([3, 8]);
+    expect(lateCandidates([3, 5], [0, 1, 2])).toEqual([]);
+    // One button per half-hour: the pick is the appointment.
+    expect(lateCandidates([3, 5, 6], [5])).toEqual([5]);
+  });
+
+  it("tells the council's Discord who took which half-hour, so a moderator appoints them in the game", () => {
+    expect(lateNotice({ gameName: "Rudy", allianceTag: "NAM" }, "Training", 4, "Thu 31 Dec", 29)).toBe(
+      "👑 Ministry: **[NAM] Rudy** took a free appointment after the deadline. Training, Day 4 (Thu 31 Dec), 14:30–15:00 UTC. It is on the roster already; appoint them in the game at that time.",
+    );
+    expect(lateNotice({ gameName: "Sylphy", allianceTag: null }, "Construction + Research", 1, "Mon 28 Dec", 0)).toContain("**Sylphy** took a free appointment after the deadline. Construction + Research, Day 1 (Mon 28 Dec), 00:00–00:30 UTC.");
+  });
+
+  it("a player with an appointment that day, in the draft or for players, takes no free one", () => {
+    expect(holdsAppointment(working, published, 1, "a")).toBe(true);
+    expect(holdsAppointment(working, published, 1, "c")).toBe(true); // in the draft only
+    expect(holdsAppointment([], published, 1, "b")).toBe(true); // for players only
+    expect(holdsAppointment(working, published, 1, "d")).toBe(false); // another day
+    expect(holdsAppointment(working, published, 1, "z")).toBe(false);
   });
 });
 

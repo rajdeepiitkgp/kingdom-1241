@@ -2,7 +2,8 @@
 import { systemAudit } from "@/lib/admin/audit";
 import type { ScoringDay } from "@/lib/kvk/prep";
 import { createLogger } from "@/lib/log";
-import { assignDay } from "./assign";
+import { dayStart } from "@/lib/kvk/prep";
+import { assignDay, lateSlots } from "./assign";
 import { rankSection, sectionOn, sectionState } from "./ministry";
 import type { MinistryRound } from "./state";
 import { type AssignOutcome, type MinistryStore, ministryMemory, NO_ROSTER, type RoundRoster } from "./store";
@@ -100,4 +101,24 @@ export async function rosterFor(store: MinistryStore, round: MinistryRound, now:
 /** The days whose roster players see: past the deadline and assigned (hand it `publishedRoster(...)` for the players' pages: then assigned means published). */
 export function rosterDays(round: MinistryRound, roster: RoundRoster, now: Date): ScoringDay[] {
   return closedDays(round, now).filter((day) => Boolean(roster.assignedAt[day]));
+}
+
+/** Per buff day, the half-hours a player can still take after its deadline (`lateSlots`); a day with none is left out. */
+export type LateOffer = Partial<Record<ScoringDay, number[]>>;
+
+/**
+ * What late players are offered, from the round's whole roster (not the players' copy): only on days whose roster is
+ * out (past the deadline and published), only half-hours that are free for players and in the moderators' draft, and
+ * only those still ahead.
+ */
+export function lateOffer(round: MinistryRound, roster: RoundRoster, now: Date): LateOffer {
+  const offer: LateOffer = {};
+  if (!roster.available || !roster.drafts) return offer;
+  for (const day of closedDays(round, now)) {
+    const live = roster.published[day];
+    if (!live) continue;
+    const free = lateSlots(roster.appointments, live, day, { dayStart: dayStart(round.round, day).getTime(), now: now.getTime() });
+    if (free.length > 0) offer[day] = free;
+  }
+  return offer;
 }
