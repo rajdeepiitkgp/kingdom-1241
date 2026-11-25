@@ -141,6 +141,25 @@ function RoundFields({ roundKey, title, open, sections, locale, state, formActio
   );
 }
 
+// What the last Set aside, Put back or Remove answered, and for which entry. A row that is set aside or put
+// back moves to the other list, so its own state would go with it and the answer (which names the time a
+// player got) would never show. Kept per view, so it doesn't follow to another round or buff day.
+interface RowNotice {
+  id: string;
+  view: string;
+  state: ActionState;
+}
+let rowNotice: RowNotice | null = null;
+const rowListeners = new Set<() => void>();
+const watchRow = (listener: () => void) => {
+  rowListeners.add(listener);
+  return () => void rowListeners.delete(listener);
+};
+function setRowNotice(next: RowNotice) {
+  rowNotice = next;
+  for (const listener of rowListeners) listener();
+}
+
 export interface RankedRow {
   signup: AdminSignup;
   score: number;
@@ -155,6 +174,7 @@ export function SignupList({
   alliances,
   locale,
   placement,
+  view,
 }: {
   rows: RankedRow[];
   section: AdminSection;
@@ -164,12 +184,14 @@ export function SignupList({
   locale: string;
   /** The day's appointments once they are given out: each row then shows the player's and lets a moderator change it. */
   placement?: Placement;
+  /** The round and buff day on screen: a row's answer shows only there. */
+  view: string;
 }) {
   if (rows.length === 0) return <EmptyRow>Nobody has signed up for this day yet.</EmptyRow>;
   return (
     <ol className="divide-y divide-line">
       {rows.map((row, index) => (
-        <SignupRow key={row.signup.id} rank={index + 1} row={row} section={section} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} placement={placement} />
+        <SignupRow key={row.signup.id} rank={index + 1} row={row} section={section} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} placement={placement} view={view} />
       ))}
     </ol>
   );
@@ -187,11 +209,11 @@ export interface Placement {
 const SOURCE_NOTE: Record<AppointmentSource, string | null> = { auto: null, moderator: "placed by hand", late: "took a free time" };
 
 /** The entries a moderator set aside: kept, left out of every list. */
-export function DisabledList({ signups, sections, roundKey, alliances, locale }: { signups: AdminSignup[]; sections: AdminSection[]; roundKey: string; alliances: Array<{ tag: string; name: string }>; locale: string }) {
+export function DisabledList({ signups, sections, roundKey, alliances, locale, view }: { signups: AdminSignup[]; sections: AdminSection[]; roundKey: string; alliances: Array<{ tag: string; name: string }>; locale: string; view: string }) {
   return (
     <ul className="divide-y divide-line">
       {signups.map((signup) => (
-        <SignupRow key={signup.id} row={{ signup, score: 0 }} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} />
+        <SignupRow key={signup.id} row={{ signup, score: 0 }} sections={sections} roundKey={roundKey} alliances={alliances} locale={locale} view={view} />
       ))}
     </ul>
   );
@@ -206,6 +228,7 @@ function SignupRow({
   alliances,
   locale,
   placement,
+  view,
 }: {
   rank?: number;
   row: RankedRow;
@@ -216,12 +239,22 @@ function SignupRow({
   alliances: Array<{ tag: string; name: string }>;
   locale: string;
   placement?: Placement;
+  view: string;
 }) {
   const { signup, score } = row;
   const held = placement?.held[signup.id];
   const [editing, setEditing] = useState(false);
-  const [disableState, disableAction, disabling] = useActionState<ActionState, FormData>(setMinistryEntryDisabled, IDLE_STATE);
-  const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(removeMinistryEntry, IDLE_STATE);
+  const [working, startWork] = useTransition();
+  // The answer is kept outside the row: by the time it arrives, this row may have moved to the other list.
+  const notice = useSyncExternalStore(
+    watchRow,
+    () => rowNotice,
+    () => null,
+  );
+  const run = (action: (state: ActionState, data: FormData) => Promise<ActionState>, form: HTMLFormElement) => {
+    const data = new FormData(form);
+    startWork(async () => setRowNotice({ id: signup.id, view, state: await action(IDLE_STATE, data) }));
+  };
   const power = powerLabel(signup.power);
   const shown = section ? [section] : sections.filter((entry) => (signup.slots[entry.day]?.length ?? 0) > 0);
   return (
@@ -279,29 +312,33 @@ function SignupRow({
         <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
           {editing ? "Close" : "Edit"}
         </button>
-        <form action={disableAction}>
-          <input type="hidden" name="locale" value={locale} />
-          <input type="hidden" name="id" value={signup.id} />
-          <input type="hidden" name="disabled" value={signup.disabled ? "0" : "1"} />
-          <button type="submit" className="btn-ghost btn-sm" disabled={disabling}>
-            {signup.disabled ? "Put back" : "Set aside"}
-          </button>
-        </form>
         <form
-          action={removeAction}
           onSubmit={(event) => {
-            if (!window.confirm(`Remove the sign-up of ${signup.gameName}?`)) event.preventDefault();
+            event.preventDefault();
+            run(setMinistryEntryDisabled, event.currentTarget);
           }}
         >
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="id" value={signup.id} />
-          <button type="submit" className="btn-ghost btn-sm text-danger" disabled={removing}>
+          <input type="hidden" name="disabled" value={signup.disabled ? "0" : "1"} />
+          <button type="submit" className="btn-ghost btn-sm" disabled={working}>
+            {signup.disabled ? "Put back" : "Set aside"}
+          </button>
+        </form>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (window.confirm(`Remove the sign-up of ${signup.gameName}?`)) run(removeMinistryEntry, event.currentTarget);
+          }}
+        >
+          <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="id" value={signup.id} />
+          <button type="submit" className="btn-ghost btn-sm text-danger" disabled={working}>
             Remove
           </button>
         </form>
       </div>
-      <Notice state={disableState} />
-      <Notice state={removeState} />
+      {notice?.id === signup.id && notice.view === view && <Notice state={notice.state} />}
       {editing && (
         <div className="rounded-xl border border-line p-4">
           <EntryForm roundKey={roundKey} sections={sections} alliances={alliances} locale={locale} entry={signup} />
@@ -703,9 +740,22 @@ function CopyText({ text, label }: { text: string; label: string }) {
   );
 }
 
+type EntryFormProps = { roundKey: string; sections: AdminSection[]; alliances: Array<{ tag: string; name: string }>; locale: string };
+type EntryControl = [state: ActionState, formAction: (data: FormData) => void, pending: boolean];
+
+/**
+ * "Add a sign-up by hand". Its fields start empty again after every add (`resetKey` changes with the number
+ * of entries), while the answer stays: it says which time the player got, or that none of theirs is free.
+ */
+export function AddEntry({ resetKey, ...props }: EntryFormProps & { resetKey: string }) {
+  const control = useActionState<ActionState, FormData>(saveMinistryEntry, IDLE_STATE);
+  return <EntryForm key={resetKey} {...props} control={control} />;
+}
+
 /** Add a sign-up by hand (no `entry`), or change one: the same fields the player's form posts. */
-export function EntryForm({ roundKey, sections, alliances, locale, entry }: { roundKey: string; sections: AdminSection[]; alliances: Array<{ tag: string; name: string }>; locale: string; entry?: AdminSignup }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(saveMinistryEntry, IDLE_STATE);
+export function EntryForm({ roundKey, sections, alliances, locale, entry, control }: EntryFormProps & { entry?: AdminSignup; /** The action's state when it is kept outside the form. */ control?: EntryControl }) {
+  const own = useActionState<ActionState, FormData>(saveMinistryEntry, IDLE_STATE);
+  const [state, formAction, pending] = control ?? own;
   const submit = useSubmitInTransition(formAction);
   const hydrated = useNow(60_000) !== null;
   const [joined, setJoined] = useState<ReadonlySet<ScoringDay>>(() => new Set(sections.filter((section) => (entry?.slots[section.day]?.length ?? 0) > 0).map((section) => section.day)));
