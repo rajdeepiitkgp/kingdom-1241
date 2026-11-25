@@ -6,7 +6,7 @@ import { locale as rootLocale } from "next/root-params";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AdminContentSkeleton } from "@/components/admin/AdminShell";
-import { type AdminSection as SectionData, ClearRound, DisabledList, type DraftState, EntryForm, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
+import { type AdminSection as SectionData, AddEntry, ClearRound, DisabledList, type DraftState, type Placement, type RosterCell, RosterPanel, type RosterPlayer, RoundForm, SignupList } from "@/components/admin/MinistryAdmin";
 import { AdminSection } from "@/components/admin/ui";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { toUtcInputValue } from "@/lib/admin/forms";
@@ -116,6 +116,8 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
   const allianceList = alliances.filter((a) => a.published).map((a) => ({ tag: a.tag, name: a.name }));
   const href = (round: string, day?: number) => `${adminPath(locale, "/ministry")}?round=${round}${day ? `&day=${day}` : ""}`;
 
+  // Where a row's answer (Set aside, Put back) shows: this round and buff day only.
+  const view = `${selected.key}:${section.day}`;
   return (
     <div className="space-y-5">
       <SectionTitle icon="👑" title="Ministry sign-ups" />
@@ -208,12 +210,12 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
           data.available && <p className="mb-4 rounded-xl bg-gold-soft px-3 py-2 text-sm font-semibold text-gold-ink">The appointments need migration 0027, which isn&apos;t applied yet. The sign-ups work as before.</p>
         )}
 
-        <SignupList rows={ranked} section={section} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} placement={placement} />
+        <SignupList rows={ranked} section={section} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} placement={placement} view={view} />
       </AdminSection>
 
       {disabled.length > 0 && (
         <AdminSection title={`Set aside (${disabled.length})`} hint="Kept, but left out of every list and of the assignment. Put one back, or remove it." tour="ministry-admin-aside">
-          <DisabledList signups={disabled} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} />
+          <DisabledList signups={disabled} sections={sections} roundKey={selected.key} alliances={allianceList} locale={locale} view={view} />
         </AdminSection>
       )}
 
@@ -222,7 +224,7 @@ async function Ministry({ locale, searchParams }: { locale: string; searchParams
         hint={`For a player who can't use the site, or a test entry, in the round ${roundSpan(selected.round)}. A moderator's entry isn't bound by the deadlines.`}
         tour="ministry-admin-add"
       >
-        <EntryForm key={`${selected.key}-${signups.length}`} roundKey={selected.key} sections={sections} alliances={allianceList} locale={locale} />
+        <AddEntry key={selected.key} resetKey={`${selected.key}-${signups.length}`} roundKey={selected.key} sections={sections} alliances={allianceList} locale={locale} />
       </AdminSection>
 
       {hasRole(user.role, "admin") && (
