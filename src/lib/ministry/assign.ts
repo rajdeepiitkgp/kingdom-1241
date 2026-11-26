@@ -81,6 +81,7 @@ export interface DayAssignment {
 /**
  * A buff day's assignment. `ranked` is the day's list (`rankSection`: highest score first, nobody set aside);
  * `current` are the day's appointments so far, of which only the fixed ones of players still on the list are kept.
+ * A score of 0 stays on the list without an appointment (`unplaced`).
  */
 export function assignDay<T extends Signup>(day: ScoringDay, ranked: readonly RankedSignup<T>[], current: readonly Appointment[] = []): DayAssignment {
   const onList = new Set(ranked.map(({ signup }) => signup.id));
@@ -94,8 +95,11 @@ export function assignDay<T extends Signup>(day: ScoringDay, ranked: readonly Ra
     takenSlots.add(appointment.slot);
     placedIds.add(appointment.signupId);
   }
+  // A player who brings nothing for this day's buffs gets no appointment from the run (the sign-up form asks for an
+  // amount, so this is an entry whose buffs the council split onto two days): everyone who brings something goes
+  // first, and a moderator can still place the player by hand.
   const given = assignSlots(
-    ranked.map(({ signup }) => ({ id: signup.id, slots: signup.slots[day] ?? [] })),
+    ranked.filter(({ score }) => score > 0).map(({ signup }) => ({ id: signup.id, slots: signup.slots[day] ?? [] })),
     takenSlots,
     placedIds,
   );

@@ -145,6 +145,21 @@ describe("assignDay", () => {
     expect(result.appointments).toEqual([{ signupId: "stays", day: 1, slot: 4, source: "auto" }]);
   });
 
+  it("gives no appointment to a player who brings nothing for the day, unless a moderator placed them", () => {
+    // After the council split a shared day, a player who brought Truegold alone is on the research day with a score of 0.
+    const signups = [signup("nothing", 0, [4]), signup("some", 1, [4, 5]), signup("placed", 0, [9])];
+    const result = assignDay(1, rankSection(signups, CONSTRUCTION));
+    expect(result.appointments).toEqual([{ signupId: "some", day: 1, slot: 4, source: "auto" }]);
+    expect(result.unplaced).toEqual(["placed", "nothing"]); // equal scores: whoever signed up first
+    const byHand: Appointment[] = [{ signupId: "placed", day: 1, slot: 4, source: "moderator" }];
+    const again = assignDay(1, rankSection(signups, CONSTRUCTION), byHand);
+    expect(again.appointments).toEqual([
+      { signupId: "placed", day: 1, slot: 4, source: "moderator" },
+      { signupId: "some", day: 1, slot: 5, source: "auto" },
+    ]);
+    expect(again.unplaced).toEqual(["nothing"]);
+  });
+
   it("looks only at its own day's appointments", () => {
     const signups = [signup("a", 50, [4])];
     const current: Appointment[] = [{ signupId: "a", day: 4, slot: 4, source: "moderator" }];
