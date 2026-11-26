@@ -46,6 +46,8 @@ export function PrepScheduleForm({
     <form action={formAction} onSubmit={submit} className="card space-y-4 p-5" data-tour="prep-round">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="round" value={roundKey} />
+      {/* The round has sign-ups: the action said what the change does to them and wants this back with the same choice. */}
+      {state.confirm && <input type="hidden" name="confirm" value={state.confirm} />}
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-extrabold text-ink">{title}</h2>
         <span className={set ? "chip bg-success-soft text-success" : "chip bg-card-soft text-ink-muted"}>{set ? "Set by the council" : `Template: Day ${TEMPLATE_SCHEDULE.construction} / Day ${TEMPLATE_SCHEDULE.research}`}</span>
@@ -69,8 +71,15 @@ export function PrepScheduleForm({
         </Field>
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3" data-tour="prep-save">
-        <SubmitButton>Save</SubmitButton>
-        <Notice state={state} />
+        <SubmitButton>{state.confirm ? "Save and move the sign-ups" : "Save"}</SubmitButton>
+        {/* What the change does to the sign-ups, before anything is saved: a warning, not an error. */}
+        {state.confirm && state.message ? (
+          <p role="status" className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink">
+            {state.message}
+          </p>
+        ) : (
+          <Notice state={state} />
+        )}
       </div>
     </form>
   );

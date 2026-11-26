@@ -5,6 +5,11 @@ export interface ActionState {
   status: "idle" | "saved" | "error";
   message?: string;
   errors?: FieldErrors;
+  /**
+   * The save needs a second, knowing tap (the message says what it will do): the form posts this value back as
+   * `confirm` with the same choice. A different choice asks again.
+   */
+  confirm?: string;
 }
 
 export const IDLE_STATE: ActionState = { status: "idle" };
