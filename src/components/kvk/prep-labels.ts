@@ -50,12 +50,20 @@ export const SAVE_IMAGES: Partial<Record<SaveItemId, string>> = {
   speedups: ITEM_IMAGES.construction,
   gems: "/items/gem.webp",
   truegold: ITEM_IMAGES.truegold,
+  temperedTruegold: ITEM_IMAGES.temperedTruegold,
+  tgDust: ITEM_IMAGES.tgDust,
   shards: ITEM_IMAGES.shards,
   widgets: ITEM_IMAGES.widgets,
   pets: ITEM_IMAGES.pets,
   governor: ITEM_IMAGES.gear,
   hammers: ITEM_IMAGES.hammers,
 };
+/** The two save items that are rows of the table too: they take the table's name, so every language has it already. */
+const SAVE_NAMED_AS_ITEM = { temperedTruegold: "prep.item.temperedTruegold", tgDust: "prep.item.tgDust" } as const satisfies Partial<Record<SaveItemId, string>>;
+/** The string that names a save item. */
+export function saveLabelKey(id: SaveItemId) {
+  return id === "temperedTruegold" || id === "tgDust" ? SAVE_NAMED_AS_ITEM[id] : (`prep.save.${id}` as const);
+}
 /** Tips with a picture instead of the ❗. */
 export const TIP_IMAGES: Partial<Record<PrepTipId, string>> = {
   intelOpen: ITEM_IMAGES.intel,

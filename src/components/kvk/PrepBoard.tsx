@@ -55,6 +55,7 @@ import {
   pointsText,
   SATURDAY,
   SAVE_IMAGES,
+  saveLabelKey,
   TIP_IMAGES,
   themeAlt,
   tipText,
@@ -149,13 +150,13 @@ export function PrepBoard({ dict, locale, council, unlock }: { dict: Dictionary;
       <section data-tour="prep-save">
         <SectionTitle icon="🎒" title={dict["prep.saveTitle"]} />
         <p className="-mt-2 mb-4 text-sm font-semibold text-ink-muted">{dict["prep.saveHint"]}</p>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {SAVE_FOR_KVK.map((item) => (
             <li key={item.id} className="card flex min-w-0 flex-col items-center gap-2 px-2 py-3 text-center">
               <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold-soft text-2xl" aria-hidden>
                 <ItemIcon image={SAVE_IMAGES[item.id]} emoji={item.icon} className="size-10" />
               </span>
-              <span className="min-w-0 text-sm/snug font-extrabold wrap-break-word hyphens-auto text-ink">{dict[`prep.save.${item.id}`]}</span>
+              <span className="min-w-0 text-sm/snug font-extrabold wrap-break-word hyphens-auto text-ink">{dict[saveLabelKey(item.id)]}</span>
             </li>
           ))}
         </ul>
