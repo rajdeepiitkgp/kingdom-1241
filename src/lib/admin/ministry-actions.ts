@@ -14,6 +14,7 @@ import { isGovernorId, normalizeGovernorId } from "@/lib/retro/form";
 import type { GovernorProfile } from "@/lib/retro/governor";
 import { lookupGovernor, mightPulseConfigured } from "@/lib/retro/mightpulse";
 import { ministryMemory, type MinistryStore, ministryStore, type StoredSignup } from "@/lib/ministry/store";
+import { nextTimes } from "@/lib/ministry/times";
 import { actionLogger, denied, failed, invalid } from "./action-helpers";
 import type { ActionState } from "./action-state";
 import { audit } from "./audit";
@@ -173,7 +174,7 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
 
     if (existing) {
       const nameChanged = entry.gameName !== existing.gameName || entry.allianceTag !== existing.allianceTag;
-      await store.update(existing.id, { gameName: entry.gameName, allianceTag: entry.allianceTag, verified: existing.verified && !nameChanged, amounts: entry.amounts, slots: entry.slots });
+      await store.update(existing.id, { gameName: entry.gameName, allianceTag: entry.allianceTag, verified: existing.verified && !nameChanged, amounts: entry.amounts, slots: entry.slots, times: nextTimes(existing, entry.slots, round.sections) });
       // A day the player no longer takes part in gives its appointment back.
       await store.unplace(existing.id, round.sections.map((section) => section.day).filter((day) => (entry.slots[day]?.length ?? 0) === 0));
       await record(access.user, "ministry.signup_edit", existing.id, { round: round.key, name: entry.gameName, before: { amounts: existing.amounts, slots: existing.slots }, after: { amounts: entry.amounts, slots: entry.slots } });
@@ -195,6 +196,7 @@ export async function saveMinistryEntry(_previous: ActionState, formData: FormDa
       power: confirmed ? (profile.power ?? null) : null,
       amounts: entry.amounts,
       slots: entry.slots,
+      times: nextTimes(null, entry.slots, round.sections),
       locale: "en",
       deviceHash: null,
     });

@@ -5,6 +5,8 @@ import { roundKey } from "@/lib/kvk/prep-schedule";
 import { memoryMinistryStore } from "@/lib/ministry/memory-store";
 import { NO_AMOUNTS } from "@/lib/ministry/ministry";
 import { mapAppointmentRow, mapSignupRow, publishedRoster } from "@/lib/ministry/store";
+import { sectionsFor } from "@/lib/ministry/ministry";
+import { planMove } from "@/lib/ministry/times";
 
 describe("mapSignupRow", () => {
   it("reads a database row tolerantly", () => {
@@ -25,6 +27,15 @@ describe("mapSignupRow", () => {
       updated_at: "2026-11-20T10:00:00Z",
     });
     expect(row).toMatchObject({ governorId: "12345678", allianceTag: "Nam", verified: true, power: 98_000_000, amounts: { ...NO_AMOUNTS, truegold: 5 }, slots: { 1: [2, 3] }, disabled: false, deviceHash: null, locale: "en" });
+    // A row from before migration 0030 has no times per buff and was never moved.
+    expect(row.times).toBeNull();
+    expect(row.movedAt).toBeNull();
+  });
+
+  it("reads the times per buff and the moved mark", () => {
+    const row = mapSignupRow({ id: "a", slots: { "2": [4] }, times: { construction: [4, 4], other: [1] }, days_moved_at: "2026-11-27T09:00:00Z" });
+    expect(row.times).toEqual({ construction: [4] });
+    expect(row.movedAt).toBe("2026-11-27T09:00:00Z");
   });
 });
 
@@ -39,7 +50,7 @@ describe("mapAppointmentRow", () => {
 
 describe("the memory store", () => {
   const round = roundKey(nextRound(roundFor(new Date())));
-  const entry = { round, governorId: "70000001", gameName: "Test", allianceTag: null, verified: false, power: null, amounts: { ...NO_AMOUNTS, truegold: 1 }, slots: { 1: [0] }, locale: "en", deviceHash: "abc" };
+  const entry = { round, governorId: "70000001", gameName: "Test", allianceTag: null, verified: false, power: null, amounts: { ...NO_AMOUNTS, truegold: 1 }, slots: { 1: [0] }, times: { construction: [0] }, locale: "en", deviceHash: "abc" };
 
   it("opens the next round with demo players", async () => {
     const store = memoryMinistryStore();
@@ -177,6 +188,48 @@ describe("the memory store", () => {
     expect(await store.get(kept.id)).not.toBeNull();
     expect(await store.removeRound(round)).toBe(0);
     await store.remove(kept.id);
+  });
+
+  it("moves a round's entries with the buff days: times, the moved mark and the rosters of the days that changed hands", async () => {
+    const store = memoryMinistryStore();
+    const other = "2099-02-01";
+    const insert = async (governorId: string, slots: Record<number, number[]>) => {
+      const saved = await store.insert({ ...entry, round: other, governorId, slots, times: {} });
+      if (saved === "duplicate") throw new Error("unexpected duplicate");
+      return saved;
+    };
+    const a = await insert("70000021", { 1: [4], 2: [9] });
+    const b = await insert("70000022", { 4: [7] });
+    await store.assign(other, 1, [{ signupId: a.id, slot: 4 }], false);
+    await store.publish(other, 1);
+    await store.assign(other, 4, [{ signupId: b.id, slot: 7 }], false);
+
+    const before = sectionsFor({ construction: 1, research: 2 });
+    const after = sectionsFor({ construction: 2, research: 1 });
+    const rows = await store.list(other);
+    const plan = planMove(rows, before, after);
+    const moved = plan.entries.map((row, index) => ({ ...row, updatedAt: rows[index].updatedAt }));
+
+    // A sign-up saved since the entries were read: nothing is written.
+    expect(await store.moveDays(other, [{ ...moved[0], updatedAt: "2000-01-01T00:00:00.000Z" }, moved[1]], plan.days, null)).toBe("changed");
+    expect(await store.moveDays(other, [moved[0]], plan.days, null)).toBe("changed");
+    expect((await store.get(a.id))?.slots).toEqual({ 1: [4], 2: [9] });
+
+    expect(await store.moveDays(other, moved, plan.days, null)).toBe("ok");
+    const swapped = await store.get(a.id);
+    expect(swapped?.slots).toEqual({ 1: [9], 2: [4] });
+    expect(swapped?.times).toEqual({ construction: [4], research: [9] });
+    expect(swapped?.movedAt).not.toBeNull();
+    // The training day didn't change hands: its entry and its roster stay.
+    expect((await store.get(b.id))?.movedAt).toBeNull();
+    const roster = await store.roster(other);
+    expect(roster.appointments).toEqual([{ signupId: b.id, day: 4, slot: 7, source: "auto" }]);
+    expect(Object.keys(roster.assignedAt)).toEqual(["4"]);
+    expect(roster.published).toEqual({});
+
+    // Saving the times again clears the mark.
+    expect((await store.update(a.id, { slots: { 1: [9], 2: [5] }, times: { construction: [5], research: [9] } }))?.movedAt).toBeNull();
+    await store.removeRound(other);
   });
 
   it("keeps one entry per Governor ID and finds a browser's own", async () => {

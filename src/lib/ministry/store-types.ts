@@ -2,10 +2,15 @@
 import type { ScoringDay } from "@/lib/kvk/prep";
 import type { Appointment, AppointmentSource } from "./assign";
 import type { Amounts, MinistrySettings, Signup, SlotChoice } from "./ministry";
+import type { BuffTimes, MovedEntry } from "./times";
 
 /** A sign-up as the store holds it: with the hash of the key of the browser that may change it. */
 export interface StoredSignup extends Signup {
   deviceHash: string | null;
+  /** The times per buff (migration 0030); null on an entry from before, which is read from its `slots` (`timesOf`). */
+  times: BuffTimes | null;
+  /** When a change of the buff days last moved this entry's times to other days; null once its times were saved again. */
+  movedAt: string | null;
 }
 
 export interface NewSignup {
@@ -17,11 +22,20 @@ export interface NewSignup {
   power: number | null;
   amounts: Amounts;
   slots: SlotChoice;
+  /** The same times per buff (`nextTimes`). */
+  times: BuffTimes;
   locale: string;
   deviceHash: string | null;
 }
 
-export type SignupPatch = Partial<Pick<StoredSignup, "gameName" | "allianceTag" | "verified" | "power" | "amounts" | "slots" | "disabled" | "locale" | "deviceHash">>;
+/** New times are always saved both ways: per day (`slots`) and per buff (`times`). */
+export type SignupPatch = Partial<Pick<StoredSignup, "gameName" | "allianceTag" | "verified" | "power" | "amounts" | "disabled" | "locale" | "deviceHash">> &
+  ({ slots?: undefined; times?: undefined } | { slots: SlotChoice; times: BuffTimes });
+
+/** An entry as a change of the buff days rewrites it; `updatedAt` is the one the site read, so a newer save is never overwritten. */
+export interface MovedRow extends MovedEntry {
+  updatedAt: string;
+}
 
 /** A round's appointments and the buff days whose assignment has run (the day's roster is shown from then on). */
 export interface RoundRoster {
@@ -92,4 +106,10 @@ export interface MinistryStore {
   clearAppointments(round: string, day: ScoringDay): Promise<void>;
   /** Back to "not assigned": the day's appointments and its mark go (sign-ups were opened again). */
   clearRoster(round: string, day: ScoringDay): Promise<void>;
+  /**
+   * The council moved a round's buff days: every entry gets its times for the new days, the rosters of `days` go and
+   * the new prep schedule (`schedule`, the whole app_config value) is stored, all or nothing (migration 0030).
+   * `changed`: a sign-up was added, changed or removed since `rows` were read, nothing was written. `unavailable`: before 0030.
+   */
+  moveDays(round: string, rows: readonly MovedRow[], days: readonly ScoringDay[], schedule: unknown): Promise<"ok" | "changed" | "unavailable">;
 }
