@@ -2,7 +2,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CALENDAR_IMAGE, DAY_IMAGES, ITEM_IMAGES, KVK_EVENT_IMAGE, MASTER_PAN_IMAGE, pointsText, SAVE_IMAGES, TIP_IMAGES } from "@/components/kvk/prep-labels";
+import { CALENDAR_IMAGE, DAY_IMAGES, ITEM_IMAGES, KVK_EVENT_IMAGE, MASTER_PAN_IMAGE, pointsText, SAVE_IMAGES, saveLabelKey, TIP_IMAGES } from "@/components/kvk/prep-labels";
 import { UI_STRINGS } from "@/content/seed/ui-strings";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { PREP_ITEMS, PREP_POINTS, SAVE_FOR_KVK } from "@/lib/kvk/prep";
@@ -30,6 +30,20 @@ describe("prep item pictures", () => {
     const saves = new Set<string>(SAVE_FOR_KVK.map((i) => i.id));
     for (const id of Object.keys(ITEM_IMAGES)) expect(items.has(id), id).toBe(true);
     for (const id of Object.keys(SAVE_IMAGES)) expect(saves.has(id), id).toBe(true);
+  });
+});
+
+describe("the save-for-KvK list", () => {
+  it("names every item with a string that exists, and shows a picture for each", () => {
+    for (const { id } of SAVE_FOR_KVK) {
+      expect(UI_STRINGS[saveLabelKey(id)]?.en, id).toBeTruthy();
+      expect(SAVE_IMAGES[id], id).toBeTruthy();
+    }
+  });
+
+  it("lists the three Truegold items together", () => {
+    const ids = SAVE_FOR_KVK.map((item) => item.id);
+    expect(ids.slice(ids.indexOf("truegold"), ids.indexOf("truegold") + 3)).toEqual(["truegold", "temperedTruegold", "tgDust"]);
   });
 });
 

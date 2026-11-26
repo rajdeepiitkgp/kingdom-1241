@@ -405,6 +405,8 @@ export const SAVE_FOR_KVK = [
   { id: "speedups", icon: "⏩" },
   { id: "gems", icon: "💎" },
   { id: "truegold", icon: "🪙" },
+  { id: "temperedTruegold", icon: "🔶" },
+  { id: "tgDust", icon: "💫" },
   { id: "shards", icon: "🧩" },
   { id: "widgets", icon: "✨" },
   { id: "pets", icon: "🐶" },
