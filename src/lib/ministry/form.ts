@@ -25,6 +25,8 @@ export const FIELD = {
   token: "token",
   /** The device's own key: whoever holds it may change the entry later. */
   deviceKey: "deviceKey",
+  /** The buff days the form was drawn with (`layoutOf`). */
+  layout: "layout",
   /** Honeypot: hidden from people, filled by bots. */
   honeypot: "website",
   /** "on" when the player takes part in the section of that day. */

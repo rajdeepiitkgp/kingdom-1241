@@ -8,6 +8,7 @@ import { isScoringDay } from "./ministry";
 import { memoryMinistryStore } from "./memory-store";
 import { MAX_SIGNUPS_PER_ROUND, parseAmounts, parseMinistrySettings, parseSlotChoice } from "./ministry";
 import { type MinistryStore, type NewSignup, NO_ROSTER, type RoundRoster, type SignupPatch, type StoredSignup } from "./store-types";
+import { parseBuffTimes } from "./times";
 
 export * from "./store-types";
 
@@ -26,7 +27,9 @@ export function ministryStore(): MinistryStore | null {
 
 export const ministryMemory = (): boolean => process.env.MINISTRY_STORE === "memory" && !process.env.VERCEL;
 
-const COLUMNS = "id, round, governor_id, game_name, alliance_tag, verified, power, amounts, slots, disabled, device_hash, locale, created_at, updated_at";
+/** The columns before migration 0030 (the times per buff): read when the newer ones are missing. */
+const COLUMNS_BEFORE_TIMES = "id, round, governor_id, game_name, alliance_tag, verified, power, amounts, slots, disabled, device_hash, locale, created_at, updated_at";
+const COLUMNS = `${COLUMNS_BEFORE_TIMES}, times, days_moved_at`;
 const TABLE = "ministry_signups";
 
 type Row = Record<string, unknown>;
@@ -44,6 +47,8 @@ export function mapSignupRow(row: Row): StoredSignup {
     power: Number.isFinite(power) && power > 0 ? power : null,
     amounts: parseAmounts(row.amounts),
     slots: parseSlotChoice(row.slots),
+    times: parseBuffTimes(row.times),
+    movedAt: typeof row.days_moved_at === "string" && row.days_moved_at ? row.days_moved_at : null,
     disabled: row.disabled === true,
     deviceHash: typeof row.device_hash === "string" && row.device_hash ? row.device_hash : null,
     locale: text(row.locale) || "en",
@@ -75,11 +80,30 @@ function patchColumns(patch: SignupPatch): Row {
   if (patch.verified !== undefined) columns.verified = patch.verified;
   if (patch.power !== undefined) columns.power = patch.power;
   if (patch.amounts !== undefined) columns.amounts = patch.amounts;
-  if (patch.slots !== undefined) columns.slots = patch.slots;
+  if (patch.slots !== undefined) {
+    columns.slots = patch.slots;
+    columns.times = patch.times;
+    // Times saved again: the "your days moved" note has done its work.
+    columns.days_moved_at = null;
+  }
   if (patch.disabled !== undefined) columns.disabled = patch.disabled;
   if (patch.locale !== undefined) columns.locale = patch.locale;
   if (patch.deviceHash !== undefined) columns.device_hash = patch.deviceHash;
   return columns;
+}
+
+/** Without the columns of 0030 a write goes without them. */
+function beforeTimes(columns: Row): Row {
+  return Object.fromEntries(Object.entries(columns).filter(([name]) => name !== "times" && name !== "days_moved_at"));
+}
+
+/**
+ * Runs a query that names the sign-up columns; while a deploy runs ahead of migration 0030 the newer columns are
+ * missing, and the same query runs once more with the older list (and, for a write, without the newer values).
+ */
+async function withColumns<T extends { error: { code?: string } | null }>(run: (columns: string, older: boolean) => PromiseLike<T>): Promise<T> {
+  const result = await run(COLUMNS, false);
+  return noColumn(result.error) ? run(COLUMNS_BEFORE_TIMES, true) : result;
 }
 
 function supabaseStore(supabase: SupabaseClient): MinistryStore {
@@ -92,9 +116,9 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
     },
     async list(round) {
       // Above the cap, so a full round is read whole.
-      const { data, error } = await supabase.from(TABLE).select(COLUMNS).eq("round", round).order("created_at").order("id").limit(MAX_SIGNUPS_PER_ROUND + 100);
+      const { data, error } = await withColumns((columns) => supabase.from(TABLE).select(columns).eq("round", round).order("created_at").order("id").limit(MAX_SIGNUPS_PER_ROUND + 100));
       if (error) throw error;
-      return (data ?? []).map((row) => mapSignupRow(row as Row));
+      return (data ?? []).map((row) => mapSignupRow(row as unknown as Row));
     },
     async count(round) {
       const { count, error } = await supabase.from(TABLE).select("id", { count: "exact", head: true }).eq("round", round);
@@ -102,48 +126,47 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
       return count ?? 0;
     },
     async get(id) {
-      const { data, error } = await supabase.from(TABLE).select(COLUMNS).eq("id", id).maybeSingle();
+      const { data, error } = await withColumns((columns) => supabase.from(TABLE).select(columns).eq("id", id).maybeSingle());
       if (error) throw error;
-      return data ? mapSignupRow(data as Row) : null;
+      return data ? mapSignupRow(data as unknown as Row) : null;
     },
     async byGovernor(round, governorId) {
-      const { data, error } = await supabase.from(TABLE).select(COLUMNS).eq("round", round).eq("governor_id", governorId).maybeSingle();
+      const { data, error } = await withColumns((columns) => supabase.from(TABLE).select(columns).eq("round", round).eq("governor_id", governorId).maybeSingle());
       if (error) throw error;
-      return data ? mapSignupRow(data as Row) : null;
+      return data ? mapSignupRow(data as unknown as Row) : null;
     },
     async byDevice(round, deviceHash) {
-      const { data, error } = await supabase.from(TABLE).select(COLUMNS).eq("round", round).eq("device_hash", deviceHash).order("created_at").limit(50);
+      const { data, error } = await withColumns((columns) => supabase.from(TABLE).select(columns).eq("round", round).eq("device_hash", deviceHash).order("created_at").limit(50));
       if (error) throw error;
-      return (data ?? []).map((row) => mapSignupRow(row as Row));
+      return (data ?? []).map((row) => mapSignupRow(row as unknown as Row));
     },
     async insert(row: NewSignup) {
-      const { data, error } = await supabase
-        .from(TABLE)
-        .insert({
-          round: row.round,
-          governor_id: row.governorId,
-          game_name: row.gameName,
-          alliance_tag: row.allianceTag,
-          verified: row.verified,
-          power: row.power,
-          amounts: row.amounts,
-          slots: row.slots,
-          locale: row.locale,
-          device_hash: row.deviceHash,
-        })
-        .select(COLUMNS)
-        .single();
+      const values: Row = {
+        round: row.round,
+        governor_id: row.governorId,
+        game_name: row.gameName,
+        alliance_tag: row.allianceTag,
+        verified: row.verified,
+        power: row.power,
+        amounts: row.amounts,
+        slots: row.slots,
+        times: row.times,
+        locale: row.locale,
+        device_hash: row.deviceHash,
+      };
+      const { data, error } = await withColumns((columns, older) => supabase.from(TABLE).insert(older ? beforeTimes(values) : values).select(columns).single());
       if (error) {
         if (error.code === "23505") return "duplicate";
         throw error;
       }
-      return mapSignupRow(data as Row);
+      return mapSignupRow(data as unknown as Row);
     },
     async update(id, patch) {
-      const { data, error } = await supabase.from(TABLE).update(patchColumns(patch)).eq("id", id).select(COLUMNS);
+      const values = patchColumns(patch);
+      const { data, error } = await withColumns((columns, older) => supabase.from(TABLE).update(older ? beforeTimes(values) : values).eq("id", id).select(columns));
       if (error) throw error;
-      const row = data?.[0];
-      return row ? mapSignupRow(row as Row) : null;
+      const row = (data as unknown as Row[] | null)?.[0];
+      return row ? mapSignupRow(row as unknown as Row) : null;
     },
     async remove(id) {
       const { data, error } = await supabase.from(TABLE).delete().eq("id", id).select("id");
@@ -221,6 +244,18 @@ function supabaseStore(supabase: SupabaseClient): MinistryStore {
         if (error) throw error;
       }
       return true;
+    },
+    async moveDays(round, rows, days, schedule) {
+      const { error } = await supabase.rpc("ministry_move_days", {
+        p_round: round,
+        p_rows: rows.map((row) => ({ id: row.id, slots: row.slots, times: row.times, moved: row.moved, updated_at: row.updatedAt })),
+        p_days: [...days],
+        p_schedule: schedule,
+      });
+      if (!error) return "ok";
+      if (notMigrated(error)) return "unavailable";
+      if (error.message?.includes("ministry_move_changed")) return "changed";
+      throw error;
     },
     async clearAppointments(round, day) {
       const { error } = await supabase.from(APPOINTMENTS).delete().eq("round", round).eq("day", day);

@@ -21,6 +21,7 @@ import { type Amounts, MAX_SIGNUPS_PER_ROUND, sectionOn, type SlotChoice } from 
 import { type LateOffer, lateOffer, publishedRoster, rosterDays, rosterFor } from "./roster";
 import { type MinistryRound, ministryUnlocked, openDays, openMinistryRound } from "./state";
 import { ministryMemory, type MinistryStore, ministryStore, type StoredSignup } from "./store";
+import { layoutOf, nextTimes } from "./times";
 
 /**
  * Server Actions of the ministry sign-up page. All are reachable by a direct
@@ -57,6 +58,8 @@ export interface MySignup {
   amounts: Amounts;
   slots: SlotChoice;
   disabled: boolean;
+  /** The council moved the buff days since this entry's times were saved: the times came along, the player should check them. */
+  moved: boolean;
   /** Per buff day whose appointments are given out: the player's half-hour slot, or null when they got none. A day not listed isn't assigned yet. */
   appointments: Partial<Record<ScoringDay, number | null>>;
   /** The days whose appointment the player took themselves after the deadline (they tell a moderator in the game). */
@@ -71,7 +74,8 @@ export interface FindState {
 }
 
 export interface SubmitState {
-  status: "idle" | "ok" | "invalid" | "taken" | "closed" | "full" | "unknownGovernor" | "throttled" | "unavailable";
+  /** `moved`: the council moved the buff days while the form was open; the page has to be loaded again. */
+  status: "idle" | "ok" | "invalid" | "taken" | "closed" | "moved" | "full" | "unknownGovernor" | "throttled" | "unavailable";
   errors?: SignupErrors;
   /** `throttled`: when (ms since epoch) this address may try again. */
   retryAt?: number;
@@ -124,6 +128,7 @@ async function mine(store: MinistryStore, round: MinistryRound, device: string, 
     amounts: row.amounts,
     slots: row.slots,
     disabled: row.disabled,
+    moved: row.movedAt !== null,
     appointments: row.disabled ? {} : appointmentsOf(row, roster.appointments, days),
     late: row.disabled ? [] : roster.appointments.filter((held) => held.signupId === row.id && held.source === "late" && days.includes(held.day)).map((held) => held.day),
   }));
@@ -195,6 +200,9 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
   const store = ministryStore();
   const round = await openMinistryRound(new Date(now));
   if (!store || !round || formData.get(FIELD.round) !== round.key) return { status: "closed" };
+  // A form drawn before the council moved the buff days names its times by the old days: nothing of it is read.
+  const layout = formData.get(FIELD.layout);
+  if (typeof layout === "string" && layout && layout !== layoutOf(round.sections)) return { status: "moved" };
   const open: ScoringDay[] = openDays(round, new Date(now));
   // Days past their deadline that still have free appointments (reading the roster runs a due assignment).
   const roster = await rosterFor(store, round, new Date(now));
@@ -262,6 +270,7 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
         power: verified?.power ?? existing.power,
         amounts: entry.amounts,
         slots: entry.slots,
+        times: nextTimes(existing, entry.slots, round.sections),
         locale: entry.locale,
       });
       if (!saved) return { status: "unavailable" };
@@ -280,6 +289,7 @@ export async function submitMinistrySignup(_previous: SubmitState, formData: For
         power: verified?.power ?? null,
         amounts: entry.amounts,
         slots: entry.slots,
+        times: nextTimes(null, entry.slots, round.sections),
         locale: entry.locale,
         deviceHash: device,
       });

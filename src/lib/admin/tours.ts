@@ -335,6 +335,7 @@ export const ADMIN_TOURS: Record<AdminPage, Tour> = {
       step("prep-construction", "Construction buff", "The day the king gives the construction minister buff: Day 1 (Monday), Day 2 (Tuesday) or Day 5 (Friday). Truegold, Tempered Truegold and construction speedups get their ✅ there; the other two days become 🆗."),
       step("prep-research", "Research buff", "The same for research: Truegold Dust and research speedups follow it, and so does the War Academy tip. Both buffs may fall on the same day."),
       step("prep-save", "Save", "Takes effect at once for everyone who has the battle plan open; nobody needs to reload more than once. Every change is listed under Recent changes on the Overview."),
+      step("prep-save", "A round with sign-ups", "When players have signed up for the round's ministry appointments, the first Save only says what the change does. Their times move with each buff to its new day, at the same hours, and appointments already given out on those days are made again. Press Save again to go ahead."),
       step(null, "Good practice", "Set the next round as soon as the council has decided, and change the current round the moment a switch is agreed, since players read the day's plan in the morning. Say it in Discord too: the page shows the days, not the reason."),
     ],
   },

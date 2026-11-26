@@ -1662,6 +1662,13 @@ export const UI_STRINGS = {
     ar: "انقضى موعد نهائي لهذا التسجيل. اطلب من أحد المشرفين حذفه.",
   },
   "ministry.mine.disabled": { en: "Set aside by a moderator", de: "Von einem Moderator zurückgestellt", ko: "운영진이 보류함", pl: "Odłożone przez moderatora", ar: "علّقه أحد المشرفين" },
+  "ministry.mine.moved": {
+    en: "The council moved the buff days. Your times moved to the new days at the same hours. Please check them: change them here while sign-ups are open, or ask a moderator.",
+    de: "Der Rat hat die Buff-Tage verlegt. Deine Zeiten sind mit denselben Uhrzeiten auf die neuen Tage gewandert. Bitte prüfe sie: Ändere sie hier, solange die Anmeldung offen ist, oder frag einen Moderator.",
+    ko: "운영진이 버프 날을 옮겼습니다. 내가 고른 시간은 같은 시각 그대로 새 날로 옮겨졌습니다. 확인해 주세요. 신청이 열려 있는 동안 여기서 바꾸거나 운영진에게 요청하세요.",
+    pl: "Rada przeniosła dni buffów. Twoje pory przeszły na nowe dni o tych samych godzinach. Sprawdź je: zmień je tutaj, dopóki zapisy są otwarte, albo poproś moderatora.",
+    ar: "نقل المجلس أيام التعزيز. انتقلت أوقاتك إلى الأيام الجديدة بالساعات نفسها. يُرجى مراجعتها: عدّلها هنا ما دام التسجيل مفتوحًا، أو اطلب من أحد المشرفين.",
+  },
   "ministry.mine.another": { en: "Sign up another account", de: "Weiteren Account anmelden", ko: "다른 계정 신청하기", pl: "Zapisz kolejne konto", ar: "سجّل حسابًا آخر" },
   "ministry.mine.appointment": {
     en: "Your appointment: {time} UTC",
@@ -1867,6 +1874,13 @@ export const UI_STRINGS = {
     ar: "معرّف الحاكم هذا مسجَّل من جهاز آخر. اطلب من أحد المشرفين تعديله.",
   },
   "ministry.error.closed": { en: "Sign-ups are closed.", de: "Die Anmeldung ist geschlossen.", ko: "신청이 마감되었습니다.", pl: "Zapisy są zamknięte.", ar: "أُغلق التسجيل." },
+  "ministry.error.moved": {
+    en: "The council moved the buff days while this page was open, so nothing was saved. Reload the page and check your days.",
+    de: "Der Rat hat die Buff-Tage verlegt, während diese Seite offen war. Es wurde nichts gespeichert. Lade die Seite neu und prüfe deine Tage.",
+    ko: "이 페이지가 열려 있는 동안 운영진이 버프 날을 옮겨서 저장되지 않았습니다. 페이지를 새로 고친 뒤 날짜를 확인하세요.",
+    pl: "Rada przeniosła dni buffów, gdy ta strona była otwarta, więc nic nie zapisano. Odśwież stronę i sprawdź swoje dni.",
+    ar: "نقل المجلس أيام التعزيز أثناء فتح هذه الصفحة، فلم يُحفظ شيء. أعد تحميل الصفحة وراجع أيامك.",
+  },
   "ministry.error.full": { en: "The list is full. Tell the council.", de: "Die Liste ist voll. Sag dem Rat Bescheid.", ko: "신청이 가득 찼습니다. 운영진에게 알려 주세요.", pl: "Lista jest pełna. Daj znać radzie.", ar: "القائمة ممتلئة. أخبر المجلس." },
 
   // KvK prep days (public)

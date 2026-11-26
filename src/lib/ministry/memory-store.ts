@@ -57,6 +57,8 @@ function demoSignups(round: string): StoredSignup[] {
       power: player.power,
       amounts: { ...NO_AMOUNTS, ...player.amounts },
       slots,
+      times: null,
+      movedAt: null,
       disabled: false,
       deviceHash: null,
       locale: "en",
@@ -113,14 +115,14 @@ export function memoryMinistryStore(): MinistryStore {
     async insert(row) {
       if (inRound(row.round).some((entry) => entry.governorId === row.governorId)) return "duplicate";
       const now = new Date().toISOString();
-      const signup: StoredSignup = { ...structuredClone(row), id: randomUUID(), disabled: false, createdAt: now, updatedAt: now };
+      const signup: StoredSignup = { ...structuredClone(row), id: randomUUID(), disabled: false, movedAt: null, createdAt: now, updatedAt: now };
       state.signups.set(signup.id, signup);
       return structuredClone(signup);
     },
     async update(id, patch) {
       const signup = state.signups.get(id);
       if (!signup) return null;
-      const next: StoredSignup = { ...signup, ...structuredClone(patch), updatedAt: new Date().toISOString() };
+      const next: StoredSignup = { ...signup, ...structuredClone(patch), movedAt: patch.slots ? null : signup.movedAt, updatedAt: new Date().toISOString() } as StoredSignup;
       state.signups.set(id, next);
       return structuredClone(next);
     },
@@ -205,6 +207,22 @@ export function memoryMinistryStore(): MinistryStore {
     },
     async unplace(signupId, days) {
       state.appointments = state.appointments.filter((held) => held.signupId !== signupId || (days !== undefined && !days.includes(held.day)));
+    },
+    async moveDays(round, rows, days) {
+      // The buff days themselves come from PREP_SCHEDULE_LOCAL here; only the entries and the rosters move.
+      const stored = inRound(round);
+      if (stored.length !== rows.length || rows.some((row) => state.signups.get(row.id)?.updatedAt !== row.updatedAt)) return "changed";
+      const now = new Date().toISOString();
+      for (const row of rows) {
+        const signup = state.signups.get(row.id) as StoredSignup;
+        state.signups.set(row.id, { ...signup, slots: structuredClone(row.slots), times: structuredClone(row.times), movedAt: row.moved ? now : signup.movedAt, updatedAt: now });
+      }
+      state.appointments = state.appointments.filter((held) => !(held.round === round && days.includes(held.day)));
+      for (const day of days) {
+        state.assigned.delete(`${round}:${day}`);
+        state.published.delete(`${round}:${day}`);
+      }
+      return "ok";
     },
     async clearRoster(round, day) {
       state.appointments = state.appointments.filter((held) => !(held.round === round && held.day === day));

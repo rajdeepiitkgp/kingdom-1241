@@ -9,6 +9,7 @@ import { format, type Dictionary } from "@/lib/i18n/dictionary";
 import type { Buff, ScoringDay } from "@/lib/kvk/prep";
 import { lookupMinistryGovernor, myMinistrySignups, submitMinistrySignup, withdrawMinistrySignup, type LookupState, type MySignup, type SubmitState } from "@/lib/ministry/actions";
 import { FIELD, type SignupErrorCode } from "@/lib/ministry/form";
+import { layoutOf } from "@/lib/ministry/times";
 import type { LateOffer } from "@/lib/ministry/roster";
 import { type Amounts, BUFF_FIELDS, NO_AMOUNTS, type ResourceField, scoredInPoints, sectionScore, SLOT_MINUTES, slotLabel, slotRuns, speedupMinutes, splitSpeedup } from "@/lib/ministry/ministry";
 import { GAME_NAME_MAX } from "@/lib/retro/config";
@@ -253,6 +254,12 @@ function MineRow({
         </span>
         {row.disabled && <span className="chip bg-gold-soft text-gold-ink">{dict["ministry.mine.disabled"]}</span>}
       </p>
+      {/* The council moved the buff days after this entry was saved: its times came along, the player looks them over. */}
+      {row.moved && !row.disabled && (
+        <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm font-bold text-gold-ink" data-tour="ministry-moved">
+          {dict["ministry.mine.moved"]}
+        </p>
+      )}
       {/* One tile per buff day the account takes part in: the buff's picture, the day, the times picked and, once the day's roster is out, the appointment with its countdown. */}
       <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-3">
         {round.sections
@@ -584,15 +591,17 @@ function SignupForm({
         ? dict["ministry.error.taken"]
         : state.status === "closed"
           ? dict["ministry.error.closed"]
-          : state.status === "full"
-            ? dict["ministry.error.full"]
-            : state.status === "unknownGovernor"
-              ? format(dict["retro.lookup.unknown"], { kingdom })
-              : waiting
-                ? format(dict["retro.error.throttled"], { time: now ? formatDuration(waitMs, dict, true) : "…" })
-                : state.status === "unavailable"
-                  ? dict["retro.error.unavailable"]
-                  : null;
+          : state.status === "moved"
+            ? dict["ministry.error.moved"]
+            : state.status === "full"
+              ? dict["ministry.error.full"]
+              : state.status === "unknownGovernor"
+                ? format(dict["retro.lookup.unknown"], { kingdom })
+                : waiting
+                  ? format(dict["retro.error.throttled"], { time: now ? formatDuration(waitMs, dict, true) : "…" })
+                  : state.status === "unavailable"
+                    ? dict["retro.error.unavailable"]
+                    : null;
 
   const field = (name: string) => ({
     name,
@@ -607,6 +616,7 @@ function SignupForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <input type="hidden" name={FIELD.round} value={round.key} />
+      <input type="hidden" name={FIELD.layout} value={layoutOf(round.sections)} />
       <input type="hidden" name={FIELD.locale} value={locale} />
       <input type="hidden" name={FIELD.deviceKey} value={deviceKey} />
       {found && lookup.token && <input type="hidden" name={FIELD.token} value={lookup.token} />}
