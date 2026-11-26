@@ -118,11 +118,11 @@ function EventCard({
   const soon = !live && (byAlliance ? days <= 1 : countdownMs < 60 * MINUTE);
 
   return (
-    <article className={clsx("card flex gap-4 border-2 p-4", colors.ring, live && !byAlliance && "ring-4 ring-success/30")}>
+    <article className={clsx("card flex h-full gap-4 border-2 p-4", colors.ring, live && !byAlliance && "ring-4 ring-success/30")}>
       <span className={clsx("grid size-14 shrink-0 place-items-center rounded-2xl text-3xl", colors.icon)} aria-hidden>
         {event.icon}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg/tight font-extrabold text-ink" dir="auto">{event.name}</h3>
           <span className="chip bg-primary-soft text-primary">{dict[`events.category.${event.category}`]}</span>
@@ -159,7 +159,7 @@ function EventCard({
           </p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
           <p
             className={clsx(
               "rounded-xl px-3 py-1.5 text-sm font-extrabold tabular",
